@@ -1,0 +1,170 @@
+@import "swiper/css";
+@import "swiper/css/navigation";
+@import "swiper/css/pagination";
+
+@import './navbar.css';
+@import './home.css';
+@import './browse.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* Button Component */
+  .btn {
+    @apply rounded-md font-semibold transition duration-200 px-4 py-2;
+  }
+
+  .btn-primary {
+    @apply bg-brand text-white hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 dark:focus:ring-offset-secondary-dark;
+  }
+
+  .btn-secondary {
+    @apply border border-secondary-dark text-secondary hover:bg-secondary-dark hover:text-white focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 dark:focus:ring-offset-secondary-dark;
+  }
+
+  .btn-outline-white {
+    @apply px-4 py-2 border border-white text-white rounded-lg bg-transparent 
+           hover:bg-white hover:text-black transition;
+  }
+
+  .btn-danger {
+    @apply bg-error text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2 dark:focus:ring-offset-secondary-dark;
+  }
+
+  /* Card Component */
+  .card {
+    @apply bg-background rounded-md shadow-md hover:shadow-lg transition p-4 flex flex-col;
+  }
+
+  .card-header {
+    @apply flex items-center justify-between mb-2;
+  }
+
+  .card-title {
+    @apply text-lg font-bold font-display;
+  }
+
+  .card-content {
+    @apply text-text-secondary text-sm;
+  }
+
+  .card-footer {
+    @apply mt-auto flex justify-between items-center;
+  }
+
+  /* Dropdown Component */
+  .dropdown-link {
+    @apply block w-full px-4 py-2 text-sm leading-5 text-left font-body;
+  }
+
+  .dropdown-active {
+    @apply text-brand bg-background-secondary dark:text-brand dark:bg-secondary-dark;
+  }
+  .dropdown-active:hover {
+    @apply bg-brand/10 dark:bg-brand-dark/10;
+  }
+
+  .dropdown-inactive {
+    @apply text-text-secondary dark:text-text;
+  }
+  .dropdown-inactive:hover {
+    @apply bg-background-secondary text-text dark:bg-secondary-dark dark:text-text-secondary;
+  }
+
+  /* Form Component */
+  .form-label {
+    @apply block font-medium text-sm text-text dark:text-text-secondary font-body;
+  }
+
+  .form-input {
+    @apply border-secondary dark:border-secondary-dark dark:bg-secondary-dark dark:text-text-secondary focus:border-brand dark:focus:border-brand-dark focus:ring-brand dark:focus:ring-brand-dark rounded-md shadow-sm px-4 py-2 w-full transition;
+  }
+
+  .form-error {
+    @apply text-error dark:text-error/80 space-y-1 font-body;
+  }
+
+  .form-wrapper {
+    @apply flex items-center min-h-screen bg-gradient-to-br from-background-secondary via-background to-secondary;
+  }
+
+  .form-wrapper-centered {
+    @apply justify-center;
+  }
+
+  .form-wrapper-left {
+    @apply justify-start;
+  }
+
+  .form-wrapper-right {
+    @apply justify-end;
+  }
+
+  .form-container {
+    @apply bg-background shadow-md rounded-md p-4 w-full max-w-md border border-secondary dark:bg-secondary-dark dark:border-secondary-dark;
+  }
+
+  /* Modal Component */
+  .modal-overlay {
+    @apply fixed inset-0 overflow-y-auto px-1 py-2 sm:px-0 z-modal;
+  }
+
+  .modal-content {
+    @apply mb-2 bg-background dark:bg-secondary-dark rounded-md overflow-hidden shadow-md transform transition-all sm:w-full sm:mx-auto;
+  }
+
+  .modal-enter {
+    @apply ease-out duration-300;
+  }
+
+  .modal-enter-start {
+    @apply opacity-0 translate-y-2 sm:translate-y-0 sm:scale-95;
+  }
+
+  .modal-enter-end {
+    @apply opacity-100 translate-y-0 sm:scale-100;
+  }
+
+  .modal-leave {
+    @apply ease-in duration-200;
+  }
+
+  .modal-leave-start {
+    @apply opacity-100 translate-y-0 sm:scale-100;
+  }
+
+  .modal-leave-end {
+    @apply opacity-0 translate-y-2 sm:translate-y-0 sm:scale-95;
+  }
+
+  .modal-backdrop {
+    @apply fixed inset-0 bg-secondary-dark dark:bg-secondary-dark opacity-75;
+  }
+
+  /* Status Component */
+  .status-message {
+    @apply font-medium text-sm font-body;
+  }
+
+  .status-success {
+    @apply text-brand dark:text-brand-dark;
+  }
+
+}
+
+@layer utilities {
+  /* hide scrollbar (Chrome/Safari/Edge/Opera + Firefox + IE/Edge) */
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* WebKit */
+  }
+
+  /* optional: smooth touch scrolling on iOS */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}

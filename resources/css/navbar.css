@@ -1,0 +1,66 @@
+
+@layer components {
+  /* Navbar container */
+  .navbar {
+    @apply sticky top-0 z-50 bg-background shadow;
+  }
+
+  .navbar-inner {
+    @apply max-w-7xl mx-auto flex justify-between items-center px-6 py-4;
+  }
+
+  /* Brand */
+  .navbar-brand {
+    @apply text-2xl font-bold flex items-center hover:opacity-50;
+  }
+  .navbar-brand-text {
+    @apply text-text;
+  }
+  .navbar-brand-accent {
+    @apply text-brand;
+  }
+
+  /* Desktop nav links */
+  .navbar-nav {
+    @apply hidden md:flex items-center space-x-6 text-text-secondary;
+  }
+  .navbar-link {
+    @apply hover:text-brand transition;
+  }
+
+  /* Auth section */
+  .navbar-auth {
+    @apply flex items-center space-x-4 pl-7;
+  }
+  .navbar-auth-link {
+    @apply hover:text-brand transition;
+  }
+  .navbar-auth-button {
+    @apply px-4 py-1 border border-text rounded hover:bg-text hover:text-background transition;
+  }
+
+  /* Mobile hamburger */
+  .navbar-toggle {
+    @apply md:hidden text-text focus:outline-none;
+  }
+
+  /* Mobile menu */
+  .navbar-mobile {
+    @apply md:hidden px-6 py-4 space-y-3 text-text-secondary bg-background border-t;
+  }
+  .navbar-mobile-link {
+    @apply block hover:text-brand transition;
+  }
+  .navbar-mobile-auth {
+    @apply pt-3 border-t;
+  }
+  .navbar-mobile-button {
+    @apply w-full mt-2 px-4 py-2 border border-text rounded hover:bg-text hover:text-background transition;
+  }
+
+  /* Active  */
+  .navbar-link.active,
+    .navbar-mobile-link.active {
+        @apply font-bold text-green-600;
+    }
+}
