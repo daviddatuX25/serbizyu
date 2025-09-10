@@ -1,3 +1,9 @@
+@import './app.css';
+@import "swiper/css";
+@import "swiper/css/navigation";
+@import "swiper/css/pagination";
+@import './browse.css';
+
 @layer components {
 
     /* Hero search input */

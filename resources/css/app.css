@@ -1,10 +1,4 @@
-@import "swiper/css";
-@import "swiper/css/navigation";
-@import "swiper/css/pagination";
-
 @import './navbar.css';
-@import './home.css';
-@import './browse.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

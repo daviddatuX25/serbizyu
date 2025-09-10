@@ -12,7 +12,11 @@
         <link href="https://fonts.bunny.net/css?family=poppins:400,500,600|inter:400,500,600&display=swap" rel="stylesheet" />
 
         <!-- Styles -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @props([
+            'cssFile' => 'app.css',
+            'jsFile' => 'app.js'
+            ])
+        @vite(["resources/css/{$cssFile}", "resources/js/{$jsFile}"])
     </head>
     <body class="font-sans antialiased" style="font-family: var(--font-body, 'Inter', sans-serif);">
         <div class="min-h-screen" style="background-color: var(--color-background); color: var(--color-text);">

@@ -1,4 +1,4 @@
-<x-app-layout header="Welcome to Serbizyu">
+<x-app-layout header="Welcome to Serbizyu" cssFile="home.css" jsFile="home.js">
     <!-- Single Hero Section Container with Swiper -->
     <section class="hero-section relative">
     <!-- Swiper Container -->
@@ -132,7 +132,7 @@
     </section>
 
     <!-- Browse Section -->
-    <section class="py-12 px-6 bg-gray-50>
+    <section class="py-12 px-6 bg-gray-50">
     <div class="browse-inner">
         <div class="browse-header">
         <h2 class="text-3xl font-bold">Browse Offers & Services</h2>
