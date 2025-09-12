@@ -1,6 +1,4 @@
 <?php
-
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -26,9 +24,9 @@ Route::get('faq', function () {
 Route::middleware('guest')->group(function () {
     Route::get('signin', function () {
         return view('auth.signin');
-    })->name('signin');
+    })->name('auth.signin');
 
-    Route::get('signup', function () {
-        return view('auth.signup');
-    })->name('signup');
+    Route::get('join', function () {
+        return view('auth.join');
+    })->name('auth.join');
 });

@@ -1,4 +1,4 @@
-<x-app-layout header="Browse Services" cssFile="browse.css">
+<x-app-layout title="Browse Services" cssFile="browse.css">
   <div class="max-w-7xl mx-auto px-6 py-10 space-y-8">
     <!-- Sticky Search + Scrollable Filters -->
     <div class="sticky top-20 bg-gray-50 z-40 p-4 rounded-b-xl shadow-md flex flex-row gap-4">

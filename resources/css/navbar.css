@@ -45,7 +45,7 @@
 
   /* Mobile menu */
   .navbar-mobile {
-    @apply md:hidden px-6 py-4 space-y-3 text-text-secondary bg-background border-t;
+    @apply md:hidden px-6 py-4 space-y-3 absolute w-full text-text-secondary bg-background border-t;
   }
   .navbar-mobile-link {
     @apply block hover:text-brand transition;
@@ -54,12 +54,13 @@
     @apply pt-3 border-t;
   }
   .navbar-mobile-button {
-    @apply w-full mt-2 px-4 py-2 border border-text rounded hover:bg-text hover:text-background transition;
+    @apply  w-full mt-2 px-4 py-2 border border-text rounded hover:bg-text hover:text-background transition;
   }
 
   /* Active  */
   .navbar-link.active,
-    .navbar-mobile-link.active {
-        @apply font-bold text-green-600;
-    }
+    .navbar-auth-link.active, 
+      .navbar-mobile-link.active {
+          @apply font-bold text-green-600;
+      }
 }
