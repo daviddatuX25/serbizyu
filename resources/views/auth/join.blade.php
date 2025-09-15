@@ -13,31 +13,37 @@
       </div>
 
       <!-- Form -->
-      <form>
+      <form method="POST" action="{{ route('auth.join') }}">
+        @csrf
         <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label for="first_name" class="auth-label">First Name</label>
             <input type="text" id="first_name" name="first_name" placeholder="First name" required class="auth-input">
+            <x-input-error :messages="$errors->get('first_name')" class="mt-2" />
           </div>
           <div>
             <label for="last_name" class="auth-label">Last Name</label>
             <input type="text" id="last_name" name="last_name" placeholder="Last name" required class="auth-input">
+            <x-input-error :messages="$errors->get('last_name')" class="mt-2" />
           </div>
         </div>
 
         <div class="mb-4">
           <label for="email" class="auth-label">Email</label>
           <input type="email" id="email" name="email" placeholder="you@email.com" required class="auth-input">
+          <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
         <div class="mb-4">
           <label for="password" class="auth-label">Password</label>
           <input type="password" id="password" name="password" placeholder="Create a password" required class="auth-input">
+          <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 
         <div class="mb-6">
-          <label for="confirm-password" class="auth-label">Confirm Password</label>
-          <input type="password" id="confirm-password" name="confirm_password" placeholder="Confirm your password" required class="auth-input">
+          <label for="password_confirmation" class="auth-label">Confirm Password</label>
+          <input type="password" id="password_confirmation" name="password_confirmation" placeholder="Confirm your password" required class="auth-input">
+          <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
 
         <button type="submit" class="auth-button">Sign Up</button>

@@ -1,32 +1,39 @@
 <?php
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+// Authentication routes
+require __DIR__.'/auth.php';
 
-Route::get('browse', function () {
-    return view('browse');
-})->name('browse');
+// Home and static pages
+    Route::get('/', function () {
+        return view('home');
+    })->name('home');
 
-Route::get('create', function () {
-    return view('create');
-})->name('create');
+    Route::get('browse', function () {
+        return view('browse');
+    })->name('browse');
 
-Route::get('about', function () {
-    return view('about');
-})->name('about');
+    Route::get('create', function () {
+        return view('create');
+    })->name('create');
 
-Route::get('faq', function () {
-    return view('faq');
-})->name('faq');
+    Route::get('about', function () {
+        return view('about');
+    })->name('about');
 
-Route::middleware('guest')->group(function () {
-    Route::get('signin', function () {
-        return view('auth.signin');
-    })->name('auth.signin');
+    Route::get('faq', function () {
+        return view('faq');
+    })->name('faq');
 
-    Route::get('join', function () {
-        return view('auth.join');
-    })->name('auth.join');
-});
+// Creator space
+   Route::middleware(['auth'])->prefix('creator')->group(function () {
+       Route::get('/', function () {
+           return view('home');
+       })->name('creator.dashboard');
+   });
+// Profile editor
+   Route::middleware(['auth'])->prefix('profile')->group(function () {
+        Route::get('/', function (){
+
+        })->name('profile.show');
+   });

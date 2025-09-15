@@ -21,9 +21,9 @@
         @vite(["resources/css/{$cssFile}", "resources/js/{$jsFile}"])
         
     </head>
-    <body class="font-sans antialiased" style="font-family: var(--font-body, 'Inter', sans-serif);">
-        <div class="min-h-screen" style="background-color: var(--color-background); color: var(--color-text);">
-            @include('layouts.navbar')
+    <body>
+        <div class="min-h-screen">
+            <x-navbar />
 
             <!-- Page Heading -->
             @isset($header)

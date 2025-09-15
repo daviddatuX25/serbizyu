@@ -28,11 +28,23 @@
         </a>
       @endforeach
 
+      {{-- show only when on auth check else show profile bar with logout button --}}
       <div class="navbar-auth">
-        <a href="{{ route('auth.signin') }}" class="navbar-auth-link {{ request()->routeIs('auth.signin') ? 'active' : '' }}">Sign In</a>
-        <a href="{{ route('auth.join') }}">
-          <button class="navbar-auth-button">Join</button>
-        </a>
+        @guest
+            <a href="{{ route('auth.signin') }}" 
+              class="navbar-auth-link {{ request()->routeIs('auth.signin') ? 'active' : '' }}">
+                Sign In
+            </a>
+            <a href="{{ route('auth.join') }}">
+                <button class="navbar-auth-button">Join</button>
+            </a>
+        @endguest
+
+       @auth
+            <x-nav.profile-dropdown :authProfileData="$authProfileData" />
+        @endauth
+
+
       </div>
     </nav>
 
@@ -66,10 +78,19 @@
       @endforeach
 
       <div class="navbar-mobile-auth">
-        <a href="{{ route('auth.signin') }}" class="block text-center navbar-mobile-link {{ request()->routeIs('auth.signin') ? 'active' : '' }}">Sign In</a>
-        <a href="{{ route('auth.join') }}">
-          <button class="navbar-mobile-button">Join</button>
-        </a>
+        @guest
+            <a href="{{ route('auth.signin') }}" 
+              class="block text-center navbar-mobile-link {{ request()->routeIs('auth.signin') ? 'active' : '' }}">
+                Sign In
+            </a>
+            <a href="{{ route('auth.join') }}">
+                <button class="navbar-mobile-button">Join</button>
+            </a>
+        @endguest
+
+       @auth
+          <x-nav.profile-dropdown :authProfileData="$authProfileData"/>
+      @endauth
       </div>
     </nav>
   </div>

@@ -9,24 +9,27 @@
             <p class="auth-subtitle">Welcome back! Please login in below.</p>
             </div>
 
-            <form>
-            <div class="mb-5">
-                <label class="auth-label" for="email">Email</label>
-                <input class="auth-input" type="email" id="email" placeholder="you@email.com" required>
-            </div>
-            <div class="mb-4">
-                <label class="auth-label" for="password">Password</label>
-                <input class="auth-input" type="password" id="password" placeholder="Enter your password" required>
-            </div>
+            <form method="POST" action="{{ route('auth.signin') }}">
+                @csrf
+                <div class="mb-5">
+                    <label class="auth-label" for="email">Email</label>
+                    <input class="auth-input" name="email" type="email" id="email" placeholder="you@email.com" required>
+                    <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                </div>
+                <div class="mb-4">
+                    <label class="auth-label" for="password">Password</label>
+                    <input class="auth-input" name="password" type="password" id="password" placeholder="Enter your password" required  autocomplete="current-password" >
+                    <x-input-error :messages="$errors->get('password')" class="mt-2" />
+                </div>
 
-            <div class="flex items-center justify-between mb-6">
-                <label class="flex items-center text-sm text-gray-600">
-                <input type="checkbox" class="mr-2 accent-green-500"> Remember me
-                </label>
-                <a href="#" class="text-green-500 hover:underline text-sm">Forgot password?</a>
-            </div>
+                <div class="flex items-center justify-between mb-6">
+                    <label class="flex items-center text-sm text-gray-600">
+                    <input type="checkbox" class="mr-2 accent-green-500"> Remember me
+                    </label>
+                    <a href="#" class="text-green-500 hover:underline text-sm">Forgot password?</a>
+                </div>
 
-            <button type="submit" class="auth-button">Sign In</button>
+                <button type="submit" class="auth-button">Sign In</button>
             </form>
 
             <div class="auth-divider">

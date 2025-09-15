@@ -57,6 +57,44 @@
     @apply  w-full mt-2 px-4 py-2 border border-text rounded hover:bg-text hover:text-background transition;
   }
 
+  /* hide until Alpine is ready */
+  [x-cloak] { display: none !important; }
+
+  /* Profile trigger */
+  .navbar-profile-trigger {
+    @apply flex items-center justify-center w-10 h-10 rounded-full hover:opacity-80 transition;
+  }
+
+  /* Profile image */
+  .navbar-profile-img {
+    @apply w-10 h-10 rounded-full object-cover;
+  }
+
+  /* Profile fallback */
+  .navbar-profile-fallback {
+    @apply flex items-center justify-center w-10 h-10 rounded-full bg-black;
+  }
+
+  /* Dropdown menu */
+  .navbar-profile-dropdown {
+    @apply absolute right-0 top-12 mt-2 w-48 bg-background shadow-lg rounded-lg border border-gray-200 z-50;
+  }
+
+  /* Dropdown item */
+  .navbar-profile-item {
+    @apply block px-4 py-2 text-sm text-text hover:bg-gray-100 transition;
+  }
+
+  /* Creator button */
+  .navbar-creator-btn {
+    @apply px-4 py-1 rounded bg-brand text-background font-semibold hover:opacity-90 transition;
+  }
+
+  /* Mobile button override (if needed) */
+  .navbar-mobile-button { @apply mt-2 px-4 py-2 border border-text rounded hover:bg-text hover:text-background transition; }
+
+
+
   /* Active  */
   .navbar-link.active,
     .navbar-auth-link.active, 
