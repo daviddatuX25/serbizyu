@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Domains\Users\Models;
+namespace App\Domains\Common\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Address extends Model
 {
-    protected $fillable = [
+     protected $fillable = [
         'address_type',
         'house_no',
         'street',

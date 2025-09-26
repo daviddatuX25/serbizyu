@@ -1,0 +1,29 @@
+[33mcommit e1610c395792c2d16f67ceed6229d4fb7963f214[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: sarmientofam-pc <David Datu PC>
+Date:   Mon Sep 15 09:14:02 2025 +0800
+
+    Some auth improvements
+
+[33mcommit 61a4467cbd6ea9df1d9a87f8b788a3dcfc0b8b78[m
+Author: sarmientofam-pc <David Datu PC>
+Date:   Fri Sep 12 13:47:28 2025 +0800
+
+    Updated npm packages
+
+[33mcommit db7715462c448e94ddb5063c39f6bc619baf427c[m
+Author: sarmientofam-pc <David Datu PC>
+Date:   Fri Sep 12 12:13:08 2025 +0800
+
+    Added auth pages: Sign in and join, improved nav
+
+[33mcommit ce9e9ec3923afa453eee85e9f137d6c165aa9a74[m
+Author: sarmientofam-pc <David Datu PC>
+Date:   Thu Sep 11 07:04:24 2025 +0800
+
+    Improved browsing page
+
+[33mcommit 9127fd58decb00593620a3f6c2bb6b786f3a8879[m
+Author: sarmientofam-pc <David Datu PC>
+Date:   Wed Sep 10 09:08:27 2025 +0800
+
+    First Prototype

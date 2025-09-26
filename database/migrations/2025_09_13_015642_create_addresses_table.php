@@ -26,7 +26,7 @@ return new class extends Migration
             $table->string('country')->nullable();
             $table->decimal('lat', 10, 6)->nullable();
             $table->decimal('lng', 10, 6)->nullable();
-
+            
             $table->timestamps();
         });
     }
