@@ -27,11 +27,13 @@ class UserFactory extends Factory
      * @return array<string, mixed>
      */
     public function definition(): array
-    {
+    {   
+        $firstName = fake()->firstName();
+        $lastName = fake()->lastName();
         return [
-            'firstname' => fake()->firstName(),
-            'lastname' => fake()->lastName(),
-            'email' => fake()->unique()->safeEmail(),
+            'firstname' => $firstName,
+            'lastname' => $lastName,
+            'email' => $firstName . '_' . $lastName . '@example.com',
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password123'),
             'remember_token' => Str::random(10),
