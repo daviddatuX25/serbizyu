@@ -20,6 +20,11 @@ class Category extends Model
         return $this->belongsToMany(Service::class);
     }
 
+    public function openOffers()
+    {
+        return $this->belongsToMany(OpenOffer::class);
+    }
+
     protected static function newFactory()
     {
         return \Database\Factories\CategoryFactory::new();

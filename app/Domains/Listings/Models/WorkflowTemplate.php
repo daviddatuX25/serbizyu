@@ -13,6 +13,11 @@ class WorkflowTemplate extends Model
 
     protected $fillable = ['title', 'description, creator_id', 'is_public'];
 
+    // casts
+    protected $casts = [
+        'is_public' => 'boolean',
+    ];
+
     public function creator()
     {
         return $this->belongsTo(User::class);
