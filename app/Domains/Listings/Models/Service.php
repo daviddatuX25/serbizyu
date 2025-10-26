@@ -8,6 +8,7 @@ use App\Domains\Listings\Models\Category;
 use App\Domains\Listings\Models\WorkflowTemplate;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domains\Common\Models\Address;
 
 class Service extends Model
 {
@@ -15,7 +16,7 @@ class Service extends Model
     use SoftDeletes;
 
     protected $table = 'services';
-    protected $fillable = ['title', 'description', 'price', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id'];
+    protected $fillable = ['title', 'description', 'price', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
 
     public function category()
     {
@@ -30,6 +31,11 @@ class Service extends Model
     public function workflow()
     {
         return $this->belongsTo(WorkflowTemplate::class);
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
     }
 
     protected static function newFactory()

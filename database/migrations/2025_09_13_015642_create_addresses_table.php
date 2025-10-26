@@ -12,12 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('addresses', function (Blueprint $table) {
-            $table->bigIncrements('id');
-
-            // Polymorphic fields
-            $table->morphs('addressable'); 
-            // This creates: addressable_id (BIGINT) + addressable_type (VARCHAR)
-            $table->string('address_type')->nullable(); // e.g., 'home', 'work', etc.
+            $table->id();
             $table->string('house_no')->nullable();
             $table->string('street')->nullable();
             $table->string('barangay')->nullable();

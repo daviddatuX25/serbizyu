@@ -29,7 +29,7 @@
         @endif
       </div>
 
-      <a href="{{ route('profile.show') }}" class="navbar-profile-item">Profile</a>
+      <a href="{{ route('profile.edit') }}" class="navbar-profile-item">Profile</a>
       <a href="{{ route('creator.dashboard') }}" class="navbar-profile-item">Creator Space</a>
 
       <form method="POST" action="{{ route('logout') }}">
@@ -47,7 +47,7 @@
         @if($authProfileData && $authProfileData['img_path'])
           <img src="{{ asset($authProfileData['img_path']) }}" alt="Profile" class="navbar-profile-img" />
         @else
-            <a class="p-5 bg-brand-100" href="{{ route('profile.show') }}" class="w-full">
+            <a class="p-5 bg-brand-100" href="{{ route('profile.edit') }}" class="w-full">
                 <x-icons.profile class="w-6 h-6 text-green-500" />
             </a>
         @endif

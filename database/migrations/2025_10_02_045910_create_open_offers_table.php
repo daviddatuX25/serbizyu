@@ -12,13 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('open_offers', function (Blueprint $table) {
-            // 'title', 'description', 'budget', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id'
+            // 'title', 'description', 'budget', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'
             $table->id();
             $table->string('title');
             $table->string('description');
             $table->decimal('budget', 10, 2);
             $table->boolean('pay_first');
             $table->boolean('fulfilled');
+            $table->foreignId('address_id')->constrained('addresses');
             $table->foreignId('category_id')->constrained();
             $table->foreignId('creator_id')->constrained('users');
             $table->foreignId('workflow_template_id')->constrained();

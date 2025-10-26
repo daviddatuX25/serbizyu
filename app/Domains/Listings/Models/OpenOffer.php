@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use App\Domains\Users\Models\User;
 use App\Domains\Listings\Models\Category;
 use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Common\Models\Address;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -16,7 +18,7 @@ class OpenOffer extends Model
 
     protected $table = 'open_offers';
     
-    protected $fillable = ['title', 'description', 'budget', 'pay_first', 'fulfilled' ,'category_id', 'creator_id', 'workflow_template_id'];
+    protected $fillable = ['title', 'description', 'budget', 'pay_first', 'fulfilled' ,'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
 
     // casts
     protected $casts = [
@@ -51,5 +53,10 @@ class OpenOffer extends Model
     protected static function newFactory()
     {
         return \Database\Factories\OpenOfferFactory::new();
+    }
+
+    protected function address()
+    {
+        return $this->belongsTo(Address::class);
     }
 }

@@ -3,10 +3,12 @@
 namespace App\Domains\Users\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Domains\Common\Models\Address;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use App\Domains\Common\Models\UserAddress;
 
 class User extends Authenticatable
 {
@@ -24,6 +26,9 @@ class User extends Authenticatable
     protected $fillable = [
         'firstname',
         'lastname',
+        'username',
+        'phone',
+        'address_id',
         'email',
         'password',
     ];
@@ -37,6 +42,12 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    // address
+    public function addresses()
+    {
+        return $this->hasMany(UserAddress::class);
+    }
 
     /**
      * Get the attributes that should be cast.

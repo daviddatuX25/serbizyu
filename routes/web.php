@@ -1,6 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
-
+use App\Domains\Users\Http\Controllers\ProfileController;
 // Authentication routes
 require __DIR__.'/auth.php';
 
@@ -33,7 +33,12 @@ require __DIR__.'/auth.php';
    });
 // Profile editor
    Route::middleware(['auth'])->prefix('profile')->group(function () {
-        Route::get('/', function (){
+    Route::get('/', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
 
-        })->name('profile.show');
-   });
+    Route::patch('/', [ProfileController::class, 'update'])
+        ->name('profile.update');
+
+    Route::delete('/', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
+});
