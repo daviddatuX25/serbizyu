@@ -26,26 +26,6 @@
     @apply bg-error text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2 dark:focus:ring-offset-secondary-dark;
   }
 
-  /* Card Component */
-  .card {
-    @apply bg-background rounded-md shadow-md hover:shadow-lg transition p-4 flex flex-col;
-  }
-
-  .card-header {
-    @apply flex items-center justify-between mb-2;
-  }
-
-  .card-title {
-    @apply text-lg font-bold font-display;
-  }
-
-  .card-content {
-    @apply text-text-secondary text-sm;
-  }
-
-  .card-footer {
-    @apply mt-auto flex justify-between items-center;
-  }
 
   /* Dropdown Component */
   .dropdown-link {
@@ -66,21 +46,68 @@
     @apply bg-background-secondary text-text dark:bg-secondary-dark dark:text-text-secondary;
   }
 
-  /* Form Component */
-  .form-label {
-    @apply block font-medium text-sm text-text dark:text-text-secondary font-body;
+  /* Status Component */
+  .status-message {
+    @apply font-medium text-sm font-body;
   }
 
-  .form-input {
-    @apply border-secondary dark:border-secondary-dark dark:bg-secondary-dark dark:text-text-secondary focus:border-brand dark:focus:border-brand-dark focus:ring-brand dark:focus:ring-brand-dark rounded-md shadow-sm px-4 py-2 w-full transition;
+  .status-success {
+    @apply text-brand dark:text-brand-dark;
   }
 
-  .form-error {
-    @apply text-error dark:text-error/80 space-y-1 font-body;
+/* ================================
+  FORM LAYOUT WRAPPERS
+  ================================ */
+
+  /* Listing Card Component */
+  .listing-card {
+    @apply bg-white rounded-xl shadow hover:shadow-md transition p-5 flex flex-col;
   }
 
+  /* Card top row (badge + right info) */
+  .card-top {
+    @apply flex items-center justify-between mb-3;
+  }
+
+  /* Badges */
+  .badge-service {
+    @apply px-2 py-1 text-xs bg-green-100 text-green-700 rounded;
+  }
+  .badge-offer {
+    @apply px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded;
+  }
+
+  /* Card Titles & Description */
+  .card-desc {
+    @apply text-gray-500 text-sm mb-2;
+  }
+  .card-meta {
+    @apply text-gray-600 text-sm;
+  }
+
+  /* Card Footer */
+  .card-footer {
+    @apply mt-3 flex justify-between items-center;
+  }
+  .card-footer span {
+    @apply text-xs text-gray-500;
+  }
+
+  /* Avatar/Icon inside card */
+  .card-avatar {
+    @apply w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center;
+  }
+
+  /* Card Titles & Description */
+  .card-title {
+    @apply text-lg font-bold;
+  }
+
+  /* ================================
+     FORM LAYOUT WRAPPERS
+     ================================ */
   .form-wrapper {
-    @apply flex items-center min-h-screen bg-gradient-to-br from-background-secondary via-background to-secondary;
+    @apply flex items-center min-h-screen bg-gradient-to-br from-green-50 via-white to-gray-100;
   }
 
   .form-wrapper-centered {
@@ -95,8 +122,88 @@
     @apply justify-end;
   }
 
+  /* ================================
+     FORM CARD CONTAINER
+     ================================ */
   .form-container {
-    @apply bg-background shadow-md rounded-md p-4 w-full max-w-md border border-secondary dark:bg-secondary-dark dark:border-secondary-dark;
+    @apply bg-white shadow-2xl rounded-3xl p-10 w-full max-w-md border border-gray-100;
+  }
+
+  /* Card variants for dashboard use */
+  .form-container-neutral {
+    @apply bg-background shadow-md rounded-md p-6 w-full border border-secondary dark:bg-secondary-dark dark:border-secondary-dark;
+  }
+
+  /* ================================
+     FORM HEADERS
+     ================================ */
+  .form-header {
+    @apply flex flex-col items-center mb-8;
+  }
+
+  .form-icon {
+    @apply bg-green-100 rounded-full p-3 mb-3;
+  }
+
+  .form-title {
+    @apply text-xl font-bold text-gray-800;
+  }
+
+  .form-subtitle {
+    @apply text-gray-500 text-sm mt-1 text-center;
+  }
+
+  /* ================================
+     LABELS, INPUTS, AND ERRORS
+     ================================ */
+  .form-label {
+    @apply block font-medium text-sm text-gray-700 mb-2 font-body;
+  }
+
+  .form-input {
+    @apply w-full px-4 py-3 border border-gray-200 rounded-lg bg-white 
+           focus:outline-none focus:ring-2 focus:ring-green-400 transition;
+  }
+
+  .form-error {
+    @apply text-error dark:text-error/80 text-sm mt-1 font-body;
+  }
+
+  /* ================================
+     BUTTONS
+     ================================ */
+  .form-button {
+    @apply w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-lg 
+           font-semibold shadow hover:from-green-600 hover:to-green-700 transition;
+  }
+
+  .form-button-danger {
+    @apply w-full bg-red-600 text-white py-3 rounded-lg font-semibold shadow 
+           hover:bg-red-700 transition;
+  }
+
+  .form-alt-button {
+    @apply w-full flex items-center justify-center gap-2 border border-gray-300 py-2 rounded-lg 
+           hover:bg-gray-50 transition;
+  }
+
+  /* ================================
+     DIVIDERS AND FOOTERS
+     ================================ */
+  .form-divider {
+    @apply flex items-center my-6;
+  }
+
+  .form-divider-line {
+    @apply flex-grow border-t border-gray-200;
+  }
+
+  .form-divider-text {
+    @apply mx-3 text-gray-400 text-xs;
+  }
+
+  .form-footer {
+    @apply text-center text-gray-600 mt-6 text-sm;
   }
 
   /* Modal Component */
@@ -144,7 +251,6 @@
   .status-success {
     @apply text-brand dark:text-brand-dark;
   }
-
 }
 
 @layer utilities {

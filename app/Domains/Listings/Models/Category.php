@@ -13,11 +13,16 @@ class Category extends Model
     use hasFactory, SoftDeletes;
 
     protected $table = 'categories';
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'description'];
 
     public function services()
     {
         return $this->belongsToMany(Service::class);
+    }
+
+    public function openOffers()
+    {
+        return $this->belongsToMany(OpenOffer::class);
     }
 
     protected static function newFactory()

@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('title');
             $table->string('description');
             $table->decimal('price', 10, 2);
+            $table->foreignId('address_id')->constrained('addresses');
             $table->foreignId('category_id')->constrained();
             $table->boolean('pay_first')->default(true);
             $table->foreignId('workflow_template_id')->constrained();

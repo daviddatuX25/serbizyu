@@ -13,14 +13,25 @@ class WorkflowTemplate extends Model
 
     protected $fillable = ['title', 'description, creator_id', 'is_public'];
 
+    // casts
+    protected $casts = [
+        'is_public' => 'boolean',
+    ];
+
     public function creator()
     {
         return $this->belongsTo(User::class);
     }
 
+
     public function services()
     {
         return $this->belongsToMany(Service::class);
+    }
+
+    public function workTemplates()
+    {
+        return $this->hasMany(WorkTemplate::class);
     }
 
     protected static function newFactory()
