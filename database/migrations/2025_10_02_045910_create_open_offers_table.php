@@ -22,7 +22,7 @@ return new class extends Migration
             $table->foreignId('address_id')->constrained('addresses');
             $table->foreignId('category_id')->constrained();
             $table->foreignId('creator_id')->constrained('users');
-            $table->foreignId('workflow_template_id')->constrained();
+            $table->foreignId('workflow_template_id')->constrained()->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

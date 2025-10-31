@@ -13,7 +13,7 @@ class Category extends Model
     use hasFactory, SoftDeletes;
 
     protected $table = 'categories';
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'description'];
 
     public function services()
     {

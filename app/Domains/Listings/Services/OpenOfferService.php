@@ -82,8 +82,8 @@ class OpenOfferService
      */
     public function getOpenOffer($id): OpenOffer
     {
-        // get a service
-        $openOffer = OpenOffer::find($id);
+        // get an open offer
+        $openOffer = OpenOffer::find($id)->with('creator', 'category', 'workflowTemplate.workTemplates', 'address', 'images');
         if ($openOffer == null) {
             throw new ResourceNotFoundException('Open Offer does not exist.');
         }
@@ -104,7 +104,7 @@ class OpenOfferService
  */
     public function getAllOpenOffers(): Collection
     {
-        $openOffers = OpenOffer::with('creator', 'category', 'workflow')->get();
+        $openOffers = OpenOffer::with('creator', 'category', 'workflowTemplate.workTemplates', 'address', 'thumbnail')->get();
 
         if ($openOffers->isEmpty())
         {

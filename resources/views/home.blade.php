@@ -1,4 +1,4 @@
-<x-app-layout header="Welcome to Serbizyu" :cssFiles='["home.css", "browse.css"]' jsFile="home.js">
+<x-app-layout header="Welcome to Serbizyu" :cssFiles='["home.css", "browse.css"]' jsFiles="home.js">
     <!-- Single Hero Section Container with Swiper -->
     <section class="hero-section relative">
     <!-- Swiper Container -->
@@ -163,7 +163,7 @@
         <div class="browse-grid">
 
         <!-- Service Card -->
-        <article class="browse-card">
+        <article class="listing-card">
             <div class="card-top">
             <span class="badge-service">Service</span>
             <span class="rating">★★★★★</span>
@@ -179,7 +179,7 @@
         </article>
 
         <!-- Open Offer Card -->
-        <article class="browse-card">
+        <article class="listing-card">
             <div class="card-top">
             <span class="badge-offer">Open Offer</span>
             <span class="text-sm text-text-secondary">Budget: ₱5,000</span>
@@ -194,7 +194,7 @@
         </article>
 
         <!-- Service Card -->
-        <article class="browse-card">
+        <article class="listing-card">
             <div class="card-top">
             <span class="badge-service">Service</span>
             <span class="rating">★★★★☆</span>
@@ -210,7 +210,7 @@
         </article>
 
         <!-- Open Offer Card -->
-        <article class="browse-card">
+        <article class="listing-card">
             <div class="card-top">
             <span class="badge-offer">Open Offer</span>
             <span class="text-sm text-text-secondary">Budget: ₱12,000</span>

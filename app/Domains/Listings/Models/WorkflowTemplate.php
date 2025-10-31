@@ -23,9 +23,15 @@ class WorkflowTemplate extends Model
         return $this->belongsTo(User::class);
     }
 
+
     public function services()
     {
         return $this->belongsToMany(Service::class);
+    }
+
+    public function workTemplates()
+    {
+        return $this->hasMany(WorkTemplate::class);
     }
 
     protected static function newFactory()

@@ -25,6 +25,27 @@ class OpenOffer extends Model
         'fulfilled' => 'boolean',
     ];
 
+    public function images()
+    {
+        return $this->morphMany(ListingImage::class, 'imageable');
+    }
+
+    public function thumbnail()
+    {
+        $primaryImage = $this->morphOne(ListingImage::class, 'imageable')
+            ->where('is_primary', true)
+            ->select(['id', 'path', 'imageable_id', 'imageable_type']); // minimal columns
+        
+        if ($primaryImage->doesntExist()) {
+            // Fallback to the first image if no primary is set
+            $primaryImage = $this->morphOne(ListingImage::class, 'imageable')
+                ->select(['id', 'path', 'imageable_id', 'imageable_type'])
+                ->orderBy('order_index', 'asc');
+        }
+        return $primaryImage;    
+    }
+
+
 
     public function category()
     {
@@ -38,7 +59,7 @@ class OpenOffer extends Model
     }
     
 
-    public function workflow()
+    public function workflowTemplate()
     {
         return $this->belongsTo(WorkflowTemplate::class);
     }

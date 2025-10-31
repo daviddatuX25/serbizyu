@@ -24,9 +24,9 @@ class OpenOfferBidService
 
         $this->openOfferService->getOpenOffer($data['open_offer_id']);
         $this->userService->getUser($data['bidder_id']);
-        $this->serviceService->getService($data['service_id']);
+        $service = $this->serviceService->getService($data['service_id']);
 
-        if($data['service_id'] != $data['bidder_id']) {
+        if($service -> creator_id != $data['bidder_id']) {
             throw new AuthorizationException('Bidder must be the creator of the service.');
         }
 

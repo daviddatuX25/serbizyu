@@ -67,4 +67,9 @@ class User extends Authenticatable
         return \Database\Factories\UserFactory::new();
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
+
 }

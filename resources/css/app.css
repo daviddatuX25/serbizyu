@@ -26,26 +26,6 @@
     @apply bg-error text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2 dark:focus:ring-offset-secondary-dark;
   }
 
-  /* Card Component */
-  .card {
-    @apply bg-background rounded-md shadow-md hover:shadow-lg transition p-4 flex flex-col;
-  }
-
-  .card-header {
-    @apply flex items-center justify-between mb-2;
-  }
-
-  .card-title {
-    @apply text-lg font-bold font-display;
-  }
-
-  .card-content {
-    @apply text-text-secondary text-sm;
-  }
-
-  .card-footer {
-    @apply mt-auto flex justify-between items-center;
-  }
 
   /* Dropdown Component */
   .dropdown-link {
@@ -74,6 +54,10 @@
   .status-success {
     @apply text-brand dark:text-brand-dark;
   }
+
+/* ================================
+  FORM LAYOUT WRAPPERS
+  ================================ */
 
   /* Listing Card Component */
   .listing-card {

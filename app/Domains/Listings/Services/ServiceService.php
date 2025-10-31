@@ -15,13 +15,14 @@ use Illuminate\Database\Eloquent\Collection;
 class ServiceService
 {
 
-
     public function __construct(
         private UserService $userService,
         private CategoryService $categoryService,
-        private WorkflowTemplateService $workflowTemplateService
-    )
-    {}
+        private WorkflowTemplateService $workflowTemplateService,
+        private AddressService $addressService,
+        private ListingImageService $listingImageService
+        ){}
+        
     public function createService($data): Service
     {
         if ($data['price'] <= 0) {
@@ -47,7 +48,7 @@ class ServiceService
 
         // address
         if ($data['address_id']) {
-            $address = app(AddressService::class)->getAddress($data['address_id']);
+            $address = $this->addressService->getAddress($data['address_id']);
             if ($address == null) {
                 throw new ResourceNotFoundException('Address does not exist.');
             }
@@ -59,13 +60,25 @@ class ServiceService
             $data['address_id'] = $address->id;
         }
 
-        return Service::create($data);
+        // Step 1: Create the service record first (without images)
+        $service = Service::create(collect($data)->except('images')->toArray());
+
+        // Step 2: Upload and attach images (if any)
+        if (!empty($data['images'])) {
+            foreach ($data['images'] as $image) {
+                $this->listingImageService->attachToModel($service, $image);
+            }
+        }
+
+        return $service->load('images');
     }
+
 
     public function getService($id): Service
     {
         // get a servce
-        $service = Service::with('category', 'creator', 'workflow')->find($id);
+        // include images loaded  
+        $service = Service::with('images', 'category', 'creator', 'address', 'workflowTemplate.workTemplates')->find($id);
         if ($service == null) {
             throw new ResourceNotFoundException('Service does not exist.');
         }
@@ -77,7 +90,7 @@ class ServiceService
 
     public function getAllServices(): Collection
     {
-        $services = Service::with('category', 'creator', 'workflow')->get();
+        $services = Service::with('category', 'creator', 'address', 'workflowTemplate.workTemplates', 'thumbnail')->get();
 
         if ($services->isEmpty()) {
             throw new ResourceNotFoundException('No services found.');

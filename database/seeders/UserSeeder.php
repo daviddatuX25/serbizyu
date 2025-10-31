@@ -15,21 +15,21 @@ class UserSeeder extends Seeder
     {
         // collection acnt be assigned role so have each function
         
-        User::factory(2)->create([
+        User::create([
             'firstname' => 'First',
             'lastname' => 'User',
             'password' => bcrypt('password123'),
             'email' => 'user@localhost',
         ])->assignRole('user');
 
-        User::factory()->create([
+        User::create([
             'firstname' => 'Moderator',
             'lastname' => 'User',
             'password' => bcrypt('password123'),
-            'email' => 'mopderator@localhost',
+            'email' => 'moderator@localhost',
         ])->assignRole('moderator');
 
-        User::factory()->create([
+        User::create([
             'firstname' => 'Admin',
             'lastname' => 'User',
             'password' => bcrypt('password123'),
