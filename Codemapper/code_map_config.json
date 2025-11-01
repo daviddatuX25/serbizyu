@@ -10,14 +10,11 @@
     "resources",
     "routes"
   ],
-  "exclude_folders": [
-    "node_modules",
-    ".git",
-    "vendor",
-    "dist",
-    "build"
+  "add_include_files": [
+    ".env",
+    "tailwind.config.js"
+
   ],
-  "include_files": [],
   "exclude_files": [
     "package-lock.json",
     "composer.lock"

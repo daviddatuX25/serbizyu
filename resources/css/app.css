@@ -207,40 +207,53 @@
   }
 
   /* Modal Component */
-  .modal-overlay {
-    @apply fixed inset-0 overflow-y-auto px-1 py-2 sm:px-0 z-modal;
+  /* ================================
+   MODAL EXTENSIONS
+   ================================ */
+
+  /* Modal header */
+  .modal-header {
+    @apply flex items-center justify-between mb-6 pb-4 border-b border-secondary dark:border-secondary-dark;
   }
 
-  .modal-content {
-    @apply mb-2 bg-background dark:bg-secondary-dark rounded-md overflow-hidden shadow-md transform transition-all sm:w-full sm:mx-auto;
+  .modal-title {
+    @apply text-xl font-bold text-text dark:text-text-secondary;
   }
 
-  .modal-enter {
-    @apply ease-out duration-300;
+  .modal-close {
+    @apply text-text-secondary hover:text-text dark:text-text dark:hover:text-text-secondary transition;
   }
 
-  .modal-enter-start {
-    @apply opacity-0 translate-y-2 sm:translate-y-0 sm:scale-95;
+  /* Modal body */
+  .modal-body {
+    @apply space-y-4;
   }
 
-  .modal-enter-end {
-    @apply opacity-100 translate-y-0 sm:scale-100;
+  /* Modal footer */
+  .modal-footer {
+    @apply flex items-center justify-end gap-3 mt-6 pt-4 border-t border-secondary dark:border-secondary-dark;
   }
 
-  .modal-leave {
-    @apply ease-in duration-200;
+  /* Delete confirmation modal variant */
+  .modal-danger {
+    @apply text-center;
   }
 
-  .modal-leave-start {
-    @apply opacity-100 translate-y-0 sm:scale-100;
+  .modal-danger-icon {
+    @apply w-12 h-12 mx-auto mb-4 text-error;
   }
 
-  .modal-leave-end {
-    @apply opacity-0 translate-y-2 sm:translate-y-0 sm:scale-95;
+  .modal-danger-title {
+    @apply text-lg font-semibold mb-2 text-text dark:text-text-secondary;
   }
 
-  .modal-backdrop {
-    @apply fixed inset-0 bg-secondary-dark dark:bg-secondary-dark opacity-75;
+  .modal-danger-text {
+    @apply text-text-secondary dark:text-text mb-6;
+  }
+
+  /* Loading skeleton */
+  .skeleton-item {
+    @apply h-10 bg-secondary dark:bg-secondary-dark rounded animate-pulse;
   }
 
   /* Status Component */
@@ -251,6 +264,29 @@
   .status-success {
     @apply text-brand dark:text-brand-dark;
   }
+
+  /* ===== Modal Core Styles ===== */
+  .modal-overlay {
+      @apply fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50;
+  }
+
+  .modal-content {
+      @apply bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 sm:p-8 w-full max-w-md transform transition-all duration-300;
+  }
+
+  .modal-enter {
+      @apply opacity-0 scale-95;
+  }
+  .modal-enter-active {
+      @apply opacity-100 scale-100;
+  }
+  .modal-leave {
+      @apply opacity-100 scale-100;
+  }
+  .modal-leave-active {
+      @apply opacity-0 scale-95;
+  }
+
 }
 
 @layer utilities {

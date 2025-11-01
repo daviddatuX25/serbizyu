@@ -8,4 +8,10 @@ export default defineConfig({
             refresh: true,
         }),
     ],
+    server: {
+        host: true, // 👈 Allow external access (from Laravel in Sail)
+        hmr: {
+            host: 'localhost', // 👈 Use localhost or your WSL/Ubuntu IP
+        },
+    },
 });

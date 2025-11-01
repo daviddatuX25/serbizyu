@@ -7,41 +7,56 @@ use Illuminate\Http\Response;
 
 trait ApiResponses
 {
-    protected function success(mixed $data, string $message = 'OK', int $statusCode = Response::HTTP_OK): JsonResponse
+    protected function success(string $message = 'Success', $data = [], int $statusCode = Response::HTTP_OK): JsonResponse
     {
         return response()->json([
+            'message' => $message,
             'data' => $data,
-            'message' => $message,
         ], $statusCode);
     }
 
-    protected function errorResponse(string $message, int $statusCode): JsonResponse
+    protected function error(string $message = 'Error', array $errors = [], int $statusCode = Response::HTTP_BAD_REQUEST): JsonResponse
     {
         return response()->json([
             'message' => $message,
-        ], $statusCode);
-    }
-
-    protected function validationErrorResponse(array $errors): JsonResponse
-    {
-        return response()->json([
-            'message' => 'Validation failed',
             'errors' => $errors,
-        ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        ], $statusCode);
     }
 
-    protected function unauthorizedResponse(string $message = 'Unauthorized'): JsonResponse
+    protected function respondWithToken(string $token, string $message = 'Authenticated', int $statusCode = Response::HTTP_OK): JsonResponse
     {
-        return $this->errorResponse($message, Response::HTTP_UNAUTHORIZED);
+        return response()->json([
+            'message' => $message,
+            'data' => [
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => auth('api')->factory()->getTTL() * 60,
+            ],
+        ], $statusCode);
     }
 
-    protected function forbiddenResponse(string $message = 'Forbidden'): JsonResponse
+    protected function validationErrorResponse(array $errors, string $message = 'Validation Error', int $statusCode = Response::HTTP_UNPROCESSABLE_ENTITY): JsonResponse
     {
-        return $this->errorResponse($message, Response::HTTP_FORBIDDEN);
+        return $this->error($message, $errors, $statusCode);
     }
 
-    protected function notFoundResponse(string $message = 'Not Found'): JsonResponse
+    protected function unauthorizedResponse(string $message = 'Unauthorized', int $statusCode = Response::HTTP_UNAUTHORIZED): JsonResponse
     {
-        return $this->errorResponse($message, Response::HTTP_NOT_FOUND);
+        return $this->error($message, [], $statusCode);
+    }
+
+    protected function forbiddenResponse(string $message = 'Forbidden', int $statusCode = Response::HTTP_FORBIDDEN): JsonResponse
+    {
+        return $this->error($message, [], $statusCode);
+    }
+
+    protected function notFoundResponse(string $message = 'Not Found', int $statusCode = Response::HTTP_NOT_FOUND): JsonResponse
+    {
+        return $this->error($message, [], $statusCode);
+    }
+
+    protected function errorResponse(string $message = 'Error', int $statusCode = Response::HTTP_BAD_REQUEST): JsonResponse
+    {
+        return $this->error($message, [], $statusCode);
     }
 }

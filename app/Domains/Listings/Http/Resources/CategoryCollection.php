@@ -15,12 +15,7 @@ class CategoryCollection extends ResourceCollection
     public function toArray($request)
     {
         return [
-            'data' => $this->collection->map(function ($category) {
-                return new CategoryResource($category);
-            }),
-            'links' => [
-                'self' => url()->current(),
-            ],
+            'data' => $this->collection,
         ];
     }
 }

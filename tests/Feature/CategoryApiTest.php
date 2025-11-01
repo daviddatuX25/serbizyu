@@ -19,6 +19,7 @@ class CategoryApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed = false;
         // Create an admin user for testing authenticated actions
          // Always seed roles for tests
         Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
@@ -91,7 +92,6 @@ class CategoryApiTest extends TestCase
     public function test_categories_can_be_listed()
     {
         Category::factory()->count(5)->create();
-
         $response = $this->getJson('/api/categories');
 
         $response->assertStatus(200)

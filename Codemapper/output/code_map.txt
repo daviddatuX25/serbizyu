@@ -1682,7 +1682,7 @@ class ProfileUpdateRequest extends FormRequest
     }
 }
 ----
---app/Domains/Users/Http/Requests/Auth/LoginRequest.php
+--app/Domains/Users/Http/Requests/Auth/signinRequest.php
 <?php
 
 namespace App\Domains\Users\Http\Requests\Auth;

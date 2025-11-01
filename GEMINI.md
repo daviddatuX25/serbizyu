@@ -123,7 +123,7 @@ composer test
 *   **Tailwind CSS:** The application uses Tailwind CSS for styling.
 *   **Alpine.js:** Alpine.js is used for front-end interactivity.
 
-## Development Guidelines
+*   **Clarification First:** Before implementing any feature or making a change, take a moment to clarify the requirements with the user. This ensures that we are building the right thing and avoids rework later. This is a crucial step to ensure we build everything right and well, even if it takes a little more time upfront.
 
 *   **Domain-Centric Architecture:** Strictly adhere to the domain-driven design for all new files and modifications. Policies, HTTP controllers, form requests, and other related components must be placed within their respective domain directories (e.g., `app/Domains/Listings/Policies`, `app/Domains/Listings/Http/Controllers`, `app/Domains/Listings/Http/Requests`).
 *   **Confidence Threshold:** Before making any changes, ensure you have at least 95% confidence in the approach and implementation. If unsure, ask follow-up questions for clarification.
@@ -189,17 +189,6 @@ composer test
 ## 📦 PHASE 1: Foundation & Core API (Week 1-2)
 
 ### Milestone 1.1: API Infrastructure Setup [8/8]
-**Goal:** Set up API foundation for AJAX requests from Blade
-
-#### Backend Tasks
-- [x] Create `app/Http/Controllers/Api/ApiController.php` (base)
-- [x] Update `app/Exceptions/Handler.php` for JSON error responses
-- [x] Create `app/Http/Middleware/ForceJsonResponse.php`
-- [x] Set up `routes/api.php` with web middleware (use session auth)
-- [x] Configure CORS in `config/cors.php`
-- [x] Add API rate limiting
-- [x] Create response helper traits
-- [ ] Test JSON error responses
 
 #### Files to Create:
 ```
@@ -218,7 +207,7 @@ app/Traits/
 
 ---
 
-### Milestone 1.2: Categories API [4/6]
+### Milestone 1.2: Categories API [6/6]
 **Goal:** Complete CRUD API for categories (foundation for listings)
 
 #### Backend Tasks

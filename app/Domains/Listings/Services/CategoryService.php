@@ -18,7 +18,21 @@ class CategoryService
             $query->where('name', 'like', '%' . $filters['search'] . '%');
         }
 
-        $categories = $query->get();
+        // include soft-deleted categories if specified or maybe just have the options of all or only deleted or only active.
+        if (!empty($filters['include_deleted']) && $filters['include_deleted'] == true) {
+            $query->withTrashed();
+        }
+
+        if (!empty($filters['only_deleted']) && $filters['only_deleted'] == true) {
+            $query->onlyTrashed();
+        }
+
+        if (!empty($filters['only_active']) && $filters['only_active'] == true) {
+            $query->whereNull('deleted_at');
+        }
+
+        $perPage = $filters['per_page'] ?? 15;
+        $categories = $query->paginate($perPage);
 
         if ($categories->isEmpty()) {
             throw new ResourceNotFoundException('No categories found matching the criteria.');
@@ -56,6 +70,8 @@ class CategoryService
     public function deleteCategory(int $id): bool
     {
         $category = $this->getCategory($id);
-        return $category->delete();
+        // options for soft delete or hard delete can be implemented here
+        return $category->forceDelete();
+        // return $category->delete();
     }
 }

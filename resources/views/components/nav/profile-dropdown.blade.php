@@ -30,7 +30,7 @@
       </div>
 
       <a href="{{ route('profile.edit') }}" class="navbar-profile-item">Profile</a>
-      <a href="{{ route('creator.dashboard') }}" class="navbar-profile-item">Creator Space</a>
+      <a href="{{ route('dashboard') }}" class="navbar-profile-item">Creator Space</a>
 
       <form method="POST" action="{{ route('logout') }}">
         @csrf
@@ -55,7 +55,7 @@
 
     
 
-      <a href="{{ route('creator.dashboard') }}" class="w-full">
+      <a href="{{ route('dashboard') }}" class="w-full">
         <button class="navbar-creator-btn w-full">Creator Space</button>
       </a>
 

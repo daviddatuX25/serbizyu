@@ -33,7 +33,7 @@ class UserFactory extends Factory
         return [
             'firstname' => $firstName,
             'lastname' => $lastName,
-            'email' => $firstName . '_' . $lastName . '@example.com',
+            'email' => Str::lower($firstName . '_' . $lastName . '@example.com'),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password123'),
             'remember_token' => Str::random(10),

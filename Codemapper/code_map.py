@@ -34,9 +34,11 @@ class CodeMapGenerator:
         self.config = config or {}
         self.text_extensions = set(self.config.get('text_extensions', DEFAULT_TEXT_EXTENSIONS))
         self.skip_patterns = set(self.config.get('exclude_folders', DEFAULT_SKIP_PATTERNS))
-        self.include_folders = self.config.get('include_folders', [])
+        self.include_folders_only = self.config.get('include_folders_only', [])
+        self.add_include_folders = self.config.get('add_include_folders', [])
         self.exclude_files = set(self.config.get('exclude_files', []))
-        self.include_files = set(self.config.get('include_files', []))
+        self.include_files_only = set(self.config.get('include_files_only', []))
+        self.add_include_files = set(self.config.get('add_include_files', []))
         self.max_file_size = self.config.get('max_file_size_mb', 10) * 1024 * 1024
         self.stats = {
             'text_files': 0,
@@ -50,18 +52,23 @@ class CodeMapGenerator:
         """Check if folder should be skipped"""
         rel_path = Path(folder_path).relative_to(base_path)
         parts = rel_path.parts
+        rel_str = str(rel_path).replace('\\', '/')
         
         # Check against exclude patterns
         if any(skip in parts for skip in self.skip_patterns):
             return True
         
-        # If include_folders is specified, only process those
-        if self.include_folders:
-            rel_str = str(rel_path).replace('\\', '/')
+        # If include_folders_only is specified, only process those (whitelist mode)
+        if self.include_folders_only:
             return not any(
                 rel_str.startswith(inc) or rel_str == inc 
-                for inc in self.include_folders
+                for inc in self.include_folders_only
             )
+        
+        # If add_include_folders is specified, these are ALWAYS included (even if normally excluded)
+        if self.add_include_folders:
+            if any(rel_str.startswith(inc) or rel_str == inc for inc in self.add_include_folders):
+                return False
         
         return False
     
@@ -71,13 +78,17 @@ class CodeMapGenerator:
         rel_str = str(rel_path).replace('\\', '/')
         filename = file_path.name
         
+        # add_include_files: ALWAYS include these files (highest priority)
+        if filename in self.add_include_files or rel_str in self.add_include_files:
+            return False
+        
         # Check explicit exclusions
         if filename in self.exclude_files or rel_str in self.exclude_files:
             return True
         
-        # Check explicit inclusions (overrides other rules)
-        if self.include_files:
-            return not (filename in self.include_files or rel_str in self.include_files)
+        # include_files_only: ONLY include these files (whitelist mode)
+        if self.include_files_only:
+            return not (filename in self.include_files_only or rel_str in self.include_files_only)
         
         # Check file size
         try:
@@ -206,9 +217,10 @@ def create_sample_config(output_path='code_map_config.json'):
         ],
         "output_folder": "./output",
         "output_filename": "code_map.txt",
-        "include_folders": [
-            "app/domains",
-            "src/components"
+        "include_folders_only": [],
+        "add_include_folders": [
+            "app/special",
+            "src/important"
         ],
         "exclude_folders": [
             "node_modules",
@@ -217,7 +229,11 @@ def create_sample_config(output_path='code_map_config.json'):
             "dist",
             "build"
         ],
-        "include_files": [],
+        "include_files_only": [],
+        "add_include_files": [
+            "config.php",
+            "app/critical.js"
+        ],
         "exclude_files": [
             "package-lock.json",
             "composer.lock"
@@ -226,14 +242,25 @@ def create_sample_config(output_path='code_map_config.json'):
             ".php", ".js", ".py", ".html", ".css",
             ".json", ".md", ".txt", ".yml", ".env"
         ],
-        "max_file_size_mb": 10
+        "max_file_size_mb": 10,
+        "_comments": {
+            "include_folders_only": "WHITELIST MODE: Only process these folders (if set, ignores all others)",
+            "add_include_folders": "ALWAYS include these folders (even if they match exclude patterns)",
+            "include_files_only": "WHITELIST MODE: Only process these files (if set, ignores all others)",
+            "add_include_files": "ALWAYS include these files (even if excluded by other rules)"
+        }
     }
     
     with open(output_path, 'w') as f:
         json.dump(sample_config, f, indent=2)
     
     print(f"Sample configuration created: {output_path}")
-    print("Edit this file and run: python code_map.py --config code_map_config.json")
+    print("\nConfiguration modes:")
+    print("  include_folders_only: Whitelist mode - ONLY these folders")
+    print("  add_include_folders: Add specific folders to normal scan")
+    print("  include_files_only: Whitelist mode - ONLY these files")
+    print("  add_include_files: Add specific files to normal scan")
+    print("\nEdit this file and run: python code_map.py --config code_map_config.json")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -255,7 +282,9 @@ Examples:
     parser.add_argument('--create-config', action='store_true', 
                        help='Create a sample configuration file')
     parser.add_argument('--exclude', nargs='+', help='Additional folders to exclude')
-    parser.add_argument('--include', nargs='+', help='Specific folders to include (only these)')
+    parser.add_argument('--include-only', nargs='+', help='ONLY include these folders (whitelist)')
+    parser.add_argument('--add-include', nargs='+', help='Add these folders/files to include')
+    parser.add_argument('--add-files', nargs='+', help='Add specific files to include')
     
     args = parser.parse_args()
     
@@ -302,8 +331,12 @@ Examples:
     config = {}
     if args.exclude:
         config['exclude_folders'] = DEFAULT_SKIP_PATTERNS | set(args.exclude)
-    if args.include:
-        config['include_folders'] = args.include
+    if args.include_only:
+        config['include_folders_only'] = args.include_only
+    if args.add_include:
+        config['add_include_folders'] = args.add_include
+    if args.add_files:
+        config['add_include_files'] = args.add_files
     
     # Determine output path
     if args.output:

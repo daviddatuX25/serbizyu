@@ -1,6 +1,8 @@
 <?php
 use Illuminate\Support\Facades\Route;
 use App\Domains\Users\Http\Controllers\ProfileController;
+use App\Domains\Listings\Http\Controllers\CategoryController;
+
 // Authentication routes
 require __DIR__.'/auth.php';
 
@@ -26,11 +28,12 @@ require __DIR__.'/auth.php';
     })->name('faq');
 
 // Creator space
-   Route::middleware(['auth'])->prefix('creator')->group(function () {
+    Route::prefix('creator')->group(function () {
        Route::get('/', function () {
            return view('home');
-       })->name('creator.dashboard');
-   });
+       })->name('dashboard');
+   })->middleware(['auth']);
+   
 // Profile editor
    Route::middleware(['auth'])->prefix('profile')->group(function () {
     Route::get('/', [ProfileController::class, 'edit'])
@@ -41,4 +44,15 @@ require __DIR__.'/auth.php';
 
     Route::delete('/', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
+});
+
+// Category Management (Admin/Creator only)
+Route::middleware(['auth'])->prefix('creator')->group(function () {
+    Route::get('categories', [CategoryController::class, 'index'])->name('creator.categories.index');
+    Route::post('categories', [CategoryController::class, 'store'])->name('creator.categories.store');
+    Route::get('categories/{category}/edit', [CategoryController::class, 'edit'])->name('creator.categories.edit');
+    Route::put('categories/{category}', [CategoryController::class, 'update'])->name('creator.categories.update');
+    Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('creator.categories.destroy');
+    // Restore soft-deleted category
+    Route::patch('categories/{category}/restore', [CategoryController::class, 'restore'])->name('creator.categories.restore');
 });

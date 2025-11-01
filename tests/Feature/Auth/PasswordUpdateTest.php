@@ -2,7 +2,8 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\User;
+use App\Domains\Users\Models\User;
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -19,7 +20,7 @@ class PasswordUpdateTest extends TestCase
             ->actingAs($user)
             ->from('/profile')
             ->put('/password', [
-                'current_password' => 'password',
+                'current_password' => 'password123',
                 'password' => 'new-password',
                 'password_confirmation' => 'new-password',
             ]);
@@ -46,6 +47,6 @@ class PasswordUpdateTest extends TestCase
 
         $response
             ->assertSessionHasErrorsIn('updatePassword', 'current_password')
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('profile.edit', absolute: false));
     }
 }
