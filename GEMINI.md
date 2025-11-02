@@ -1610,11 +1610,11 @@ deploy.sh
 
 ## 📊 Summary Statistics
 
-### Total Development Effort
-- **Total Phases:** 10
-- **Total Milestones:** 46
-- **Total Tasks:** ~450
-- **Estimated Time:** ~260 hours (6-7 weeks full-time)
+### Total Development Effort (2-Week MVP)
+- **Total Phases:** 5 (1, 2, 3, 4, 8)
+- **Total Milestones:** 12
+- **Total Tasks:** ~130
+- **Estimated Time:** ~91 hours (2 weeks full-time)
 
 ### Phase Breakdown
 1. **Phase 1:** Foundation & Core API (34 hours)
@@ -1717,59 +1717,45 @@ deploy.sh
 
 ---
 
-## 📅 Recommended Sprint Schedule
+## 📅 Accelerated 2-Week MVP Schedule
 
-### Sprint 1 (Week 1): Foundation
-- Milestone 1.1: API Infrastructure
-- Milestone 1.2: Categories API
-- Milestone 1.3: Services API (partial)
+**Goal:** Deliver a functional core marketplace including APIs, ordering, messaging, and payment integration within a two-week timeframe.
 
-### Sprint 2 (Week 2): Core Listings
-- Milestone 1.3: Services API (complete)
-- Milestone 1.4: Open Offers API
-- Milestone 1.5: Bidding System
+---
 
-### Sprint 3 (Week 3): Workflows & Orders
-- Milestone 1.6: User Profile & Address
-- Milestone 1.7: Workflow Management
-- Milestone 2.1: Order System
+### **WEEK 1: Core Platform & Communication (Est. 47 hours)**
 
-### Sprint 4 (Week 4): Work Execution
-- Milestone 2.2: Work Instances
+*   **Focus:** Build the foundational APIs for all marketplace entities and establish core communication channels.
 
-### Sprint 5 (Week 5): Real-time
-- Milestone 3.1: Broadcasting Setup
-- Milestone 3.2: Notifications
-- Milestone 3.3: Messaging
+*   **Milestones:**
+    1.  **Phase 1: Foundation & Core API (34 hours)**
+        *   M1.1: API Infrastructure Setup
+        *   M1.2: Categories API
+        *   M1.3: Services API & UI Enhancement
+        *   M1.4: Open Offers API & UI
+        *   M1.5: Bidding System API & UI
+        *   M1.6: User Profile & Address API
+    2.  **Phase 3.3: Messaging System (8 hours)**
+    3.  **Phase 8.3: Email Notifications (5 hours)**
 
-### Sprint 6 (Week 6-7): Payments
-- Milestone 4.1: Payment Integration
-- Milestone 4.2: Escrow
-- Milestone 4.3: Refunds
+---
 
-### Sprint 7 (Week 8): Trust & Safety
-- Milestone 5.1: Verification
-- Milestone 5.2: Reviews
-- Milestone 5.3: Disputes
-- Milestone 5.4: Moderation
+### **WEEK 2: Transactions & Fulfillment (Est. 44 hours)**
 
-### Sprint 8 (Week 9): Quick Deals
-- Milestone 6.1: Quick Deal Core
-- Milestone 6.2: QR Codes
+*   **Focus:** Implement the entire transaction lifecycle, from order creation and work execution to payment and disbursement.
 
-### Sprint 9 (Week 10): Admin & Polish
-- Milestone 7.1: Admin Dashboard
-- Milestone 7.2: Search
-- Milestone 8.1: Performance
+*   **Milestones:**
+    1.  **Phase 2: Order System & Execution (20 hours)**
+        *   M2.1: Order System Foundation
+        *   M2.2: Work Instance Execution
+    2.  **Phase 4: Payments & Financial (24 hours)**
+        *   M4.1: Payment Integration (Xendit)
+        *   M4.2: Escrow & Disbursement
+        *   M4.3: Refunds & Cancellations
 
-### Sprint 10 (Week 11): Final Polish
-- Milestone 8.2-8.5: All polish tasks
+---
 
-### Sprint 11 (Week 12): Testing
-- Milestone 9.1-9.3: All testing tasks
-
-### Sprint 12 (Week 13+): Launch
-- Milestone 10.1-10.6: Deployment & Launch
+This schedule prioritizes the P0 features and is achievable if we maintain a high pace. All other items (P1 and P2) will be considered post-launch features.
 
 ---
 

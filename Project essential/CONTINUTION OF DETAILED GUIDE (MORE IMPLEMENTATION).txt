@@ -1,0 +1,1636 @@
+🎯 EXTENDED IMPLEMENTATION GUIDE
+Session 2: Advanced Features & Clarifications
+Based on your detailed Q&A session, here are the critical extensions and clarifications to the main guide.
+
+I. WORK EXECUTION SYSTEM - DEEP DIVE
+A. Activity-Based Progression Architecture
+Core Concept Clarification:
+Workflow Template (reusable)
+    ↓ clones to
+Work Instance (per order, per step)
+    ↓ contains
+Activity Threads (comments/updates by users)
+    ↓ can have
+Thread Media (attachments)
+    ↓ and
+Thread Messages (conversations within thread)
+B. Database Schema for Activities
+php// database/migrations/xxxx_create_work_instances_table.php
+Schema::create('work_instances', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('order_id')->constrained()->onDelete('cascade');
+    $table->foreignId('work_template_id')->constrained(); // Reference to original template
+    $table->unsignedInteger('order_index'); // Position in workflow (0, 1, 2...)
+    $table->enum('status', ['pending', 'in_progress', 'completed', 'skipped'])->default('pending');
+    $table->string('label'); // From work_catalog or custom
+    $table->json('config')->nullable(); // Step-specific configuration
+    $table->timestamp('started_at')->nullable();
+    $table->timestamp('completed_at')->nullable();
+    $table->timestamps();
+    
+    $table->index(['order_id', 'order_index']);
+});
+
+// database/migrations/xxxx_create_activity_threads_table.php
+Schema::create('activity_threads', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('work_instance_id')->constrained()->onDelete('cascade');
+    $table->foreignId('creator_id')->constrained('users'); // Who created this thread
+    $table->string('title')->nullable(); // Optional thread title
+    $table->text('content'); // Main thread content/description
+    $table->enum('type', ['update', 'question', 'evidence', 'issue'])->default('update');
+    $table->timestamps();
+    
+    $table->index(['work_instance_id', 'created_at']);
+});
+
+// database/migrations/xxxx_create_activity_thread_media_table.php
+Schema::create('activity_thread_media', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('activity_thread_id')->constrained()->onDelete('cascade');
+    $table->string('path');
+    $table->string('thumbnail_path')->nullable();
+    $table->enum('media_type', ['image', 'video', 'document'])->default('image');
+    $table->string('mime_type');
+    $table->bigInteger('file_size');
+    $table->unsignedInteger('order_index')->default(0);
+    $table->timestamps();
+});
+
+// database/migrations/xxxx_create_thread_messages_table.php
+// Messages WITHIN an activity thread (conversation)
+Schema::create('thread_messages', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('activity_thread_id')->constrained()->onDelete('cascade');
+    $table->foreignId('sender_id')->constrained('users');
+    $table->text('content');
+    $table->timestamps();
+    
+    $table->index(['activity_thread_id', 'created_at']);
+});
+
+// database/migrations/xxxx_create_activity_prompts_table.php
+// Blocking questions that require answers before progression
+Schema::create('activity_prompts', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('work_instance_id')->constrained()->onDelete('cascade');
+    $table->foreignId('creator_id')->constrained('users'); // Who created the prompt
+    $table->enum('for_role', ['customer', 'servicer']); // Who must answer
+    $table->string('question');
+    $table->text('answer')->nullable();
+    $table->foreignId('answered_by')->nullable()->constrained('users');
+    $table->boolean('is_strict')->default(false); // If true, blocks progression
+    $table->timestamp('answered_at')->nullable();
+    $table->timestamps();
+    
+    $table->index(['work_instance_id', 'is_strict', 'answered_at']);
+});
+C. Work Instance Progression Service
+php// app/Domains/Orders/Services/WorkInstanceService.php
+<?php
+
+namespace App\Domains\Orders\Services;
+
+use App\Domains\Orders\Models\WorkInstance;
+use App\Domains\Orders\Models\Order;
+use App\Domains\Orders\Models\ActivityThread;
+use App\Domains\Orders\Models\ActivityPrompt;
+use App\Exceptions\BusinessRuleException;
+use Illuminate\Support\Facades\DB;
+
+class WorkInstanceService
+{
+    /**
+     * Progress to next work instance
+     * Checks strict prompts, updates status, creates next instance
+     */
+    public function progressToNext(int $workInstanceId, int $userId): WorkInstance
+    {
+        $currentInstance = WorkInstance::with('order', 'strictPrompts')->findOrFail($workInstanceId);
+        
+        // Authorization check
+        $this->authorizeProgression($currentInstance, $userId);
+        
+        // Check for unanswered strict prompts
+        if ($this->hasUnansweredStrictPrompts($currentInstance)) {
+            throw new BusinessRuleException(
+                'Cannot progress: There are unanswered required questions.'
+            );
+        }
+        
+        return DB::transaction(function () use ($currentInstance) {
+            // Mark current instance as completed
+            $currentInstance->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+            
+            // Get next instance
+            $nextInstance = WorkInstance::where('order_id', $currentInstance->order_id)
+                ->where('order_index', $currentInstance->order_index + 1)
+                ->first();
+            
+            if ($nextInstance) {
+                $nextInstance->update([
+                    'status' => 'in_progress',
+                    'started_at' => now(),
+                ]);
+                
+                event(new WorkInstanceProgressed($currentInstance, $nextInstance));
+                
+                return $nextInstance;
+            }
+            
+            // No more instances - order workflow complete
+            $this->completeOrderWorkflow($currentInstance->order);
+            
+            return $currentInstance;
+        });
+    }
+    
+    /**
+     * Skip a work instance (requires both parties agreement via message)
+     */
+    public function skipInstance(int $workInstanceId, int $userId, string $reason): WorkInstance
+    {
+        $instance = WorkInstance::with('order')->findOrFail($workInstanceId);
+        
+        $this->authorizeProgression($instance, $userId);
+        
+        $instance->update([
+            'status' => 'skipped',
+            'completed_at' => now(),
+        ]);
+        
+        // Log skip reason as activity thread
+        ActivityThread::create([
+            'work_instance_id' => $instance->id,
+            'creator_id' => $userId,
+            'type' => 'update',
+            'content' => "Step skipped: {$reason}",
+        ]);
+        
+        event(new WorkInstanceSkipped($instance, $reason));
+        
+        // Auto-progress to next
+        return $this->progressToNext($workInstanceId, $userId);
+    }
+    
+    /**
+     * Create activity thread with optional media
+     */
+    public function createActivityThread(array $data): ActivityThread
+    {
+        return DB::transaction(function () use ($data) {
+            $thread = ActivityThread::create([
+                'work_instance_id' => $data['work_instance_id'],
+                'creator_id' => $data['creator_id'],
+                'title' => $data['title'] ?? null,
+                'content' => $data['content'],
+                'type' => $data['type'] ?? 'update',
+            ]);
+            
+            // Attach media if provided
+            if (!empty($data['media'])) {
+                foreach ($data['media'] as $file) {
+                    $path = $file->store('activity-media', 'public');
+                    
+                    $thread->media()->create([
+                        'path' => $path,
+                        'media_type' => $this->detectMediaType($file),
+                        'mime_type' => $file->getMimeType(),
+                        'file_size' => $file->getSize(),
+                    ]);
+                }
+            }
+            
+            event(new ActivityThreadCreated($thread));
+            
+            return $thread->load('media');
+        });
+    }
+    
+    /**
+     * Create a strict prompt that blocks progression
+     */
+    public function createPrompt(array $data): ActivityPrompt
+    {
+        $prompt = ActivityPrompt::create([
+            'work_instance_id' => $data['work_instance_id'],
+            'creator_id' => $data['creator_id'],
+            'for_role' => $data['for_role'], // 'customer' or 'servicer'
+            'question' => $data['question'],
+            'is_strict' => $data['is_strict'] ?? false,
+        ]);
+        
+        // Notify the person who needs to answer
+        event(new PromptCreated($prompt));
+        
+        return $prompt;
+    }
+    
+    /**
+     * Answer a prompt
+     */
+    public function answerPrompt(int $promptId, int $userId, string $answer): ActivityPrompt
+    {
+        $prompt = ActivityPrompt::with('workInstance.order')->findOrFail($promptId);
+        
+        // Check user is authorized to answer (must match for_role)
+        $this->authorizePromptAnswer($prompt, $userId);
+        
+        $prompt->update([
+            'answer' => $answer,
+            'answered_by' => $userId,
+            'answered_at' => now(),
+        ]);
+        
+        event(new PromptAnswered($prompt));
+        
+        return $prompt;
+    }
+    
+    // Private helper methods
+    
+    private function authorizeProgression(WorkInstance $instance, int $userId): void
+    {
+        $order = $instance->order;
+        
+        // Only servicer (seller) can progress by default
+        if ($order->seller_id !== $userId) {
+            throw new AuthorizationException('Only the service provider can progress the workflow.');
+        }
+    }
+    
+    private function hasUnansweredStrictPrompts(WorkInstance $instance): bool
+    {
+        return $instance->prompts()
+            ->where('is_strict', true)
+            ->whereNull('answered_at')
+            ->exists();
+    }
+    
+    private function completeOrderWorkflow(Order $order): void
+    {
+        $order->update(['workflow_status' => 'completed']);
+        event(new OrderWorkflowCompleted($order));
+    }
+    
+    private function authorizePromptAnswer(ActivityPrompt $prompt, int $userId): void
+    {
+        $order = $prompt->workInstance->order;
+        
+        if ($prompt->for_role === 'customer' && $order->buyer_id !== $userId) {
+            throw new AuthorizationException('Only the customer can answer this question.');
+        }
+        
+        if ($prompt->for_role === 'servicer' && $order->seller_id !== $userId) {
+            throw new AuthorizationException('Only the service provider can answer this question.');
+        }
+    }
+    
+    private function detectMediaType($file): string
+    {
+        $mime = $file->getMimeType();
+        if (str_starts_with($mime, 'image/')) return 'image';
+        if (str_starts_with($mime, 'video/')) return 'video';
+        return 'document';
+    }
+}
+D. Work Instance UI Component
+blade<!-- resources/views/orders/work-instances.blade.php -->
+<div x-data="workInstanceManager({{ $order->id }})" x-init="init()" class="max-w-4xl mx-auto p-6">
+  
+  <!-- Progress Bar -->
+  <div class="mb-8">
+    <div class="flex justify-between text-sm mb-2">
+      <span>Workflow Progress</span>
+      <span x-text="`Step ${currentIndex + 1} of ${totalSteps}`"></span>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-2">
+      <div class="bg-green-600 h-2 rounded-full transition-all" 
+           :style="`width: ${progress}%`"></div>
+    </div>
+  </div>
+
+  <!-- Current Step -->
+  <div x-show="currentInstance" class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-2xl font-bold mb-2" x-text="currentInstance?.label"></h2>
+    <p class="text-gray-600 mb-4" x-text="currentInstance?.config?.description"></p>
+    
+    <!-- Unanswered Prompts Alert -->
+    <div x-show="strictPromptsCount > 0" 
+         class="bg-yellow-100 border border-yellow-400 rounded p-4 mb-4">
+      <p class="font-semibold">⚠️ Required Questions</p>
+      <p class="text-sm">You must answer <span x-text="strictPromptsCount"></span> question(s) before continuing.</p>
+    </div>
+
+    <!-- Activity Threads -->
+    <div class="space-y-4 mb-6">
+      <h3 class="font-semibold text-lg">Activity Updates</h3>
+      
+      <template x-for="thread in threads" :key="thread.id">
+        <div class="border rounded-lg p-4">
+          <div class="flex items-start justify-between mb-2">
+            <div>
+              <span class="font-medium" x-text="thread.creator.name"></span>
+              <span class="text-xs text-gray-500 ml-2" x-text="formatDate(thread.created_at)"></span>
+            </div>
+            <span class="px-2 py-1 text-xs rounded" 
+                  :class="{
+                    'bg-blue-100 text-blue-700': thread.type === 'update',
+                    'bg-yellow-100 text-yellow-700': thread.type === 'question',
+                    'bg-green-100 text-green-700': thread.type === 'evidence',
+                    'bg-red-100 text-red-700': thread.type === 'issue'
+                  }"
+                  x-text="thread.type"></span>
+          </div>
+          
+          <h4 x-show="thread.title" class="font-medium mb-1" x-text="thread.title"></h4>
+          <p class="text-gray-700 mb-3" x-text="thread.content"></p>
+          
+          <!-- Media Gallery -->
+          <div x-show="thread.media && thread.media.length > 0" 
+               class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+            <template x-for="media in thread.media" :key="media.id">
+              <img :src="`/storage/${media.thumbnail_path || media.path}`" 
+                   :alt="media.media_type"
+                   class="w-full aspect-square object-cover rounded cursor-pointer"
+                   @click="openLightbox(media)">
+            </template>
+          </div>
+          
+          <!-- Thread Messages (Comments on this activity) -->
+          <div x-show="thread.messages && thread.messages.length > 0" class="mt-3 pl-4 border-l-2">
+            <template x-for="msg in thread.messages" :key="msg.id">
+              <div class="text-sm mb-2">
+                <span class="font-medium" x-text="msg.sender.name"></span>:
+                <span x-text="msg.content"></span>
+              </div>
+            </template>
+          </div>
+          
+          <!-- Reply to thread -->
+          <div x-data="{ replying: false }" class="mt-2">
+            <button @click="replying = !replying" class="text-sm text-green-600 hover:underline">
+              Reply
+            </button>
+            <div x-show="replying" x-transition class="mt-2">
+              <input type="text" 
+                     x-model="replyContent"
+                     @keydown.enter="replyToThread(thread.id)"
+                     placeholder="Write a reply..."
+                     class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+          </div>
+        </div>
+      </template>
+      
+      <!-- No threads yet -->
+      <div x-show="threads.length === 0" class="text-center text-gray-500 py-8">
+        No activity updates yet. Be the first to add one!
+      </div>
+    </div>
+
+    <!-- Prompts Section -->
+    <div x-show="prompts.length > 0" class="mb-6">
+      <h3 class="font-semibold text-lg mb-3">Questions</h3>
+      <template x-for="prompt in prompts" :key="prompt.id">
+        <div class="border rounded-lg p-4 mb-3"
+             :class="prompt.is_strict ? 'border-yellow-400 bg-yellow-50' : ''">
+          <div class="flex items-start justify-between mb-2">
+            <p class="font-medium" x-text="prompt.question"></p>
+            <span x-show="prompt.is_strict" 
+                  class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded">
+              Required
+            </span>
+          </div>
+          
+          <div x-show="prompt.answered_at">
+            <p class="text-sm text-gray-600 mb-1">
+              Answered by <span x-text="prompt.answered_by?.name"></span>
+            </p>
+            <p class="text-gray-800" x-text="prompt.answer"></p>
+          </div>
+          
+          <div x-show="!prompt.answered_at && canAnswerPrompt(prompt)">
+            <textarea x-model="promptAnswers[prompt.id]"
+                      placeholder="Your answer..."
+                      class="w-full border rounded px-3 py-2 text-sm mb-2"></textarea>
+            <button @click="answerPrompt(prompt.id)" 
+                    class="btn btn-primary btn-sm">
+              Submit Answer
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex gap-3 flex-wrap">
+      <!-- Create Activity Thread -->
+      <button @click="showCreateThreadModal = true" 
+              class="btn btn-secondary">
+        📝 Add Update
+      </button>
+      
+      <!-- Create Prompt (Servicer only) -->
+      <button x-show="userRole === 'servicer'" 
+              @click="showCreatePromptModal = true"
+              class="btn btn-secondary">
+        ❓ Ask Question
+      </button>
+      
+      <!-- Skip Step (Servicer only) -->
+      <button x-show="userRole === 'servicer'" 
+              @click="showSkipModal = true"
+              class="btn btn-secondary">
+        ⏭️ Skip Step
+      </button>
+      
+      <!-- Progress to Next (Servicer only) -->
+      <button x-show="userRole === 'servicer' && strictPromptsCount === 0" 
+              @click="progressToNext"
+              :disabled="progressing"
+              class="btn btn-primary">
+        <span x-show="!progressing">✓ Complete & Continue</span>
+        <span x-show="progressing">Processing...</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Completed Steps List -->
+  <div class="bg-white rounded-lg shadow p-6">
+    <h3 class="font-semibold text-lg mb-4">Workflow History</h3>
+    <div class="space-y-2">
+      <template x-for="instance in allInstances" :key="instance.id">
+        <div class="flex items-center justify-between p-3 border rounded"
+             :class="{
+               'bg-green-50 border-green-300': instance.status === 'completed',
+               'bg-blue-50 border-blue-300': instance.status === 'in_progress',
+               'bg-gray-50': instance.status === 'pending',
+               'bg-yellow-50 border-yellow-300': instance.status === 'skipped'
+             }">
+          <div>
+            <span class="font-medium" x-text="instance.label"></span>
+            <span class="text-xs text-gray-500 ml-2" x-text="instance.status"></span>
+          </div>
+          <span x-show="instance.completed_at" 
+                class="text-xs text-gray-600"
+                x-text="formatDate(instance.completed_at)"></span>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <x-modal name="create-thread" :show="showCreateThreadModal">
+    <!-- Create Thread Form -->
+  </x-modal>
+  
+  <x-modal name="create-prompt" :show="showCreatePromptModal">
+    <!-- Create Prompt Form -->
+  </x-modal>
+  
+  <x-modal name="skip-step" :show="showSkipModal">
+    <!-- Skip Step Confirmation -->
+  </x-modal>
+</div>
+
+<script>
+function workInstanceManager(orderId) {
+  return {
+    orderId: orderId,
+    currentInstance: null,
+    currentIndex: 0,
+    totalSteps: 0,
+    progress: 0,
+    threads: [],
+    prompts: [],
+    strictPromptsCount: 0,
+    allInstances: [],
+    userRole: '{{ auth()->user()->id === $order->seller_id ? "servicer" : "customer" }}',
+    progressing: false,
+    showCreateThreadModal: false,
+    showCreatePromptModal: false,
+    showSkipModal: false,
+    replyContent: '',
+    promptAnswers: {},
+
+    async init() {
+      await this.loadWorkInstances();
+      this.setupRealTimeListeners();
+    },
+
+    async loadWorkInstances() {
+      const response = await fetch(`/api/orders/${this.orderId}/work-instances`);
+      const data = await response.json();
+      
+      this.allInstances = data.instances;
+      this.totalSteps = data.instances.length;
+      this.currentInstance = data.instances.find(i => i.status === 'in_progress');
+      this.currentIndex = this.currentInstance?.order_index || 0;
+      this.progress = ((this.currentIndex) / this.totalSteps) * 100;
+      
+      if (this.currentInstance) {
+        await this.loadThreadsAndPrompts(this.currentInstance.id);
+      }
+    },
+
+    async loadThreadsAndPrompts(instanceId) {
+      // Load activity threads
+      const threadsRes = await fetch(`/api/work-instances/${instanceId}/threads`);
+      this.threads = await threadsRes.json();
+      
+      // Load prompts
+      const promptsRes = await fetch(`/api/work-instances/${instanceId}/prompts`);
+      this.prompts = await promptsRes.json();
+      
+      this.strictPromptsCount = this.prompts.filter(
+        p => p.is_strict && !p.answered_at
+      ).length;
+    },
+
+    setupRealTimeListeners() {
+      window.Echo.channel(`orders.${this.orderId}`)
+        .listen('WorkInstanceProgressed', (e) => {
+          this.loadWorkInstances();
+          window.toast('info', 'Workflow Updated', 'Progressed to next step');
+        })
+        .listen('ActivityThreadCreated', (e) => {
+          if (e.thread.work_instance_id === this.currentInstance?.id) {
+            this.threads.push(e.thread);
+          }
+        })
+        .listen('PromptCreated', (e) => {
+          if (e.prompt.work_instance_id === this.currentInstance?.id) {
+            this.prompts.push(e.prompt);
+            if (e.prompt.is_strict) this.strictPromptsCount++;
+          }
+        })
+        .listen('PromptAnswered', (e) => {
+          const prompt = this.prompts.find(p => p.id === e.prompt.id);
+          if (prompt) {
+            Object.assign(prompt, e.prompt);
+            if (prompt.is_strict) this.strictPromptsCount--;
+          }
+        });
+    },
+
+    async progressToNext() {
+      if (this.strictPromptsCount > 0) {
+        window.toast('error', 'Cannot Progress', 'Please answer all required questions first');
+        return;
+      }
+
+      this.progressing = true;
+      try {
+        const response = await fetch(`/api/work-instances/${this.currentInstance.id}/progress`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+          }
+        });
+
+        if (response.ok) {
+          window.toast('success', 'Progress', 'Moved to next step');
+          await this.loadWorkInstances();
+        }
+      } catch (error) {
+        window.toast('error', 'Error', 'Failed to progress workflow');
+      } finally {
+        this.progressing = false;
+      }
+    },
+
+    async replyToThread(threadId) {
+      if (!this.replyContent.trim()) return;
+
+      const response = await fetch(`/api/activity-threads/${threadId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ content: this.replyContent })
+      });
+
+      if (response.ok) {
+        const message = await response.json();
+        const thread = this.threads.find(t => t.id === threadId);
+        if (!thread.messages) thread.messages = [];
+        thread.messages.push(message);
+        this.replyContent = '';
+      }
+    },
+
+    async answerPrompt(promptId) {
+      const answer = this.promptAnswers[promptId];
+      if (!answer?.trim()) return;
+
+      const response = await fetch(`/api/activity-prompts/${promptId}/answer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ answer })
+      });
+
+      if (response.ok) {
+        window.toast('success', 'Answered', 'Your answer has been submitted');
+        await this.loadThreadsAndPrompts(this.currentInstance.id);
+      }
+    },
+
+    canAnswerPrompt(prompt) {
+      if (this.userRole === 'servicer' && prompt.for_role === 'servicer') return true;
+      if (this.userRole === 'customer' && prompt.for_role === 'customer') return true;
+      return false;
+    },
+
+    formatDate(date) {
+      return new Date(date).toLocaleString();
+    }
+  }
+}
+</script>
+
+II. MESSAGING SYSTEM - POLYMORPHIC ARCHITECTURE
+A. Unified Messaging Schema
+php// THREE SEPARATE USE CASES:
+
+// 1. USER-TO-USER DIRECT MESSAGING (no thread context)
+Schema::create('direct_messages', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('sender_id')->constrained('users');
+    $table->foreignId('receiver_id')->constrained('users');
+    $table->text('content');
+    $table->timestamp('read_at')->nullable();
+    $table->timestamps();
+    
+    $table->index(['sender_id', 'receiver_id', 'created_at']);
+});
+
+// 2. CONTEXTUAL THREADS (attached to listings, bids, etc.)
+Schema::create('message_threads', function (Blueprint $table) {
+    $table->id();
+    $table->morphs('threadable'); // open_offers, services, quick_deals
+    $table->string('subject')->nullable();
+    $table->timestamps();
+});
+
+Schema::create('thread_participants', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('message_thread_id')->constrained()->onDelete('cascade');
+    $table->foreignId('user_id')->constrained()->onDelete('cascade');
+    $table->timestamp('last_read_at')->nullable();
+    $table->timestamps();
+    
+    $table->unique(['message_thread_id', 'user_id']);
+});
+
+Schema::create('thread_messages', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('message_thread_id')->constrained()->onDelete('cascade');
+    $table->foreignId('sender_id')->constrained('users');
+    $table->text('content');
+    $table->timestamps();
+    
+    $table->index(['message_thread_id', 'created_at']);
+});
+
+// 3. ACTIVITY THREADS (already covered above - part of work instances)
+B. Message Models
+php// app/Domains/Messaging/Models/MessageThread.php
+<?php
+
+namespace App\Domains\Messaging\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class MessageThread extends Model
+{
+    protected $fillable = ['subject'];
+
+    public function threadable()
+    {
+        return $this->morphTo();
+    }
+
+    public function participants()
+    {
+        return $this->belongsToMany(User::class, 'thread_participants')
+            ->withPivot('last_read_at')
+            ->withTimestamps();
+    }
+
+    public function messages()
+    {
+        return $this->hasMany(ThreadMessage::class, 'message_thread_id');
+    }
+
+    public function latestMessage()
+    {
+        return $this->hasOne(ThreadMessage::class, 'message_thread_id')->latest();
+    }
+
+    // Check if user is participant
+    public function hasParticipant(int $userId): bool
+    {
+        return $this->participants()->where('user_id', $userId)->exists();
+    }
+
+    // Get unread count for user
+    public function unreadCountFor(int $userId): int
+    {
+        $participant = $this->participants()->where('user_id', $userId)->first();
+        if (!$participant) return 0;
+
+        return $this->messages()
+            ->where('sender_id', '!=', $userId)
+            ->where('created_at', '>', $participant->pivot->last_read_at ?? $this->created_at)
+            ->count();
+    }
+}
+
+// app/Domains/Listings/Models/OpenOffer.php - Add relationship
+public function messageThreads()
+{
+    return $this->morphMany(MessageThread::class, 'threadable');
+}
+
+// Usage: Comment on open offer
+$thread = $openOffer->messageThreads()->create(['subject' => 'Question about budget']);
+$thread->participants()->attach([$buyerId, $sellerId]);
+$thread->messages()->create([
+    'sender_id' => $buyerId,
+    'content' => 'Can you negotiate on the price?'
+]);
+
+III. QUICK DEALS - COMPLETE IMPLEMENTATION
+A. Quick Deal Database Schema
+php// database/migrations/xxxx_create_quick_deals_table.php
+Schema::create('quick_deals', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('creator_id')->constrained('users');
+    $table->string('title');
+    $table->text('description')->nullable();
+    $table->enum('mode', ['one_way', 'two_way'])->default('two_way');
+    // one_way: Scanner canRetryDDContinuephp// database/migrations/xxxx_create_quick_deals_table.php (continued)
+Schema::create('quick_deals', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('creator_id')->constrained('users');
+    $table->string('title');
+    $table->text('description')->nullable();
+    $table->enum('mode', ['one_way', 'two_way'])->default('two_way');
+    // one_way: Scanner can immediately send requests (potential spam)
+    // two_way: Both parties must accept before starting session
+    
+    $table->enum('scope', ['single_service', 'multiple_services', 'all_services'])->default('all_services');
+    // single_service: QR links to one specific service
+    // multiple_services: QR links to selected services
+    // all_services: QR shows entire catalog (dynamic)
+    
+    $table->string('qr_code_path')->nullable(); // Stored QR image
+    $table->string('qr_token')->unique(); // UUID for scanning
+    $table->boolean('is_active')->default(true);
+    $table->timestamp('expires_at')->nullable(); // Optional expiration
+    $table->timestamps();
+    $table->softDeletes();
+});
+
+// Pivot table for multiple_services scope
+Schema::create('quick_deal_services', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('quick_deal_id')->constrained()->onDelete('cascade');
+    $table->foreignId('service_id')->constrained()->onDelete('cascade');
+    $table->timestamps();
+    
+    $table->unique(['quick_deal_id', 'service_id']);
+});
+
+// Session tracking (for two_way mode)
+Schema::create('quick_deal_sessions', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('quick_deal_id')->constrained()->onDelete('cascade');
+    $table->foreignId('scanner_id')->constrained('users'); // Who scanned
+    $table->foreignId('creator_id')->constrained('users'); // QR owner
+    $table->enum('status', ['pending', 'accepted', 'rejected', 'expired'])->default('pending');
+    $table->timestamp('expires_at'); // Session expiry (e.g., 5 minutes)
+    $table->timestamp('accepted_at')->nullable();
+    $table->timestamps();
+    
+    $table->index(['scanner_id', 'status', 'created_at']);
+});
+
+// Request/Proposal within session
+Schema::create('quick_deal_requests', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('quick_deal_session_id')->constrained()->onDelete('cascade');
+    $table->foreignId('proposer_id')->constrained('users'); // Who proposes
+    $table->foreignId('service_id')->nullable()->constrained(); // Proposed service
+    $table->decimal('proposed_price', 10, 2)->nullable(); // Custom price
+    $table->text('message')->nullable();
+    $table->enum('status', ['pending', 'accepted', 'rejected'])->default('pending');
+    $table->foreignId('order_id')->nullable()->constrained(); // Created order
+    $table->timestamps();
+    
+    $table->index(['quick_deal_session_id', 'status']);
+});
+B. Quick Deal Models
+php// app/Domains/QuickDeals/Models/QuickDeal.php
+<?php
+
+namespace App\Domains\QuickDeals\Models;
+
+use App\Domains\Users\Models\User;
+use App\Domains\Listings\Models\Service;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
+
+class QuickDeal extends Model
+{
+    use SoftDeletes;
+
+    protected $fillable = [
+        'creator_id',
+        'title',
+        'description',
+        'mode',
+        'scope',
+        'qr_code_path',
+        'qr_token',
+        'is_active',
+        'expires_at',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+        'expires_at' => 'datetime',
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        
+        // Auto-generate QR token on creation
+        static::creating(function ($quickDeal) {
+            if (empty($quickDeal->qr_token)) {
+                $quickDeal->qr_token = Str::uuid();
+            }
+        });
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function services()
+    {
+        return $this->belongsToMany(Service::class, 'quick_deal_services');
+    }
+
+    public function sessions()
+    {
+        return $this->hasMany(QuickDealSession::class);
+    }
+
+    public function activeSessions()
+    {
+        return $this->hasMany(QuickDealSession::class)
+            ->where('status', 'accepted')
+            ->where('expires_at', '>', now());
+    }
+
+    // Check if QR is still valid
+    public function isValid(): bool
+    {
+        if (!$this->is_active) return false;
+        if ($this->trashed()) return false;
+        if ($this->expires_at && $this->expires_at->isPast()) return false;
+        return true;
+    }
+
+    // Get available services based on scope
+    public function getAvailableServices()
+    {
+        return match($this->scope) {
+            'single_service' => $this->services()->limit(1)->get(),
+            'multiple_services' => $this->services,
+            'all_services' => $this->creator->services()->where('status', 'active')->get(),
+        };
+    }
+}
+
+// app/Domains/QuickDeals/Models/QuickDealSession.php
+<?php
+
+namespace App\Domains\QuickDeals\Models;
+
+use App\Domains\Users\Models\User;
+use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
+
+class QuickDealSession extends Model
+{
+    protected $fillable = [
+        'quick_deal_id',
+        'scanner_id',
+        'creator_id',
+        'status',
+        'expires_at',
+        'accepted_at',
+    ];
+
+    protected $casts = [
+        'expires_at' => 'datetime',
+        'accepted_at' => 'datetime',
+    ];
+
+    public function quickDeal()
+    {
+        return $this->belongsTo(QuickDeal::class);
+    }
+
+    public function scanner()
+    {
+        return $this->belongsTo(User::class, 'scanner_id');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    public function requests()
+    {
+        return $this->hasMany(QuickDealRequest::class);
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at->isPast();
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'accepted' && !$this->isExpired();
+    }
+}
+
+// app/Domains/QuickDeals/Models/QuickDealRequest.php
+<?php
+
+namespace App\Domains\QuickDeals\Models;
+
+use App\Domains\Users\Models\User;
+use App\Domains\Listings\Models\Service;
+use App\Domains\Orders\Models\Order;
+use Illuminate\Database\Eloquent\Model;
+
+class QuickDealRequest extends Model
+{
+    protected $fillable = [
+        'quick_deal_session_id',
+        'proposer_id',
+        'service_id',
+        'proposed_price',
+        'message',
+        'status',
+        'order_id',
+    ];
+
+    protected $casts = [
+        'proposed_price' => 'decimal:2',
+    ];
+
+    public function session()
+    {
+        return $this->belongsTo(QuickDealSession::class, 'quick_deal_session_id');
+    }
+
+    public function proposer()
+    {
+        return $this->belongsTo(User::class, 'proposer_id');
+    }
+
+    public function service()
+    {
+        return $this->belongsTo(Service::class);
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+}
+C. Quick Deal Service
+php// app/Domains/QuickDeals/Services/QuickDealService.php
+<?php
+
+namespace App\Domains\QuickDeals\Services;
+
+use App\Domains\QuickDeals\Models\QuickDeal;
+use App\Domains\QuickDeals\Models\QuickDealSession;
+use App\Domains\QuickDeals\Models\QuickDealRequest;
+use App\Domains\Orders\Services\OrderService;
+use App\Exceptions\BusinessRuleException;
+use App\Exceptions\ResourceNotFoundException;
+use Illuminate\Support\Facades\DB;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Carbon\Carbon;
+
+class QuickDealService
+{
+    public function __construct(
+        private OrderService $orderService
+    ) {}
+
+    /**
+     * Create Quick Deal with QR code
+     */
+    public function createQuickDeal(int $creatorId, array $data): QuickDeal
+    {
+        return DB::transaction(function () use ($creatorId, $data) {
+            $quickDeal = QuickDeal::create([
+                'creator_id' => $creatorId,
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'mode' => $data['mode'] ?? 'two_way',
+                'scope' => $data['scope'] ?? 'all_services',
+                'expires_at' => $data['expires_at'] ?? null,
+            ]);
+
+            // Attach specific services if scope is single or multiple
+            if (in_array($quickDeal->scope, ['single_service', 'multiple_services'])) {
+                if (empty($data['service_ids'])) {
+                    throw new BusinessRuleException('Must specify services for this scope.');
+                }
+                $quickDeal->services()->attach($data['service_ids']);
+            }
+
+            // Generate QR Code
+            $this->generateQrCode($quickDeal);
+
+            event(new QuickDealCreated($quickDeal));
+
+            return $quickDeal->load('services');
+        });
+    }
+
+    /**
+     * Scan QR Code - initiate session
+     */
+    public function scanQuickDeal(string $qrToken, int $scannerId): QuickDealSession|QuickDeal
+    {
+        $quickDeal = QuickDeal::where('qr_token', $qrToken)->firstOrFail();
+
+        // Validation
+        if (!$quickDeal->isValid()) {
+            throw new BusinessRuleException('This Quick Deal is no longer active.');
+        }
+
+        // Cannot scan your own QR
+        if ($quickDeal->creator_id === $scannerId) {
+            throw new BusinessRuleException('You cannot scan your own Quick Deal.');
+        }
+
+        // Rate limiting: Max 3 scans per minute per user
+        $recentScans = QuickDealSession::where('scanner_id', $scannerId)
+            ->where('created_at', '>', now()->subMinute())
+            ->count();
+        
+        if ($recentScans >= 3) {
+            throw new BusinessRuleException('Too many scans. Please wait a moment.');
+        }
+
+        // TWO-WAY MODE: Create pending session (requires creator acceptance)
+        if ($quickDeal->mode === 'two_way') {
+            $session = QuickDealSession::create([
+                'quick_deal_id' => $quickDeal->id,
+                'scanner_id' => $scannerId,
+                'creator_id' => $quickDeal->creator_id,
+                'status' => 'pending',
+                'expires_at' => now()->addMinutes(5), // 5 min to accept
+            ]);
+
+            // Notify creator via broadcast
+            event(new QuickDealSessionRequested($session));
+
+            return $session;
+        }
+
+        // ONE-WAY MODE: Auto-accept session
+        $session = QuickDealSession::create([
+            'quick_deal_id' => $quickDeal->id,
+            'scanner_id' => $scannerId,
+            'creator_id' => $quickDeal->creator_id,
+            'status' => 'accepted',
+            'accepted_at' => now(),
+            'expires_at' => now()->addMinutes(30), // 30 min session
+        ]);
+
+        event(new QuickDealSessionStarted($session));
+
+        return $session;
+    }
+
+    /**
+     * Accept session request (two-way mode)
+     */
+    public function acceptSession(int $sessionId, int $userId): QuickDealSession
+    {
+        $session = QuickDealSession::findOrFail($sessionId);
+
+        // Authorization
+        if ($session->creator_id !== $userId) {
+            throw new AuthorizationException('Only the QR owner can accept.');
+        }
+
+        // Validate
+        if ($session->status !== 'pending') {
+            throw new BusinessRuleException('Session already processed.');
+        }
+
+        if ($session->isExpired()) {
+            $session->update(['status' => 'expired']);
+            throw new BusinessRuleException('Session request has expired.');
+        }
+
+        $session->update([
+            'status' => 'accepted',
+            'accepted_at' => now(),
+            'expires_at' => now()->addMinutes(30), // Extend to 30 min
+        ]);
+
+        event(new QuickDealSessionAccepted($session));
+
+        return $session;
+    }
+
+    /**
+     * Reject session request
+     */
+    public function rejectSession(int $sessionId, int $userId): QuickDealSession
+    {
+        $session = QuickDealSession::findOrFail($sessionId);
+
+        if ($session->creator_id !== $userId) {
+            throw new AuthorizationException('Only the QR owner can reject.');
+        }
+
+        $session->update(['status' => 'rejected']);
+
+        event(new QuickDealSessionRejected($session));
+
+        return $session;
+    }
+
+    /**
+     * Submit service proposal/request within session
+     */
+    public function submitRequest(int $sessionId, int $proposerId, array $data): QuickDealRequest
+    {
+        $session = QuickDealSession::with('quickDeal')->findOrFail($sessionId);
+
+        // Validation
+        if (!$session->isActive()) {
+            throw new BusinessRuleException('Session is not active or has expired.');
+        }
+
+        // Check proposer is participant
+        if (!in_array($proposerId, [$session->scanner_id, $session->creator_id])) {
+            throw new AuthorizationException('You are not part of this session.');
+        }
+
+        // Validate service belongs to proposer
+        $service = Service::findOrFail($data['service_id']);
+        if ($service->creator_id !== $proposerId) {
+            throw new BusinessRuleException('You can only propose your own services.');
+        }
+
+        // Create request
+        $request = QuickDealRequest::create([
+            'quick_deal_session_id' => $sessionId,
+            'proposer_id' => $proposerId,
+            'service_id' => $data['service_id'],
+            'proposed_price' => $data['proposed_price'] ?? $service->price,
+            'message' => $data['message'] ?? null,
+            'status' => 'pending',
+        ]);
+
+        // Notify counterparty
+        event(new QuickDealRequestSubmitted($request));
+
+        return $request;
+    }
+
+    /**
+     * Accept request - creates order
+     */
+    public function acceptRequest(int $requestId, int $userId): Order
+    {
+        $request = QuickDealRequest::with('session', 'service')->findOrFail($requestId);
+
+        // Authorization: counterparty must accept
+        $session = $request->session;
+        $counterpartyId = $request->proposer_id === $session->scanner_id 
+            ? $session->creator_id 
+            : $session->scanner_id;
+
+        if ($counterpartyId !== $userId) {
+            throw new AuthorizationException('Only the counterparty can accept.');
+        }
+
+        // Validate
+        if ($request->status !== 'pending') {
+            throw new BusinessRuleException('Request already processed.');
+        }
+
+        if (!$session->isActive()) {
+            throw new BusinessRuleException('Session has expired.');
+        }
+
+        return DB::transaction(function () use ($request) {
+            // Create order
+            $order = $this->orderService->createFromService(
+                buyerId: $request->proposer_id === $request->service->creator_id 
+                    ? $request->session->scanner_id 
+                    : $request->session->creator_id,
+                serviceId: $request->service_id,
+                data: [
+                    'custom_price' => $request->proposed_price,
+                    'notes' => $request->message,
+                ]
+            );
+
+            // Update request
+            $request->update([
+                'status' => 'accepted',
+                'order_id' => $order->id,
+            ]);
+
+            event(new QuickDealRequestAccepted($request, $order));
+
+            return $order;
+        });
+    }
+
+    /**
+     * Generate QR Code image
+     */
+    private function generateQrCode(QuickDeal $quickDeal): void
+    {
+        $url = route('quick-deals.scan', ['token' => $quickDeal->qr_token]);
+        
+        $qrCode = QrCode::format('png')
+            ->size(300)
+            ->margin(2)
+            ->generate($url);
+
+        $filename = "qr_{$quickDeal->qr_token}.png";
+        $path = "quick-deals/qr/{$filename}";
+        
+        Storage::disk('public')->put($path, $qrCode);
+
+        $quickDeal->update(['qr_code_path' => $path]);
+    }
+
+    /**
+     * Cleanup expired sessions (run via cron)
+     */
+    public function cleanupExpiredSessions(): int
+    {
+        return QuickDealSession::where('status', 'pending')
+            ->where('expires_at', '<', now())
+            ->update(['status' => 'expired']);
+    }
+}
+D. Quick Deal QR Scanner UI
+blade<!-- resources/views/quick-deals/scan.blade.php -->
+<div x-data="quickDealScanner('{{ $qrToken }}')" x-init="init()" class="max-w-2xl mx-auto p-6">
+  
+  <!-- Loading State -->
+  <div x-show="loading" class="text-center py-12">
+    <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mx-auto"></div>
+    <p class="mt-4 text-gray-600">Validating Quick Deal...</p>
+  </div>
+
+  <!-- Error State -->
+  <div x-show="error" class="bg-red-100 border border-red-400 rounded-lg p-6 text-center">
+    <p class="text-red-700 font-semibold" x-text="errorMessage"></p>
+    <a href="/browse" class="mt-4 inline-block btn btn-secondary">Browse Services</a>
+  </div>
+
+  <!-- Two-Way Mode: Waiting for Creator Acceptance -->
+  <div x-show="mode === 'two_way' && sessionStatus === 'pending'" class="bg-yellow-50 border border-yellow-400 rounded-lg p-6">
+    <div class="text-center">
+      <div class="animate-pulse mb-4">
+        <svg class="w-16 h-16 text-yellow-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h2 class="text-xl font-bold mb-2">Waiting for Approval</h2>
+      <p class="text-gray-700 mb-4">
+        The service provider needs to accept your request to start the Quick Deal session.
+      </p>
+      <p class="text-sm text-gray-600">
+        This request will expire in <span x-text="timeRemaining"></span>
+      </p>
+    </div>
+  </div>
+
+  <!-- Session Active: Show Services -->
+  <div x-show="sessionStatus === 'accepted' && !loading" class="space-y-6">
+    <div class="bg-green-50 border border-green-400 rounded-lg p-4 mb-6">
+      <p class="text-green-700 font-semibold">✓ Quick Deal Session Active</p>
+      <p class="text-sm text-gray-600 mt-1">
+        Session expires in <span x-text="timeRemaining"></span>
+      </p>
+    </div>
+
+    <h2 class="text-2xl font-bold mb-4">Available Services</h2>
+
+    <!-- Services Grid -->
+    <div class="grid gap-4 md:grid-cols-2">
+      <template x-for="service in services" :key="service.id">
+        <div class="border rounded-lg p-4 hover:shadow-md transition">
+          <h3 class="font-semibold text-lg mb-2" x-text="service.title"></h3>
+          <p class="text-sm text-gray-600 mb-3" x-text="service.description"></p>
+          <p class="text-xl text-green-600 font-bold mb-3">
+            ₱<span x-text="service.price.toFixed(2)"></span>
+          </p>
+          
+          <button @click="proposeService(service.id)" 
+                  class="btn btn-primary w-full">
+            Propose This Service
+          </button>
+        </div>
+      </template>
+    </div>
+
+    <!-- Active Requests -->
+    <div x-show="requests.length > 0" class="mt-8">
+      <h3 class="text-xl font-bold mb-4">Active Proposals</h3>
+      <div class="space-y-3">
+        <template x-for="request in requests" :key="request.id">
+          <div class="border rounded-lg p-4"
+               :class="{
+                 'bg-yellow-50 border-yellow-400': request.status === 'pending',
+                 'bg-green-50 border-green-400': request.status === 'accepted',
+                 'bg-gray-50 border-gray-400': request.status === 'rejected'
+               }">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="font-semibold" x-text="request.service.title"></p>
+                <p class="text-sm text-gray-600">
+                  Proposed by <span x-text="request.proposer.name"></span>
+                </p>
+                <p class="text-lg text-green-600 font-bold mt-1">
+                  ₱<span x-text="request.proposed_price"></span>
+                </p>
+                <p x-show="request.message" class="text-sm mt-2" x-text="request.message"></p>
+              </div>
+              
+              <!-- Accept/Reject buttons (if you're the counterparty) -->
+              <div x-show="request.proposer_id !== userId && request.status === 'pending'" 
+                   class="flex gap-2">
+                <button @click="acceptRequest(request.id)" 
+                        class="btn btn-primary btn-sm">
+                  Accept
+                </button>
+                <button @click="rejectRequest(request.id)" 
+                        class="btn btn-secondary btn-sm">
+                  Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Proposal Modal -->
+<div x-show="showProposeModal" 
+     x-transition
+     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+     @click.self="showProposeModal = false">
+  <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+    <h3 class="text-xl font-bold mb-4">Propose Service</h3>
+    
+    <div class="space-y-4">
+      <div>
+        <label class="form-label">Custom Price (Optional)</label>
+        <input type="number" 
+               x-model="proposalData.price"
+               step="0.01"
+               class="form-input"
+               placeholder="Leave empty to use default price">
+      </div>
+      
+      <div>
+        <label class="form-label">Message (Optional)</label>
+        <textarea x-model="proposalData.message"
+                  rows="3"
+                  class="form-input"
+                  placeholder="Any special notes or terms..."></textarea>
+      </div>
+      
+      <div class="flex gap-3">
+        <button @click="submitProposal" 
+                :disabled="submitting"
+                class="btn btn-primary flex-1">
+          <span x-show="!submitting">Send Proposal</span>
+          <span x-show="submitting">Sending...</span>
+        </button>
+        <button @click="showProposeModal = false" 
+                class="btn btn-secondary">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function quickDealScanner(qrToken) {
+  return {
+    qrToken: qrToken,
+    loading: true,
+    error: false,
+    errorMessage: '',
+    mode: null,
+    sessionId: null,
+    sessionStatus: null,
+    services: [],
+    requests: [],
+    userId: {{ auth()->id() ?? 'null' }},
+    timeRemaining: '',
+    expiresAt: null,
+    showProposeModal: false,
+    selectedServiceId: null,
+    proposalData: {
+      price: null,
+      message: ''
+    },
+    submitting: false,
+
+    async init() {
+      await this.scanQr();
+      if (this.sessionId) {
+        this.startCountdown();
+        this.setupRealTimeListeners();
+      }
+    },
+
+    async scanQr() {
+      try {
+        const response = await fetch(`/api/quick-deals/scan/${this.qrToken}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+          }
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message);
+        }
+
+        const data = await response.json();
+        
+        this.sessionId = data.session.id;
+        this.sessionStatus = data.session.status;
+        this.mode = data.quick_deal.mode;
+        this.expiresAt = new Date(data.session.expires_at);
+
+        if (this.sessionStatus === 'accepted') {
+          this.services = data.services;
+          await this.loadRequests();
+        }
+
+        this.loading = false;
+      } catch (err) {
+        this.error = true;
+        this.errorMessage = err.message || 'Failed to scan Quick Deal';
+        this.loading = false;
+      }
+    },
+
+    async loadRequests() {
+      const response = await fetch(`/api/quick-deal-sessions/${this.sessionId}/requests`);
+      this.requests = await response.json();
+    },
+
+    proposeService(serviceId) {
+      this.selectedServiceId = serviceId;
+      const service = this.services.find(s => s.id === serviceId);
+      this.proposalData.price = service.price;
+      this.showProposeModal = true;
+    },
+
+    async submitProposal() {
+      this.submitting = true;
+      try {
+        const response = await fetch(`/api/quick-deal-sessions/${this.sessionId}/requests`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify({
+            service_id: this.selectedServiceId,
+            proposed_price: this.proposalData.price,
+            message: this.proposalData.message
+          })
+        });
+
+        if (response.ok) {
+          window.toast('success', 'Proposal Sent', 'Waiting for counterparty response');
+          this.showProposeModal = false;
+          await this.loadRequests();
+        }
+      } catch (error) {
+        window.toast('error', 'Error', 'Failed to send proposal');
+      } finally {
+        this.submitting = false;
+      }
+    },
+
+    async acceptRequest(requestId) {
+      const response = await fetch(`/api/quick-deal-requests/${requestId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+      });
+
+      if (response.ok) {
+        const order = await response.json();
+        window.toast('success', 'Order Created!', 'Redirecting...');
+        setTimeout(() => {
+          window.location.href = `/orders/${order.id}`;
+        }, 1500);
+      }
+    },
+
+    async rejectRequest(requestId) {
+      const response = await fetch(`/api/quick-deal-requests/${requestId}/reject`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+      });
+
+      if (response.ok) {
+        window.toast('info', 'Rejected', 'Proposal rejected');
+        await this.loadRequests();
+      }
+    },
+
+    startCountdown() {
+      setInterval(() => {
+        const now = new Date();
+        const diff = this.expiresAt - now;
+
+        if (diff <= 0) {
+          this.timeRemaining = 'Expired';
+          this.error = true;
+          this.errorMessage = 'This Quick Deal session has expired.';
+          return;
+        }
+
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        this.timeRemaining = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      }, 1000);
+    },
+
+    setupRealTimeListeners() {
+      window.Echo.channel(`quick-deal-sessions.${this.sessionId}`)
+        .listen('QuickDealSessionAccepted', (e) => {
+          this.sessionStatus = 'accepted';
+          this.services = e.services;
+          window.toast('success', 'Session Started!', 'You can now propose services');
+        })
+        .listen('QuickDealRequestSubmitted', (e) => {
+          this.requests.push(e.request);
+          if (e.request.proposer_id !== this.userId) {
+            window.toast('info', 'New Proposal', 'Someone proposed a service');
+          }
+        })
+        .listen('QuickDealRequestAccepted', (e) => {
+          window.location.href = `/orders/${e.order.id}`;
+        });
+    }
+  }
+}
+</script>

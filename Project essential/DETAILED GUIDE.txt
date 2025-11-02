@@ -1,0 +1,3535 @@
+Ultimate Development Guide: Serbizyu Platform
+Frontend, UX, Testing & Quality Strategy
+Based on your comprehensive answers, here's your strategic guide covering Phase 4-6 and connecting to your backend architecture.
+
+Phase 4: Frontend Architecture & UX Strategy
+4.1 CSS & Component Organization Strategy
+Core Philosophy: Utility-First with Strategic Components
+css/* resources/css/app.css - Central hub (current approach) */
+@import './navbar.css';
+@import './browse.css';
+@import './home.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Future refactor structure (when components grow): */
+/*
+resources/css/
+├── app.css (imports only)
+├── components/
+│   ├── buttons.css
+│   ├── cards.css
+│   ├── forms.css
+│   └── modals.css
+├── layouts/
+│   ├── navbar.css
+│   └── footer.css
+└── pages/
+    ├── browse.css
+    ├── home.css
+    └── auth.css
+*/
+Decision Matrix: When to Use What
+ScenarioApproachExamplePage LayoutUtilities in Blade<div class="max-w-7xl mx-auto px-6 py-10">Repeated ComponentBlade Component + CSS Class<x-listing-card> with .listing-cardOne-off ElementInline Utilities<button class="px-4 py-2 bg-green-600">Complex Reusable PatternCSS Component.form-wrapper for auth forms
+Refactoring Plan
+php// CURRENT (Keep for now):
+// resources/views/browse.blade.php
+<div class="max-w-7xl mx-auto px-6 py-10 space-y-8">
+  <article class="listing-card">...</article>
+</div>
+
+// FUTURE (After Phase 1-3 complete):
+// Extract when you need same layout in 3+ places
+// resources/views/components/layouts/container.blade.php
+@props(['spacing' => 'default'])
+<div @class([
+    'max-w-7xl mx-auto px-6',
+    'py-10 space-y-8' => $spacing === 'default',
+    'py-6 space-y-4' => $spacing === 'compact',
+])>
+    {{ $slot }}
+</div>
+
+// Usage: <x-layouts.container>...</x-layouts.container>
+
+4.2 Responsive Strategy: Mobile-First with Desktop Optimization
+Breakpoint Standards (Tailwind Defaults)
+javascript// tailwind.config.js - Document your standards
+module.exports = {
+  theme: {
+    screens: {
+      'sm': '640px',  // Mobile landscape, small tablets
+      'md': '768px',  // Tablets
+      'lg': '1024px', // Laptops
+      'xl': '1280px', // Desktops
+      '2xl': '1536px' // Large desktops
+    }
+  }
+}
+Responsive Patterns
+Pattern 1: Navigation (Mobile-First)
+blade<!-- Current navbar needs fix -->
+<header class="navbar" x-data="{ open: false }">
+  <div class="navbar-inner">
+    <!-- Brand: Always visible -->
+    <a href="{{ route('home') }}" class="navbar-brand">...</a>
+
+    <!-- Desktop Nav: Hidden on mobile, flex on md+ -->
+    <nav class="hidden md:flex navbar-nav">
+      @foreach($navItems as $item)
+        <a href="..." class="navbar-link">{{ $item['label'] }}</a>
+      @endforeach
+      
+      <!-- Auth section stays inline on desktop -->
+      <div class="navbar-auth">
+        @auth
+          <x-nav.profile-dropdown :authProfileData="$authProfileData" />
+        @endauth
+      </div>
+    </nav>
+
+    <!-- Mobile Hamburger: Visible on mobile, hidden on md+ -->
+    <button @click="open = !open" class="md:hidden navbar-toggle">
+      <span x-show="!open">☰</span>
+      <span x-show="open">✕</span>
+    </button>
+  </div>
+
+  <!-- Mobile Menu: Full-width dropdown -->
+  <div x-show="open" 
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 -translate-y-4"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       class="md:hidden navbar-mobile">
+    <!-- Nav links stack vertically -->
+    <nav class="flex flex-col space-y-3">
+      @foreach($navItems as $item)
+        <a href="..." class="navbar-mobile-link">{{ $item['label'] }}</a>
+      @endforeach
+    </nav>
+    
+    <!-- Auth section in mobile menu -->
+    <div class="navbar-mobile-auth mt-4 pt-4 border-t">
+      @auth
+        <x-nav.profile-dropdown :authProfileData="$authProfileData" />
+      @endauth
+    </div>
+  </div>
+</header>
+Pattern 2: Browse Filters (Fixed)
+blade<!-- resources/views/browse.blade.php -->
+<div x-data="{ openFilters: false }" 
+     class="sticky top-20 bg-gray-50 z-40 p-4 rounded-b-xl shadow-md">
+  
+  <!-- Mobile: Search + Toggle Button -->
+  <div class="flex items-center gap-3 md:hidden">
+    <input type="text" placeholder="Search..." 
+           class="flex-1 border rounded-lg px-4 py-2 text-xs">
+    <button @click="openFilters = !openFilters" 
+            class="bg-green-600 text-white p-2 rounded-lg">
+      <x-icons.filter class="w-5 h-5" />
+    </button>
+  </div>
+
+  <!-- Desktop: Search + Inline Filters -->
+  <div class="hidden md:flex items-center gap-4">
+    <input type="text" placeholder="Search services or offers..." 
+           class="flex-1 border rounded-lg px-4 py-2">
+    
+    <div class="flex gap-2">
+      <button class="filter-btn filter-btn-primary">All</button>
+      <button class="filter-btn filter-btn-outline">Services</button>
+      <select class="filter-select">
+        <option>All Categories</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Mobile Filter Dropdown (conditional) -->
+  <div x-show="openFilters" 
+       x-transition
+       @click.away="openFilters = false"
+       class="md:hidden absolute top-full left-0 w-full bg-white border-t shadow-lg mt-2 p-4 space-y-3 z-50">
+    <button class="filter-btn filter-btn-primary w-full">All</button>
+    <button class="filter-btn filter-btn-outline w-full">Services</button>
+    <select class="filter-select w-full">
+      <option>All Categories</option>
+    </select>
+  </div>
+</div>
+Pattern 3: Grid Layouts
+blade<!-- Card grids: 1 col mobile, 2 col tablet, 3 col desktop -->
+<div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+  @foreach($listings as $listing)
+    <x-listing-card :listing="$listing" />
+  @endforeach
+</div>
+
+<!-- Form layouts: Stack mobile, side-by-side desktop -->
+<div class="grid gap-4 grid-cols-1 md:grid-cols-2">
+  <div>
+    <label class="form-label">First Name</label>
+    <input class="form-input" />
+  </div>
+  <div>
+    <label class="form-label">Last Name</label>
+    <input class="form-input" />
+  </div>
+</div>
+Responsive Testing Checklist
+markdown## Before Committing Any View:
+- [ ] Test on 375px (iPhone SE)
+- [ ] Test on 768px (iPad)
+- [ ] Test on 1920px (Desktop)
+- [ ] Check text overflow/truncation
+- [ ] Verify touch target sizes (min 44x44px)
+- [ ] Test hamburger menu animations
+- [ ] Check sticky elements (navbar, filters)
+
+4.3 Real-Time Updates Strategy
+Architecture: Laravel Echo + Soketi (Free WebSockets)
+Setup Guide
+bash# 1. Install Soketi locally (development)
+npm install -g @soketi/soketi
+soketi start
+
+# 2. Install Laravel dependencies
+composer require pusher/pusher-php-server
+npm install --save laravel-echo pusher-js
+
+# 3. Configure .env
+BROADCAST_DRIVER=pusher
+PUSHER_APP_ID=your-app-id
+PUSHER_APP_KEY=your-app-key
+PUSHER_APP_SECRET=your-app-secret
+PUSHER_HOST=127.0.0.1
+PUSHER_PORT=6001
+PUSHER_SCHEME=http
+PUSHER_APP_CLUSTER=mt1
+VITE_PUSHER_APP_KEY="${PUSHER_APP_KEY}"
+VITE_PUSHER_HOST="${PUSHER_HOST}"
+VITE_PUSHER_PORT="${PUSHER_PORT}"
+VITE_PUSHER_SCHEME="${PUSHER_SCHEME}"
+php// config/broadcasting.php
+'pusher' => [
+    'driver' => 'pusher',
+    'key' => env('PUSHER_APP_KEY'),
+    'secret' => env('PUSHER_APP_SECRET'),
+    'app_id' => env('PUSHER_APP_ID'),
+    'options' => [
+        'host' => env('PUSHER_HOST', '127.0.0.1'),
+        'port' => env('PUSHER_PORT', 6001),
+        'scheme' => env('PUSHER_SCHEME', 'http'),
+        'encrypted' => true,
+        'useTLS' => env('PUSHER_SCHEME') === 'https',
+    ],
+],
+javascript// resources/js/bootstrap.js
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
+
+window.Pusher = Pusher;
+
+window.Echo = new Echo({
+    broadcaster: 'pusher',
+    key: import.meta.env.VITE_PUSHER_APP_KEY,
+    wsHost: import.meta.env.VITE_PUSHER_HOST,
+    wsPort: import.meta.env.VITE_PUSHER_PORT,
+    wssPort: import.meta.env.VITE_PUSHER_PORT,
+    forceTLS: false,
+    encrypted: true,
+    disableStats: true,
+    enabledTransports: ['ws', 'wss'],
+});
+Event Broadcasting Implementation
+Example 1: Service Updated (Force Refresh)
+php// app/Domains/Listings/Events/ServiceUpdated.php
+<?php
+
+namespace App\Domains\Listings\Events;
+
+use App\Domains\Listings\Models\Service;
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Queue\SerializesModels;
+
+class ServiceUpdated implements ShouldBroadcast
+{
+    use InteractsWithSockets, SerializesModels;
+
+    public function __construct(
+        public Service $service
+    ) {}
+
+    public function broadcastOn(): Channel
+    {
+        return new Channel('services.' . $this->service->id);
+    }
+
+    public function broadcastWith(): array
+    {
+        return [
+            'service_id' => $this->service->id,
+            'title' => $this->service->title,
+            'price' => $this->service->price,
+            'updated_at' => $this->service->updated_at->toISOString(),
+        ];
+    }
+}
+php// app/Domains/Listings/Services/ServiceService.php
+public function updateService(int $id, array $data): Service
+{
+    $service = $this->getService($id);
+    
+    DB::transaction(function () use ($service, $data) {
+        $service->update($data);
+        
+        // Broadcast update
+        event(new ServiceUpdated($service));
+    });
+    
+    return $service->fresh();
+}
+blade<!-- resources/views/services/show.blade.php -->
+<div x-data="serviceShow({{ $service->id }})" 
+     x-init="init()"
+     class="max-w-4xl mx-auto p-6">
+  
+  <div x-show="updateAvailable" 
+       class="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded-lg">
+    <p class="text-sm">This service has been updated.</p>
+    <button @click="refreshPage" 
+            class="mt-2 px-4 py-2 bg-green-600 text-white rounded">
+      Refresh to see changes
+    </button>
+  </div>
+
+  <h1 x-text="serviceData.title" class="text-3xl font-bold mb-4"></h1>
+  <p x-text="'₱' + serviceData.price" class="text-2xl text-green-600"></p>
+  <!-- ... rest of service details ... -->
+</div>
+
+<script>
+function serviceShow(serviceId) {
+  return {
+    serviceData: @json($service),
+    updateAvailable: false,
+
+    init() {
+      // Listen for updates on this specific service
+      window.Echo.channel(`services.${serviceId}`)
+        .listen('ServiceUpdated', (e) => {
+          console.log('Service updated:', e);
+          this.updateAvailable = true;
+          // Optionally auto-update without refresh:
+          // this.serviceData = e;
+        });
+    },
+
+    refreshPage() {
+      window.location.reload();
+    }
+  }
+}
+</script>
+Example 2: New Search Results (Live Feed)
+php// app/Domains/Listings/Events/ServiceCreated.php
+class ServiceCreated implements ShouldBroadcast
+{
+    public function broadcastOn(): Channel
+    {
+        return new Channel('listings'); // Public channel
+    }
+
+    public function broadcastWith(): array
+    {
+        return [
+            'service' => [
+                'id' => $this->service->id,
+                'title' => $this->service->title,
+                'category_id' => $this->service->category_id,
+                'price' => $this->service->price,
+            ],
+        ];
+    }
+}
+blade<!-- resources/views/browse.blade.php -->
+<div x-data="browseLive()" x-init="init()">
+  
+  <!-- New listings notification -->
+  <div x-show="newListingsCount > 0" 
+       class="fixed top-24 left-1/2 -translate-x-1/2 z-50">
+    <button @click="loadNewListings" 
+            class="px-6 py-3 bg-green-600 text-white rounded-full shadow-lg animate-bounce">
+      <span x-text="newListingsCount"></span> new services available - Click to load
+    </button>
+  </div>
+
+  <!-- Listings grid -->
+  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <template x-for="listing in listings" :key="listing.id">
+      <x-listing-card :listing="listing" />
+    </template>
+  </div>
+</div>
+
+<script>
+function browseLive() {
+  return {
+    listings: @json($listings),
+    newListings: [],
+    newListingsCount: 0,
+
+    init() {
+      window.Echo.channel('listings')
+        .listen('ServiceCreated', (e) => {
+          // Check if matches current filters (simplified)
+          this.newListings.push(e.service);
+          this.newListingsCount++;
+        });
+    },
+
+    loadNewListings() {
+      this.listings = [...this.newListings, ...this.listings];
+      this.newListings = [];
+      this.newListingsCount = 0;
+    }
+  }
+}
+</script>
+Broadcasting Patterns for Key Events
+php// Events to broadcast (priority order):
+
+// 1. Service/Offer CRUD
+ServiceCreated → Channel: 'listings' (public)
+ServiceUpdated → Channel: 'services.{id}' (viewers)
+OpenOfferCreated → Channel: 'listings'
+OpenOfferAccepted → Channel: 'open-offers.{id}'
+
+// 2. Order & Work Updates
+OrderCreated → Channel: 'users.{buyer_id}' + 'users.{seller_id}' (private)
+WorkInstanceUpdated → Channel: 'orders.{order_id}' (participants)
+
+// 3. Messages
+MessageSent → Channel: 'threads.{thread_id}' (presence channel)
+ActivityMessageSent → Channel: 'work-instances.{instance_id}'
+
+// 4. Bids & Payments
+BidPlaced → Channel: 'users.{offer_owner_id}' (private)
+PaymentSucceeded → Channel: 'orders.{order_id}'
+
+4.4 Notification Preferences System
+Database Schema
+php// database/migrations/xxxx_create_notification_preferences_table.php
+Schema::create('notification_preferences', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('user_id')->constrained()->onDelete('cascade');
+    $table->string('notification_type'); // 'bid_placed', 'message_received', etc.
+    $table->string('channel'); // 'database', 'email', 'push'
+    $table->boolean('enabled')->default(true);
+    $table->timestamps();
+    
+    $table->unique(['user_id', 'notification_type', 'channel']);
+});
+php// app/Domains/Users/Models/NotificationPreference.php
+<?php
+
+namespace App\Domains\Users\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class NotificationPreference extends Model
+{
+    protected $fillable = ['user_id', 'notification_type', 'channel', 'enabled'];
+
+    protected $casts = [
+        'enabled' => 'boolean',
+    ];
+
+    // Available notification types
+    const TYPES = [
+        'bid_placed' => 'New bid on your offer',
+        'bid_accepted' => 'Your bid was accepted',
+        'message_received' => 'New message',
+        'order_created' => 'New order',
+        'payment_received' => 'Payment received',
+        'work_completed' => 'Work instance completed',
+        'service_updated' => 'Service you follow was updated',
+    ];
+
+    // Available channels
+    const CHANNELS = ['database', 'email', 'broadcast'];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+}
+php// app/Domains/Users/Models/User.php - Add relationship
+public function notificationPreferences()
+{
+    return $this->hasMany(NotificationPreference::class);
+}
+
+public function shouldReceiveNotification(string $type, string $channel): bool
+{
+    $preference = $this->notificationPreferences()
+        ->where('notification_type', $type)
+        ->where('channel', $channel)
+        ->first();
+    
+    // Default to enabled if no preference set
+    return $preference ? $preference->enabled : true;
+}
+Notification Service
+php// app/Domains/Users/Services/NotificationService.php
+<?php
+
+namespace App\Domains\Users\Services;
+
+use App\Domains\Users\Models\User;
+use App\Domains\Users\Models\NotificationPreference;
+use Illuminate\Support\Facades\Notification;
+
+class NotificationService
+{
+    public function setPreference(User $user, string $type, string $channel, bool $enabled): void
+    {
+        NotificationPreference::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'notification_type' => $type,
+                'channel' => $channel,
+            ],
+            ['enabled' => $enabled]
+        );
+    }
+
+    public function getPreferences(User $user): array
+    {
+        $preferences = $user->notificationPreferences()
+            ->get()
+            ->groupBy('notification_type');
+
+        $result = [];
+        foreach (NotificationPreference::TYPES as $type => $label) {
+            $result[$type] = [
+                'label' => $label,
+                'channels' => [],
+            ];
+            
+            foreach (NotificationPreference::CHANNELS as $channel) {
+                $pref = $preferences->get($type)?->firstWhere('channel', $channel);
+                $result[$type]['channels'][$channel] = $pref ? $pref->enabled : true;
+            }
+        }
+
+        return $result;
+    }
+
+    public function sendNotification(User $user, $notification, string $type): void
+    {
+        $channels = [];
+        
+        foreach (NotificationPreference::CHANNELS as $channel) {
+            if ($user->shouldReceiveNotification($type, $channel)) {
+                $channels[] = $channel;
+            }
+        }
+
+        if (!empty($channels)) {
+            Notification::send($user, $notification);
+        }
+    }
+}
+Preferences UI
+blade<!-- resources/views/profile/partials/notification-preferences.blade.php -->
+<div class="card bg-white border rounded-2xl shadow p-8">
+  <h2 class="text-lg font-semibold mb-4">Notification Preferences</h2>
+  
+  <form method="POST" action="{{ route('profile.notifications.update') }}" 
+        x-data="notificationPrefs()">
+    @csrf
+    @method('PATCH')
+
+    <div class="space-y-6">
+      @foreach($preferences as $type => $config)
+        <div class="border-b pb-4">
+          <h3 class="font-medium text-gray-900 mb-3">{{ $config['label'] }}</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            @foreach(['database' => 'In-App', 'email' => 'Email', 'broadcast' => 'Push'] as $channel => $channelLabel)
+              <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" 
+                       name="preferences[{{ $type }}][{{ $channel }}]"
+                       value="1"
+                       {{ $config['channels'][$channel] ? 'checked' : '' }}
+                       class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                <span class="text-sm text-gray-700">{{ $channelLabel }}</span>
+              </label>
+            @endforeach
+          </div>
+        </div>
+      @endforeach
+    </div>
+
+    <div class="flex justify-end mt-6">
+      <button type="submit" class="btn btn-primary">Save Preferences</button>
+    </div>
+  </form>
+</div>
+
+<script>
+function notificationPrefs() {
+  return {
+    // Quick actions
+    enableAll() {
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    },
+    disableAll() {
+      document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    }
+  }
+}
+</script>
+php// routes/web.php
+Route::middleware(['auth'])->group(function () {
+    Route::patch('/profile/notifications', [ProfileController::class, 'updateNotifications'])
+        ->name('profile.notifications.update');
+});
+
+// app/Domains/Users/Http/Controllers/ProfileController.php
+public function updateNotifications(Request $request)
+{
+    $validated = $request->validate([
+        'preferences' => 'required|array',
+        'preferences.*' => 'array',
+        'preferences.*.*' => 'boolean',
+    ]);
+
+    $notificationService = app(NotificationService::class);
+    $user = $request->user();
+
+    foreach ($validated['preferences'] as $type => $channels) {
+        foreach ($channels as $channel => $enabled) {
+            $notificationService->setPreference($user, $type, $channel, $enabled);
+        }
+    }
+
+    return back()->with('status', 'Notification preferences updated');
+}
+
+Phase 5: File Handling & Media Strategy
+5.1 Storage Architecture with Future-Proofing
+Storage Service Interface Pattern
+php// app/Domains/Common/Contracts/StorageServiceInterface.php
+<?php
+
+namespace App\Domains\Common\Contracts;
+
+use Illuminate\Http\UploadedFile;
+
+interface StorageServiceInterface
+{
+    public function store(UploadedFile $file, string $path): string;
+    public function delete(string $path): bool;
+    public function url(string $path): string;
+    public function exists(string $path): bool;
+}
+php// app/Domains/Common/Services/LocalStorageService.php
+<?php
+
+namespace App\Domains\Common\Services;
+
+use App\Domains\Common\Contracts\StorageServiceInterface;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+
+class LocalStorageService implements StorageServiceInterface
+{
+    public function store(UploadedFile $file, string $path): string
+    {
+        return $file->store($path, 'public');
+    }
+
+    public function delete(string $path): bool
+    {
+        return Storage::disk('public')->delete($path);
+    }
+
+    public function url(string $path): string
+    {
+        return asset('storage/' . $path);
+    }
+
+    public function exists(string $path): bool
+    {
+        return Storage::disk('public')->exists($path);
+    }
+}
+php// app/Domains/Common/Services/S3StorageService.php (Future implementation)
+<?php
+
+namespace App\Domains\Common\Services;
+
+use App\Domains\Common\Contracts\StorageServiceInterface;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+
+class S3StorageService implements StorageServiceInterface
+{
+    public function store(UploadedFile $file, string $path): string
+    {
+        return $file->store($path, 's3');
+    }
+
+    public function delete(string $path): bool
+    {
+        return Storage::disk('s3')->delete($path);
+    }
+
+    public function url(string $path): string
+    {
+        return Storage::disk('s3')->url($path);
+    }
+
+    public function exists(string $path): bool
+    {
+        return Storage::disk('s3')->exists($path);
+    }
+}
+php// app/Providers/AppServiceProvider.php
+use App\Domains\Common\Contracts\StorageServiceInterface;
+use App\Domains\Common\Services\LocalStorageService;
+use App\Domains\Common\Services\S3StorageService;
+
+public function register(): void
+{
+    // Bind storage service based on config
+    $this->app->bind(StorageServiceInterface::class, function ($app) {
+        $driver = config('filesystems.default_cloud', 'local');
+        
+        return match ($driver) {
+            's3' => new S3StorageService(),
+            'local' => new LocalStorageService(),
+            default => new LocalStorageService(),
+        };
+    });
+}
+php// .env configuration
+FILESYSTEM_DRIVER=local  # Change to 's3' when ready
+
+# Future S3 setup
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=ap-southeast-1
+AWS_BUCKET=
+AWS_USE_PATH_STYLE_ENDPOINT=false
+Updated ListingImageService
+php// app/Domains/Listings/Services/ListingImageService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\ListingImage;
+use App\Domains\Common\Contracts\StorageServiceInterface;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
+use Intervention\Image\Facades\Image;
+
+class ListingImageService
+{
+    public function __construct(
+        private StorageServiceInterface $storage
+    ) {}
+
+    public function attachToModel(Model $model, UploadedFile $file, array $options = []): ListingImage
+    {
+        // Validate file
+        $this->validateImage($file);
+
+        // Generate unique filename
+        $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+        $path = 'uploads/listings/' . $filename;
+
+        // Store original
+        $storedPath = $this->storage->store($file, 'uploads/listings');
+
+        // Generate thumbnail
+        $thumbnailPath = $this->generateThumbnail($file, $storedPath);
+
+        // Create database record
+        return $model->images()->create([
+            'path' => $storedPath,
+            'thumbnail_path' => $thumbnailPath,
+            'alt_text' => $options['alt_text'] ?? $file->getClientOriginalName(),
+            'order_index' => $options['order_index'] ?? 0,
+            'is_primary' => $options['is_primary'] ?? false,
+        ]);
+    }
+
+    public function deleteImage(ListingImage $image): bool
+    {
+        // Delete files from storage
+        $this->storage->delete($image->path);
+        if ($image->thumbnail_path) {
+            $this->storage->delete($image->thumbnail_path);
+        }
+
+        // Delete database record
+        return $image->delete();
+    }
+
+    private function validateImage(UploadedFile $file): void
+    {
+        $file->validate([
+            'mimes' => 'jpeg,png,jpg,webp',
+            'max' => 5120, // 5MB
+        ]);
+    }
+
+    private function generateThumbnail(UploadedFile $file, string $originalPath): ?string
+    {
+        try {
+            $thumbnailFilename = 'thumb_' . basename($originalPath);
+            $thumbnailPath = 'uploads/listings/thumbnails/' . $thumbnailFilename;
+
+            // Load image
+            $img = Image::make($file);
+
+            // Resize to 300x300 (fit mode)
+            $img->fit(300, 300, function ($constraint) {
+                $constraint->upsize();
+            });
+
+            // Save thumbnail
+            $img->save(storage_path('app/public/' . $thumbnailPath), 80);
+
+            return $thumbnailPath;
+        } catch (\Exception $e) {
+            \Log::error('Thumbnail generation failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+}
+5.2 Image Optimization & Lazy Loading
+Install Intervention Image
+bashcomposer require intervention/image
+php// config/app.php
+'providers' => [
+    Intervention\Image\ImageServiceProvider::class,
+],
+'aliases' => [
+    'Image' => Intervention\Image\Facades\Image::class,
+],
+Lazy Loading Implementation
+blade<!-- resources/views/components/listing-card.blade.php -->
+<article class="listing-card">
+  <div class="relative aspect-video bg-gray-200 rounded-lg overflow-hidden">
+    @if($service->thumbnail)
+      <img src="{{ $service->thumbnail->thumbnailRetryDDContinueDDcontinue. *but at the end* asside from this implementation way of giving me the guide* make it kind of like broad and all encompassing instruction that will support everything.blade<!-- resources/views/components/listing-card.blade.php -->
+<article class="listing-card">
+  <div class="relative aspect-video bg-gray-200 rounded-lg overflow-hidden">
+    @if($service->thumbnail)
+      <img 
+        src="{{ asset('storage/' . $service->thumbnail->thumbnail_path) }}" 
+        alt="{{ $service->thumbnail->alt_text }}"
+        loading="lazy"
+        class="w-full h-full object-cover transition-transform hover:scale-105"
+        onerror="this.src='{{ asset('images/placeholder-service.jpg') }}'"
+      >
+    @else
+      <div class="w-full h-full flex items-center justify-center text-gray-400">
+        <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+    @endif
+  </div>
+
+  <div class="card-top">
+    <span class="badge-service">Service</span>
+    <span class="rating">★★★★☆</span>
+  </div>
+  
+  <h3 class="card-title">{{ $service->title }}</h3>
+  <p class="card-desc">{{ Str::limit($service->description, 80) }}</p>
+  <p class="card-meta">Price: ₱{{ number_format($service->price, 2) }}</p>
+</article>
+Video Support
+php// app/Domains/Listings/Models/ListingMedia.php (extends ListingImage concept)
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class ListingMedia extends Model
+{
+    protected $fillable = [
+        'path',
+        'thumbnail_path',
+        'media_type', // 'image', 'video'
+        'alt_text',
+        'order_index',
+        'is_primary',
+        'duration', // for videos
+        'file_size',
+    ];
+
+    protected $casts = [
+        'is_primary' => 'boolean',
+        'duration' => 'integer',
+        'file_size' => 'integer',
+    ];
+
+    public function mediable()
+    {
+        return $this->morphTo();
+    }
+
+    public function isVideo(): bool
+    {
+        return $this->media_type === 'video';
+    }
+
+    public function getUrlAttribute()
+    {
+        return asset('storage/' . $this->path);
+    }
+}
+php// database/migrations/xxxx_add_media_support_to_listing_images.php
+Schema::table('listing_images', function (Blueprint $table) {
+    $table->enum('media_type', ['image', 'video'])->default('image')->after('path');
+    $table->integer('duration')->nullable()->after('media_type'); // seconds
+    $table->bigInteger('file_size')->nullable()->after('duration'); // bytes
+});
+
+// Or create new table if you want to keep images separate:
+Schema::create('listing_media', function (Blueprint $table) {
+    $table->id();
+    $table->morphs('mediable');
+    $table->enum('media_type', ['image', 'video']);
+    $table->string('path');
+    $table->string('thumbnail_path')->nullable();
+    $table->string('alt_text')->nullable();
+    $table->unsignedInteger('order_index')->default(0);
+    $table->boolean('is_primary')->default(false);
+    $table->integer('duration')->nullable(); // for videos
+    $table->bigInteger('file_size')->nullable();
+    $table->timestamps();
+});
+php// app/Domains/Listings/Services/ListingImageService.php - add video support
+public function attachVideo(Model $model, UploadedFile $file, array $options = []): ListingMedia
+{
+    // Validate video
+    $file->validate([
+        'mimes' => 'mp4,mov,avi,webm',
+        'max' => 51200, // 50MB
+    ]);
+
+    $storedPath = $this->storage->store($file, 'uploads/listings/videos');
+    
+    // Generate video thumbnail (requires FFmpeg)
+    $thumbnailPath = $this->generateVideoThumbnail($storedPath);
+
+    return $model->media()->create([
+        'media_type' => 'video',
+        'path' => $storedPath,
+        'thumbnail_path' => $thumbnailPath,
+        'file_size' => $file->getSize(),
+        'duration' => $options['duration'] ?? null,
+        'order_index' => $options['order_index'] ?? 0,
+        'is_primary' => false, // Videos can't be primary
+    ]);
+}
+
+private function generateVideoThumbnail(string $videoPath): ?string
+{
+    // Placeholder - implement with FFmpeg when needed
+    // FFMpeg::fromDisk('public')
+    //     ->open($videoPath)
+    //     ->getFrameFromSeconds(1)
+    //     ->export()
+    //     ->save($thumbnailPath);
+    
+    return null; // For now, return null
+}
+
+Phase 6: Testing & Quality Assurance
+6.1 Testing Strategy
+php// tests/Feature/ServiceCreationTest.php
+<?php
+
+namespace Tests\Feature;
+
+use Tests\TestCase;
+use App\Domains\Users\Models\User;
+use App\Domains\Listings\Models\Category;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Common\Models\Address;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+
+class ServiceCreationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Storage::fake('public');
+    }
+
+    /** @test */
+    public function authenticated_user_can_create_service_with_images()
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $category = Category::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['is_public' => true]);
+        $address = Address::factory()->create();
+        
+        $image1 = UploadedFile::fake()->image('service1.jpg', 800, 600);
+        $image2 = UploadedFile::fake()->image('service2.jpg', 800, 600);
+
+        // Act
+        $response = $this->actingAs($user)->postJson('/api/services', [
+            'title' => 'Test Service',
+            'description' => 'Test description',
+            'price' => 100.00,
+            'category_id' => $category->id,
+            'workflow_template_id' => $workflow->id,
+            'address_id' => $address->id,
+            'pay_first' => true,
+            'images' => [$image1, $image2],
+        ]);
+
+        // Assert
+        $response->assertCreated();
+        $this->assertDatabaseHas('services', [
+            'title' => 'Test Service',
+            'creator_id' => $user->id,
+        ]);
+        
+        $service = $user->services()->first();
+        $this->assertCount(2, $service->images);
+        
+        Storage::disk('public')->assertExists($service->images->first()->path);
+    }
+
+    /** @test */
+    public function service_creation_fails_with_invalid_workflow()
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create();
+        
+        // Private workflow from different user
+        $workflow = WorkflowTemplate::factory()->create([
+            'is_public' => false,
+            'creator_id' => User::factory()->create()->id,
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/api/services', [
+            'title' => 'Test Service',
+            'description' => 'Test description',
+            'price' => 100.00,
+            'category_id' => $category->id,
+            'workflow_template_id' => $workflow->id,
+        ]);
+
+        $response->assertStatus(403);
+    }
+}
+php// tests/Unit/OrderServiceTest.php
+<?php
+
+namespace Tests\Unit\Services;
+
+use Tests\TestCase;
+use App\Domains\Orders\Services\OrderService;
+use App\Domains\Listings\Models\Service;
+use App\Domains\Users\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+class OrderServiceTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /** @test */
+    public function it_clones_workflow_when_creating_order()
+    {
+        // Arrange
+        $service = Service::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create();
+        $service->workflow_template_id = $workflow->id;
+        $service->save();
+        
+        // Add steps to workflow
+        WorkTemplate::factory()->count(3)->create([
+            'workflow_template_id' => $workflow->id,
+        ]);
+
+        $buyer = User::factory()->create();
+        $orderService = app(OrderService::class);
+
+        // Act
+        $order = $orderService->createFromService($buyer->id, $service->id, []);
+
+        // Assert
+        $this->assertCount(3, $order->workInstances);
+        $this->assertEquals(0, $order->workInstances->first()->current_step_index);
+    }
+}
+6.2 Factory Strategy
+php// database/factories/ServiceFactory.php - UPDATED
+<?php
+
+namespace Database\Factories;
+
+use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Models\Category;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Common\Models\Address;
+use App\Domains\Users\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class ServiceFactory extends Factory
+{
+    protected $model = Service::class;
+
+    public function definition(): array
+    {
+        return [
+            'title' => fake()->sentence(3),
+            'description' => fake()->paragraph(),
+            'price' => fake()->randomFloat(2, 100, 5000),
+            'pay_first' => fake()->boolean(30),
+            'category_id' => Category::factory(),
+            'creator_id' => User::factory(),
+            'workflow_template_id' => WorkflowTemplate::factory(),
+            'address_id' => Address::factory(),
+        ];
+    }
+
+    public function withImages(int $count = 2): static
+    {
+        return $this->afterCreating(function (Service $service) use ($count) {
+            ListingImage::factory()
+                ->count($count)
+                ->for($service, 'imageable')
+                ->create();
+        });
+    }
+
+    public function payFirst(): static
+    {
+        return $this->state(['pay_first' => true]);
+    }
+
+    public function payAfter(): static
+    {
+        return $this->state(['pay_first' => false]);
+    }
+}
+php// database/factories/AddressFactory.php - CREATE NEW
+<?php
+
+namespace Database\Factories;
+
+use App\Domains\Common\Models\Address;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class AddressFactory extends Factory
+{
+    protected $model = Address::class;
+
+    public function definition(): array
+    {
+        return [
+            'house_no' => fake()->buildingNumber(),
+            'street' => fake()->streetName(),
+            'barangay' => fake()->city(),
+            'town' => fake()->randomElement(['Tagudin', 'Candon', 'Sta. Cruz', 'Vigan']),
+            'province' => 'Ilocos Sur',
+            'country' => 'Philippines',
+            'lat' => fake()->latitude(16.0, 18.0),
+            'lng' => fake()->longitude(120.0, 121.0),
+        ];
+    }
+}
+6.3 Seeders Strategy
+php// database/seeders/DatabaseSeeder.php - PRODUCTION SAFE
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // ALWAYS run (production-safe data)
+        $this->call([
+            RolesSeeder::class,        // Spatie roles
+            CategorySeeder::class,      // Service categories
+            WorkCatalogSeeder::class,   // Work template catalog
+        ]);
+
+        // ONLY in non-production environments
+        if (!app()->environment('production')) {
+            $this->call([
+                UserSeeder::class,
+                AddressSeeder::class,
+                WorkflowAndWorkTemplateSeeder::class,
+                ListingsSeeder::class,
+                // OpenOfferBidSeeder::class, // Uncomment when needed
+            ]);
+        }
+    }
+}
+bash# Production deployment
+php artisan migrate --force
+php artisan db:seed --class=RolesSeeder
+php artisan db:seed --class=CategorySeeder
+php artisan db:seed --class=WorkCatalogSeeder
+
+# Development setup
+php artisan migrate:fresh --seed
+6.4 Code Standards & Static Analysis
+bash# Install tools
+composer require --dev laravel/pint
+composer require --dev phpstan/phpstan
+composer require --dev nunomaduro/larastan
+json// composer.json - add scripts
+{
+  "scripts": {
+    "pint": "pint",
+    "pint:test": "pint --test",
+    "phpstan": "phpstan analyse",
+    "test": "php artisan test",
+    "test:coverage": "php artisan test --coverage",
+    "check": [
+      "@pint:test",
+      "@phpstan",
+      "@test"
+    ]
+  }
+}
+php// pint.json - PSR-12 with Laravel conventions
+{
+    "preset": "laravel",
+    "rules": {
+        "single_quote": true,
+        "trailing_comma_in_multiline": true,
+        "no_unused_imports": true
+    }
+}
+neon# phpstan.neon
+includes:
+    - ./vendor/nunomaduro/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+    level: 5
+    ignoreErrors:
+        - '#Unsafe usage of new static#'
+    excludePaths:
+        - app/Http/Middleware/TrustProxies.php
+bash# Pre-commit hook (.git/hooks/pre-commit)
+#!/bin/sh
+composer pint:test || exit 1
+composer phpstan || exit 1
+```
+
+---
+
+# 🎯 COMPREHENSIVE IMPLEMENTATION GUIDE
+
+## I. Strategic Overview
+
+### Core Principles
+1. **Mobile-First, Desktop-Optimized**: Every feature must work flawlessly on 375px before desktop
+2. **Progressive Enhancement**: Base functionality without JS, enhanced with Alpine/Echo
+3. **Future-Proof Architecture**: Interfaces for swappable implementations (storage, payments, search)
+4. **Real-Time by Default**: All user-facing actions broadcast updates via WebSockets
+5. **Test-Driven Development**: Critical paths covered by feature tests before shipping
+
+---
+
+## II. Frontend Development Workflow
+
+### A. Creating Any New Page/Feature
+```
+STEP 1: MOBILE WIREFRAME FIRST
+- Sketch on 375px canvas (iPhone SE)
+- Identify collapsible/stackable sections
+- Plan hamburger menus and bottom sheets
+
+STEP 2: BUILD MOBILE HTML
+- Use utility classes directly in Blade
+- Start with: <div class="max-w-7xl mx-auto px-4 py-6">
+- Test on actual mobile device or Chrome DevTools
+
+STEP 3: ADD TABLET BREAKPOINTS
+- Introduce md: prefixes for 768px+ layouts
+- Typically: single column → 2 columns
+- Example: grid-cols-1 md:grid-cols-2
+
+STEP 4: DESKTOP ENHANCEMENTS
+- Add lg: and xl: for 1024px+
+- Typically: 2 columns → 3 columns or side navigation
+- Example: lg:grid-cols-3 lg:space-x-8
+
+STEP 5: EXTRACT COMPONENTS IF REPEATED 3+ TIMES
+- Create Blade component: php artisan make:component ListingCard
+- Move to resources/views/components/
+- Add @props(['listing']) for type hinting
+- Document usage in component docblock
+```
+
+### B. CSS Organization Rules
+```
+UTILITY CLASSES (95% of cases):
+- Page layouts and spacing
+- Responsive grids
+- One-off styling
+- Hover states and transitions
+
+CUSTOM CSS COMPONENTS (5% of cases):
+- Repeated UI patterns (cards, buttons, forms)
+- Complex animations
+- Print stylesheets
+- Legacy browser fallbacks
+
+WHERE TO PUT CSS:
+├── app.css → @import statements only
+├── components/ → Reusable UI (.btn, .card)
+├── layouts/ → Site structure (.navbar, .footer)
+└── pages/ → Page-specific (browse.css, home.css)
+
+WHEN TO EXTRACT:
+1. Pattern used in 3+ templates → Create Blade component
+2. Pattern + custom CSS → Add to components/
+3. Page grows > 500 lines → Split into partials
+C. Alpine.js State Management Pattern
+javascript// COMPONENT PATTERN (for complex interactions)
+<div x-data="componentName()" x-init="init()">
+  <!-- Template -->
+</div>
+
+<script>
+function componentName() {
+  return {
+    // State
+    items: [],
+    loading: false,
+    
+    // Lifecycle
+    init() {
+      this.fetchData();
+      this.setupListeners();
+    },
+    
+    // Actions
+    async fetchData() {
+      this.loading = true;
+      const response = await fetch('/api/items');
+      this.items = await response.json();
+      this.loading = false;
+    },
+    
+    setupListeners() {
+      window.Echo.channel('items')
+        .listen('ItemCreated', (e) => {
+          this.items.unshift(e.item);
+        });
+    }
+  }
+}
+</script>
+
+// INLINE PATTERN (for simple toggles)
+<div x-data="{ open: false }">
+  <button @click="open = !open">Toggle</button>
+  <div x-show="open" x-transition>Content</div>
+</div>
+```
+
+### D. Real-Time Broadcasting Checklist
+```
+FOR EVERY USER-FACING CRUD ACTION:
+
+1. CREATE EVENT
+   ✓ php artisan make:event ServiceCreated
+   ✓ Implement ShouldBroadcast interface
+   ✓ Define broadcastOn() channel
+   ✓ Define broadcastWith() data
+
+2. DISPATCH EVENT
+   ✓ In Service method: event(new ServiceCreated($service))
+   ✓ Or use model event: Service::creating(fn => event(...))
+
+3. FRONTEND LISTENER
+   ✓ Alpine component with init()
+   ✓ Echo.channel('...').listen('...', callback)
+   ✓ Update UI state reactively
+
+4. TEST REAL-TIME
+   ✓ Open two browsers/tabs
+   ✓ Trigger event in tab 1
+   ✓ Verify update in tab 2 within 100ms
+```
+
+---
+
+## III. Backend Development Workflow
+
+### A. Creating New Features (Services, Models, etc.)
+```
+STEP 1: MIGRATION
+php artisan make:migration create_things_table
+- Add columns with appropriate types
+- Add indexes on foreign keys
+- Add soft deletes if user-facing data
+- Add timestamps
+
+STEP 2: MODEL
+php artisan make:model Thing
+- Define $fillable or $guarded
+- Add $casts for dates/booleans
+- Define relationships
+- Add scopes for common queries
+
+STEP 3: FACTORY
+php artisan make:factory ThingFactory
+- Use realistic fake() data
+- Match your migration exactly
+- Add relationship factories
+- Create state methods for variants
+
+STEP 4: SERVICE CLASS
+Create app/Domains/Things/Services/ThingService.php
+- Constructor inject dependencies
+- Public methods for business logic
+- Private methods for helpers
+- Throw domain exceptions
+
+STEP 5: CONTROLLER
+php artisan make:controller ThingController
+- Thin controllers, fat services
+- Validate via FormRequest
+- Return JSON for API, views for web
+- Use service methods
+
+STEP 6: TESTS
+php artisan make:test ThingTest
+- Test happy path
+- Test validation failures
+- Test authorization
+- Test edge cases
+B. Service Layer Pattern
+php// EVERY SERVICE CLASS FOLLOWS THIS STRUCTURE:
+
+namespace App\Domains\Things\Services;
+
+use App\Domains\Things\Models\Thing;
+use App\Exceptions\ResourceNotFoundException;
+use App\Exceptions\AuthorizationException;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
+
+class ThingService
+{
+    // 1. CONSTRUCTOR INJECTION (dependencies only)
+    public function __construct(
+        private OtherService $otherService,
+        private AnotherService $anotherService
+    ) {}
+
+    // 2. CRUD METHODS (with business logic)
+    public function getAllThings(): Collection
+    {
+        $things = Thing::with('relations')->get();
+        
+        if ($things->isEmpty()) {
+            throw new ResourceNotFoundException('No things found.');
+        }
+        
+        return $things;
+    }
+
+    public function getThing(int $id): Thing
+    {
+        $thing = Thing::find($id);
+        
+        if (!$thing) {
+            throw new ResourceNotFoundException('Thing not found');
+        }
+        
+        if ($thing->trashed()) {
+            throw new ResourceNotFoundException('Thing has been deleted');
+        }
+        
+        return $thing;
+    }
+
+    public function createThing(array $data): Thing
+    {
+        // Validation (via FormRequest, not here)
+        // Business rules
+        if ($data['price'] <= 0) {
+            throw new BusinessRuleException('Price must be greater than 0');
+        }
+        
+        // Dependencies
+        $this->otherService->validateSomething($data);
+        
+        // Transaction
+        return DB::transaction(function () use ($data) {
+            $thing = Thing::create($data);
+            
+            // Side effects
+            event(new ThingCreated($thing));
+            
+            return $thing;
+        });
+    }
+
+    // 3. PRIVATE HELPERS
+    private function calculateSomething($thing): float
+    {
+        // Complex logic extracted
+    }
+}
+C. Exception Handling Strategy
+php// app/Exceptions/Handler.php
+public function render($request, Throwable $exception)
+{
+    // Domain exceptions
+    if ($exception instanceof DomainException) {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'errors' => $exception instanceof ValidationException 
+                    ? $exception->getErrors() 
+                    : [],
+            ], $exception->getStatus());
+        }
+        
+        return back()
+            ->withErrors(['error' => $exception->getMessage()])
+            ->withInput();
+    }
+
+    // Laravel validation
+    if ($exception instanceof \Illuminate\Validation\ValidationException) {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $exception->errors(),
+            ], 422);
+        }
+    }
+
+    return parent::render($request, $exception);
+}
+D. Database Best Practices
+php// MIGRATIONS: Always reversible
+public function up()
+{
+    Schema::create('things', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('user_id')->constrained()->onDelete('cascade');
+        $table->string('title')->index(); // Searchable
+        $table->decimal('price', 10, 2);
+        $table->timestamps();
+        $table->softDeletes();
+        
+        // Composite indexes for common queries
+        $table->index(['user_id', 'created_at']);
+    });
+}
+
+public function down()
+{
+    Schema::dropIfExists('things');
+}
+
+// MODELS: Use query scopes for reusability
+public function scopeActive($query)
+{
+    return $query->whereNull('deleted_at');
+}
+
+public function scopeForUser($query, User $user)
+{
+    return $query->where('user_id', $user->id);
+}
+
+// Usage: Thing::active()->forUser($user)->get();
+
+IV. File Upload & Media Management
+A. Universal Upload Flow
+php// SINGLE FILE UPLOAD
+Route::post('/things/{thing}/media', function (Request $request, Thing $thing) {
+    $request->validate([
+        'file' => 'required|file|mimes:jpeg,png,jpg,mp4|max:10240',
+    ]);
+    
+    $service = app(ListingImageService::class);
+    $media = $service->attachToModel($thing, $request->file('file'), [
+        'alt_text' => $request->alt_text,
+        'is_primary' => $request->boolean('is_primary'),
+    ]);
+    
+    return response()->json($media, 201);
+});
+
+// MULTIPLE FILES
+Route::post('/things/{thing}/media/bulk', function (Request $request, Thing $thing) {
+    $request->validate([
+        'files' => 'required|array|max:10',
+        'files.*' => 'required|file|mimes:jpeg,png,jpg|max:5120',
+    ]);
+    
+    $service = app(ListingImageService::class);
+    $media = collect($request->file('files'))->map(function ($file, $index) use ($thing, $service) {
+        return $service->attachToModel($thing, $file, [
+            'order_index' => $index,
+        ]);
+    });
+    
+    return response()->json($media, 201);
+});
+B. Frontend Upload Component
+blade<!-- resources/views/components/media-uploader.blade.php -->
+<div x-data="mediaUploader()" class="space-y-4">
+  <input type="file" 
+         @change="handleFiles($event)" 
+         multiple 
+         accept="image/*,video/*"
+         class="hidden" 
+         x-ref="fileInput">
+  
+  <button @click="$refs.fileInput.click()" 
+          class="btn btn-secondary">
+    Choose Files
+  </button>
+
+  <!-- Preview Grid -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <template x-for="(file, index) in files" :key="index">
+      <div class="relative">
+        <img :src="file.preview" class="w-full aspect-square object-cover rounded">
+        <button @click="removeFile(index)" 
+                class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1">
+          ✕
+        </button>
+      </div>
+    </template>
+  </div>
+
+  <!-- Upload Progress -->
+  <div x-show="uploading" class="w-full bg-gray-200 rounded-full h-2">
+    <div class="bg-green-600 h-2 rounded-full transition-all" 
+         :style="`width: ${progress}%`"></div>
+  </div>
+
+  <button @click="upload" 
+          :disabled="files.length === 0 || uploading"
+          class="btn btn-primary w-full">
+    Upload <span x-text="files.length"></span> Files
+  </button>
+</div>
+
+<script>
+function mediaUploader() {
+  return {
+    files: [],
+    uploading: false,
+    progress: 0,
+
+    handleFiles(event) {
+      const newFiles = Array.from(event.target.files);
+      newFiles.forEach(file => {
+        this.files.push({
+          file: file,
+          preview: URL.createObjectURL(file)
+        });
+      });
+    },
+
+    removeFile(index) {
+      URL.revokeObjectURL(this.files[index].preview);
+      this.files.splice(index, 1);
+    },
+
+    async upload() {
+      this.uploading = true;
+      const formData = new FormData();
+      
+      this.files.forEach((f, i) => {
+        formData.append(`files[${i}]`, f.file);
+      });
+
+      try {
+        const response = await fetch('/api/things/{{ $thingId }}/media/bulk', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+          }
+        });
+
+        if (response.ok) {
+          this.files = [];
+          location.reload(); // Or update state
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        this.uploading = false;
+      }
+    }
+  }
+}
+</script>
+
+V. Testing Workflow
+A. Test-Driven Development Process
+bash# 1. RED: Write failing test
+php artisan make:test Feature/ServiceTest
+# Write test that describes desired behavior
+
+# 2. GREEN: Make it pass
+# Implement minimal code to pass test
+
+# 3. REFACTOR: Clean up
+# Extract methods, improve naming, remove duplication
+
+# 4. REPEAT
+```
+
+### B. Test Coverage Targets
+```
+CRITICAL PATHS (100% coverage):
+- Authentication & Authorization
+- Payment processing
+- Order creation & fulfillment
+- File uploads & deletions
+
+BUSINESS LOGIC (80% coverage):
+- Service classes
+- Model relationships
+- Validation rules
+
+NICE TO HAVE (50% coverage):
+- Controllers (mostly integration)
+- Seeders (manual testing ok)
+- Views (browser testing)
+C. Manual Testing Checklist (Browser)
+markdown## Before Each Release
+
+### Mobile (375px - iPhone SE)
+- [ ] Sign up flow
+- [ ] Login flow
+- [ ] Browse services
+- [ ] View service details
+- [ ] Create service (with images)
+- [ ] Create open offer
+- [ ] Place bid
+- [ ] Accept bid
+- [ ] Complete order workflow
+- [ ] Send message
+- [ ] Receive real-time notification
+
+### Tablet (768px - iPad)
+- [ ] Repeat above with landscape orientation
+- [ ] Verify nav transforms correctly
+- [ ] Check filter dropdowns
+
+### Desktop (1920px)
+- [ ] Verify all features
+- [ ] Check multi-column layouts
+- [ ] Test keyboard navigation
+
+### Cross-Browser
+- [ ] Chrome (primary)
+- [ ] Safari (iOS testing)
+- [ ] Firefox (fallback)
+
+### Performance
+- [ ] Lighthouse score > 90
+- [ ] Images lazy load
+- [ ] No console errors
+
+VI. Deployment & Maintenance
+A. Pre-Deployment Checklist
+bash# Code Quality
+composer check          # Runs pint, phpstan, tests
+npm run build          # Vite production build
+
+# Database
+php artisan migrate:status    # Verify migrations
+php artisan db:seed --class=CategorySeeder  # Prod data only
+
+# Config
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Storage
+php artisan storage:link
+# Verify uploads/ directories exist with 755 permissions
+
+# Environment
+# Check .env has production values:
+# - APP_ENV=production
+# - APP_DEBUG=false
+# - BROADCAST_DRIVER=pusher (if using Soketi)
+B. Monitoring & Logging
+php// app/Exceptions/Handler.php - Production logging
+public function report(Throwable $exception)
+{
+    if ($RetryDDContinuephp// app/Exceptions/Handler.php - Production logging
+public function report(Throwable $exception)
+{
+    if ($this->shouldReport($exception)) {
+        // Log critical errors
+        if ($exception instanceof PaymentException) {
+            \Log::critical('Payment failed', [
+                'exception' => $exception->getMessage(),
+                'user_id' => auth()->id(),
+                'trace' => $exception->getTraceAsString(),
+            ]);
+        }
+        
+        // Log business exceptions
+        if ($exception instanceof BusinessRuleException) {
+            \Log::warning('Business rule violated', [
+                'message' => $exception->getMessage(),
+                'user' => auth()->user()?->email,
+            ]);
+        }
+    }
+
+    parent::report($exception);
+}
+php// config/logging.php - Production channels
+'channels' => [
+    'stack' => [
+        'driver' => 'stack',
+        'channels' => ['daily', 'slack'],
+        'ignore_exceptions' => false,
+    ],
+    
+    'daily' => [
+        'driver' => 'daily',
+        'path' => storage_path('logs/laravel.log'),
+        'level' => env('LOG_LEVEL', 'debug'),
+        'days' => 14,
+    ],
+    
+    'slack' => [
+        'driver' => 'slack',
+        'url' => env('LOG_SLACK_WEBHOOK_URL'),
+        'username' => 'Serbizyu Logger',
+        'emoji' => ':boom:',
+        'level' => 'error', // Only errors and above
+    ],
+],
+C. Backup Strategy
+bash# Install backup package
+composer require spatie/laravel-backup
+
+# config/backup.php
+return [
+    'backup' => [
+        'name' => env('APP_NAME', 'serbizyu'),
+        'source' => [
+            'files' => [
+                'include' => [
+                    base_path(),
+                ],
+                'exclude' => [
+                    base_path('vendor'),
+                    base_path('node_modules'),
+                ],
+            ],
+            'databases' => [
+                'mysql',
+            ],
+        ],
+        'destination' => [
+            'disks' => [
+                'local', // Later: 's3'
+            ],
+        ],
+    ],
+    
+    'cleanup' => [
+        'strategy' => \Spatie\Backup\Tasks\Cleanup\Strategies\DefaultStrategy::class,
+        'default_strategy' => [
+            'keep_all_backups_for_days' => 7,
+            'keep_daily_backups_for_days' => 16,
+            'keep_weekly_backups_for_weeks' => 8,
+            'keep_monthly_backups_for_months' => 4,
+            'keep_yearly_backups_for_years' => 2,
+            'delete_oldest_backups_when_using_more_megabytes_than' => 5000,
+        ],
+    ],
+];
+php// app/Console/Kernel.php - Scheduled backups
+protected function schedule(Schedule $schedule)
+{
+    // Daily backup at 2 AM
+    $schedule->command('backup:run')->dailyAt('02:00');
+    
+    // Cleanup old backups weekly
+    $schedule->command('backup:clean')->weeklyOn(1, '03:00');
+    
+    // Monitor backup health
+    $schedule->command('backup:monitor')->dailyAt('04:00');
+}
+
+VII. Performance Optimization
+A. Database Query Optimization
+php// BAD: N+1 Query Problem
+$services = Service::all();
+foreach ($services as $service) {
+    echo $service->creator->name; // Queries for each iteration
+}
+
+// GOOD: Eager Loading
+$services = Service::with('creator', 'category', 'address')->get();
+foreach ($services as $service) {
+    echo $service->creator->name; // No additional queries
+}
+
+// BETTER: Selective Loading
+$services = Service::with([
+    'creator:id,firstname,lastname',
+    'category:id,name',
+    'thumbnail' => function ($query) {
+        $query->select('id', 'path', 'imageable_id', 'imageable_type');
+    }
+])->get();
+php// Query Caching for Static Data
+use Illuminate\Support\Facades\Cache;
+
+public function getAllCategories(): Collection
+{
+    return Cache::remember('categories.all', 3600, function () {
+        return Category::with('parent')
+            ->orderBy('name')
+            ->get();
+    });
+}
+
+// Clear cache when categories change
+public function createCategory(array $data): Category
+{
+    $category = Category::create($data);
+    Cache::forget('categories.all');
+    return $category;
+}
+B. Frontend Performance
+blade<!-- Defer non-critical CSS -->
+<link rel="preload" href="{{ asset('css/app.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="{{ asset('css/app.css') }}"></noscript>
+
+<!-- Preconnect to external domains -->
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
+<!-- Lazy load images (native) -->
+<img src="{{ $image->url }}" loading="lazy" alt="{{ $image->alt_text }}">
+
+<!-- Intersection Observer for complex lazy loading -->
+<script>
+if ('IntersectionObserver' in window) {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const img = entry.target;
+        img.src = img.dataset.src;
+        observer.unobserve(img);
+      }
+    });
+  });
+
+  document.querySelectorAll('img[data-src]').forEach(img => {
+    observer.observe(img);
+  });
+}
+</script>
+C. Caching Strategy
+php// config/cache.php - Use Redis in production
+'default' => env('CACHE_DRIVER', 'redis'),
+
+'stores' => [
+    'redis' => [
+        'driver' => 'redis',
+        'connection' => 'cache',
+        'lock_connection' => 'default',
+    ],
+],
+php// Cache expensive computations
+public function getServiceStats(): array
+{
+    return Cache::remember('service.stats', 600, function () {
+        return [
+            'total' => Service::count(),
+            'active' => Service::where('status', 'active')->count(),
+            'avg_price' => Service::avg('price'),
+        ];
+    });
+}
+
+// Tag-based cache clearing (Redis only)
+Cache::tags(['services', 'stats'])->remember('service.stats', 600, function () {
+    // ...
+});
+
+// Clear specific tags
+Cache::tags(['services'])->flush();
+
+VIII. Security Best Practices
+A. Input Validation & Sanitization
+php// ALWAYS use FormRequest for validation
+php artisan make:request StoreServiceRequest
+
+// app/Http/Requests/StoreServiceRequest.php
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class StoreServiceRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()->can('create', Service::class);
+    }
+
+    public function rules(): array
+    {
+        return [
+            'title' => 'required|string|max:255',
+            'description' => 'required|string|max:5000',
+            'price' => 'required|numeric|min:0.01|max:999999.99',
+            'category_id' => 'required|exists:categories,id',
+            'workflow_template_id' => [
+                'required',
+                'exists:workflow_templates,id',
+                Rule::exists('workflow_templates', 'id')->where(function ($query) {
+                    $query->where('is_public', true)
+                          ->orWhere('creator_id', $this->user()->id);
+                }),
+            ],
+            'address_id' => 'required|exists:addresses,id',
+            'pay_first' => 'boolean',
+            'images' => 'nullable|array|max:10',
+            'images.*' => 'image|mimes:jpeg,png,jpg|max:5120',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'title.required' => 'Service title is required',
+            'price.min' => 'Price must be at least ₱0.01',
+            'images.*.max' => 'Each image must not exceed 5MB',
+        ];
+    }
+}
+
+// Controller usage
+public function store(StoreServiceRequest $request)
+{
+    $service = $this->serviceService->createService(
+        $request->user()->id,
+        $request->validated()
+    );
+    
+    return response()->json($service, 201);
+}
+B. Authorization Policies
+php// php artisan make:policy ServicePolicy --model=Service
+
+// app/Policies/ServicePolicy.php
+<?php
+
+namespace App\Policies;
+
+use App\Domains\Listings\Models\Service;
+use App\Domains\Users\Models\User;
+
+class ServicePolicy
+{
+    public function viewAny(?User $user): bool
+    {
+        return true; // Anyone can browse
+    }
+
+    public function view(?User $user, Service $service): bool
+    {
+        return true; // Anyone can view individual service
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->hasVerifiedEmail(); // Must verify email
+    }
+
+    public function update(User $user, Service $service): bool
+    {
+        return $user->id === $service->creator_id;
+    }
+
+    public function delete(User $user, Service $service): bool
+    {
+        return $user->id === $service->creator_id 
+            || $user->hasRole('admin');
+    }
+}
+
+// Register in AuthServiceProvider
+protected $policies = [
+    Service::class => ServicePolicy::class,
+];
+
+// Usage in controller
+public function update(Request $request, Service $service)
+{
+    $this->authorize('update', $service);
+    // ...
+}
+
+// Usage in Blade
+@can('update', $service)
+    <a href="{{ route('services.edit', $service) }}">Edit</a>
+@endcan
+C. XSS Protection
+blade<!-- ALWAYS escape output (Blade does this by default) -->
+{{ $service->title }} <!-- Safe -->
+
+<!-- For HTML content, sanitize server-side first -->
+{!! Purifier::clean($service->description) !!}
+
+<!-- Install HTML Purifier -->
+composer require mews/purifier
+
+<!-- config/purifier.php -->
+return [
+    'default' => [
+        'HTML.Allowed' => 'p,b,strong,i,em,u,a[href],ul,ol,li,br',
+        'AutoFormat.RemoveEmpty' => true,
+    ],
+];
+D. CSRF Protection
+blade<!-- All forms must include CSRF token -->
+<form method="POST" action="{{ route('services.store') }}">
+    @csrf
+    <!-- ... -->
+</form>
+
+<!-- For AJAX requests -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
+<script>
+// Axios automatically includes CSRF token
+axios.post('/api/services', data);
+
+// Or manually with fetch
+fetch('/api/services', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify(data)
+});
+</script>
+
+IX. Error Handling & User Feedback
+A. Graceful Degradation
+blade<!-- Always provide fallbacks -->
+
+<!-- 1. JavaScript disabled -->
+<noscript>
+    <div class="p-4 bg-yellow-100 border border-yellow-400 rounded">
+        This site works best with JavaScript enabled. Some features may be limited.
+    </div>
+</noscript>
+
+<!-- 2. Image loading failure -->
+<img src="{{ $service->image }}" 
+     alt="{{ $service->title }}"
+     onerror="this.src='/images/placeholder-service.jpg'">
+
+<!-- 3. Real-time connection failure -->
+<div x-data="{ connected: true }" x-init="
+    window.Echo.connector.pusher.connection.bind('disconnected', () => {
+        connected = false;
+    });
+    window.Echo.connector.pusher.connection.bind('connected', () => {
+        connected = true;
+    });
+">
+    <div x-show="!connected" class="fixed top-0 left-0 right-0 bg-red-500 text-white p-2 text-center">
+        Connection lost. Reconnecting...
+    </div>
+</div>
+B. User-Friendly Error Messages
+php// app/Exceptions/DomainException.php - Base class
+<?php
+
+namespace App\Exceptions;
+
+use Exception;
+
+abstract class DomainException extends Exception
+{
+    protected int $status;
+
+    public function __construct(string $message = "", int $status = 400)
+    {
+        parent::__construct($message);
+        $this->status = $status;
+    }
+
+    public function getStatus(): int
+    {
+        return $this->status;
+    }
+
+    // User-friendly message
+    public function getUserMessage(): string
+    {
+        return $this->getMessage();
+    }
+
+    // Technical details for logging
+    public function getTechnicalDetails(): array
+    {
+        return [
+            'exception' => get_class($this),
+            'message' => $this->getMessage(),
+            'file' => $this->getFile(),
+            'line' => $this->getLine(),
+        ];
+    }
+}
+php// Specific exceptions with helpful messages
+class InsufficientFundsException extends DomainException
+{
+    public function __construct(float $required, float $available)
+    {
+        parent::__construct(
+            "You need ₱" . number_format($required, 2) . 
+            " but only have ₱" . number_format($available, 2) . " available.",
+            402
+        );
+    }
+}
+
+// Usage
+if ($user->balance < $order->total) {
+    throw new InsufficientFundsException($order->total, $user->balance);
+}
+C. Toast Notifications Component
+blade<!-- resources/views/components/toast-notifications.blade.php -->
+<div x-data="toastManager()" 
+     @toast.window="addToast($event.detail)"
+     class="fixed top-4 right-4 z-50 space-y-2">
+  
+  <template x-for="toast in toasts" :key="toast.id">
+    <div x-show="toast.visible"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-x-full"
+         x-transition:enter-end="opacity-100 translate-x-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         :class="{
+           'bg-green-100 border-green-400 text-green-700': toast.type === 'success',
+           'bg-red-100 border-red-400 text-red-700': toast.type === 'error',
+           'bg-yellow-100 border-yellow-400 text-yellow-700': toast.type === 'warning',
+           'bg-blue-100 border-blue-400 text-blue-700': toast.type === 'info',
+         }"
+         class="max-w-sm w-full border rounded-lg shadow-lg p-4 flex items-start">
+      
+      <div class="flex-1">
+        <p class="font-semibold" x-text="toast.title"></p>
+        <p class="text-sm mt-1" x-text="toast.message"></p>
+      </div>
+      
+      <button @click="removeToast(toast.id)" class="ml-4 text-xl">&times;</button>
+    </div>
+  </template>
+</div>
+
+<script>
+function toastManager() {
+  return {
+    toasts: [],
+    nextId: 1,
+
+    addToast(data) {
+      const toast = {
+        id: this.nextId++,
+        type: data.type || 'info',
+        title: data.title || '',
+        message: data.message || '',
+        visible: true,
+      };
+
+      this.toasts.push(toast);
+
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        this.removeToast(toast.id);
+      }, 5000);
+    },
+
+    removeToast(id) {
+      const toast = this.toasts.find(t => t.id === id);
+      if (toast) {
+        toast.visible = false;
+        // Remove from array after animation
+        setTimeout(() => {
+          this.toasts = this.toasts.filter(t => t.id !== id);
+        }, 300);
+      }
+    }
+  }
+}
+
+// Global helper function
+window.toast = function(type, title, message) {
+  window.dispatchEvent(new CustomEvent('toast', {
+    detail: { type, title, message }
+  }));
+};
+</script>
+
+<!-- Include in main layout -->
+<x-toast-notifications />
+
+<!-- Usage anywhere in JavaScript -->
+<script>
+// Success
+window.toast('success', 'Order Created', 'Your order has been placed successfully');
+
+// Error
+window.toast('error', 'Payment Failed', 'Please check your payment details');
+
+// Warning
+window.toast('warning', 'Session Expiring', 'You will be logged out in 5 minutes');
+
+// Info
+window.toast('info', 'New Message', 'You have a new message from seller');
+</script>
+
+X. Accessibility (A11y) Guidelines
+A. Keyboard Navigation
+blade<!-- All interactive elements must be keyboard accessible -->
+
+<!-- Good: Button -->
+<button @click="handleClick" class="btn btn-primary">
+    Submit
+</button>
+
+<!-- Good: Link styled as button -->
+<a href="{{ route('services.create') }}" class="btn btn-primary">
+    Create Service
+</a>
+
+<!-- Bad: Div styled as button (not keyboard accessible) -->
+<div @click="handleClick" class="btn btn-primary">
+    Submit <!-- Missing tabindex, role, keyboard handlers -->
+</div>
+
+<!-- Fix for div (if absolutely necessary): -->
+<div @click="handleClick" 
+     @keydown.enter="handleClick"
+     @keydown.space.prevent="handleClick"
+     tabindex="0"
+     role="button"
+     class="btn btn-primary">
+    Submit
+</div>
+B. ARIA Labels & Roles
+blade<!-- Descriptive labels -->
+<button aria-label="Close modal" @click="closeModal">
+    <svg>...</svg> <!-- Icon only -->
+</button>
+
+<!-- Form labels -->
+<label for="service-title" class="form-label">Service Title</label>
+<input id="service-title" type="text" class="form-input" required>
+
+<!-- Loading states -->
+<button :disabled="loading" :aria-busy="loading">
+    <span x-show="!loading">Submit</span>
+    <span x-show="loading" aria-live="polite">Loading...</span>
+</button>
+
+<!-- Alerts -->
+<div role="alert" aria-live="assertive" class="error-message">
+    {{ $errors->first('title') }}
+</div>
+
+<!-- Navigation -->
+<nav aria-label="Main navigation">
+    <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/browse">Browse</a></li>
+    </ul>
+</nav>
+C. Focus Management
+javascript// Modal focus trap
+function modalComponent() {
+  return {
+    open: false,
+    
+    openModal() {
+      this.open = true;
+      this.$nextTick(() => {
+        // Focus first focusable element
+        this.$refs.modalContent.querySelector('button, input, select, textarea, a[href]')?.focus();
+      });
+    },
+    
+    closeModal() {
+      this.open = false;
+      // Return focus to trigger element
+      this.$refs.trigger?.focus();
+    },
+    
+    // Trap focus within modal
+    handleTab(e) {
+      const focusableElements = this.$refs.modalContent.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey && document.activeElement === firstElement) {
+        lastElement.focus();
+        e.preventDefault();
+      } else if (!e.shiftKey && document.activeElement === lastElement) {
+        firstElement.focus();
+        e.preventDefault();
+      }
+    }
+  }
+}
+```
+
+---
+
+## XI. Progressive Enhancement Strategy
+
+### A. Build Layers
+```
+LAYER 1: HTML (Semantic & Accessible)
+├── Works without CSS or JavaScript
+├── Forms submit via POST
+├── Links navigate pages
+└── Content is readable
+
+LAYER 2: CSS (Visual Enhancement)
+├── Responsive layout
+├── Visual hierarchy
+├── Animations & transitions
+└── Print styles
+
+LAYER 3: JavaScript (Interactivity)
+├── Form validation
+├── AJAX submissions
+├── Real-time updates
+└── Smooth UX enhancements
+B. Implementation Example
+blade<!-- LAYER 1: HTML Form (works without JS) -->
+<form method="POST" action="{{ route('services.store') }}" 
+      enctype="multipart/form-data">
+    @csrf
+    
+    <label for="title" class="form-label">Service Title</label>
+    <input type="text" name="title" id="title" class="form-input" required>
+    
+    <button type="submit" class="btn btn-primary">Create Service</button>
+</form>
+
+<!-- LAYER 3: JavaScript Enhancement (with Alpine) -->
+<form method="POST" 
+      action="{{ route('services.store') }}"
+      @submit.prevent="submitForm"
+      x-data="serviceForm()"
+      enctype="multipart/form-data">
+    @csrf
+    
+    <label for="title" class="form-label">Service Title</label>
+    <input type="text" 
+           name="title" 
+           id="title" 
+           x-model="form.title"
+           @input="validateTitle"
+           class="form-input" 
+           required>
+    <p x-show="errors.title" x-text="errors.title" class="form-error"></p>
+    
+    <button type="submit" 
+            :disabled="submitting"
+            class="btn btn-primary">
+        <span x-show="!submitting">Create Service</span>
+        <span x-show="submitting">Creating...</span>
+    </button>
+</form>
+
+<script>
+function serviceForm() {
+  return {
+    form: { title: '' },
+    errors: {},
+    submitting: false,
+
+    validateTitle() {
+      if (this.form.title.length < 3) {
+        this.errors.title = 'Title must be at least 3 characters';
+      } else {
+        delete this.errors.title;
+      }
+    },
+
+    async submitForm(event) {
+      // If JavaScript fails, form still submits traditionally
+      this.submitting = true;
+      
+      try {
+        const formData = new FormData(event.target);
+        const response = await fetch(event.target.action, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+          }
+        });
+
+        if (response.ok) {
+          window.toast('success', 'Success', 'Service created!');
+          window.location.href = '/services';
+        } else {
+          const errors = await response.json();
+          this.errors = errors.errors || {};
+        }
+      } catch (error) {
+        // Fallback: let form submit traditionally
+        event.target.submit();
+      } finally {
+        this.submitting = false;
+      }
+    }
+  }
+}
+</script>
+
+XII. Documentation Standards
+A. Code Comments
+php/**
+ * Create a new service listing with workflow and images.
+ *
+ * This method performs the following operations:
+ * 1. Validates business rules (price > 0, workflow access)
+ * 2. Creates service record in transaction
+ * 3. Attaches images if provided
+ * 4. Broadcasts ServiceCreated event for real-time updates
+ *
+ * @param int $creatorId The ID of the user creating the service
+ * @param array $data Service data including:
+ *   - title: string (required)
+ *   - description: string (required)
+ *   - price: float (required, > 0)
+ *   - category_id: int (required, exists)
+ *   - workflow_template_id: int (required, accessible)
+ *   - address_id: int (optional, defaults to user's primary)
+ *   - pay_first: bool (optional, defaults to true)
+ *   - images: UploadedFile[] (optional, max 10)
+ *
+ * @return Service The created service with relationships loaded
+ *
+ * @throws BusinessRuleException If price <= 0
+ * @throws AuthorizationException If workflow not accessible
+ * @throws ResourceNotFoundException If dependencies not found
+ *
+ * @example
+ * $service = $serviceService->createService($userId, [
+ *     'title' => 'Plumbing Service',
+ *     'price' => 200.00,
+ *     'category_id' => 1,
+ *     'workflow_template_id' => 5,
+ *     'images' => [$file1, $file2],
+ * ]);
+ */
+public function createService(int $creatorId, array $data): Service
+{
+    // Implementation...
+}
+B. README Structure
+markdown# Serbizyu Platform
+
+## Quick Start
+```bash
+# Clone repository
+git clone https://github.com/yourusername/serbizyu.git
+cd serbizyu
+
+# Install dependencies
+composer install
+npm install
+
+# Environment setup
+cp .env.example .env
+php artisan key:generate
+
+# Database
+php artisan migrate --seed
+
+# Start development servers
+php artisan serve          # Laravel (port 8000)
+npm run dev                # Vite (port 5173)
+soketi start               # WebSockets (port 6001)
+```
+
+## Architecture
+
+- **Backend**: Laravel 11 (PHP 8.2+)
+- **Frontend**: Blade + Alpine.js + Tailwind CSS
+- **Database**: MySQL 8.0
+- **Real-time**: Laravel Echo + Soketi (Pusher protocol)
+- **Storage**: Local (dev) → S3 (production ready)
+
+## Project Structure
+```
+app/
+├── Domains/              # Domain-driven design
+│   ├── Users/           # Authentication, profiles
+│   ├── Listings/        # Services, offers
+│   ├── Orders/          # Order management
+│   └── Common/          # Shared models (Address, etc.)
+├── Exceptions/          # Custom domain exceptions
+└── Providers/           # Service registrations
+
+resources/
+├── views/
+│   ├── components/      # Reusable Blade components
+│   ├── layouts/         # Page layouts
+│   └── [pages]/         # Feature pages
+├── css/
+│   ├── app.css          # Main entry (imports only)
+│   ├── components/      # Component styles
+│   └── pages/           # Page-specific styles
+└── js/
+    ├── app.js           # Main entry (Alpine init)
+    └── [features]/      # Feature-specific JS
+
+tests/
+├── Feature/             # Integration tests
+└── Unit/                # Unit tests
+```
+
+## Development Workflow
+
+### Creating a New Feature
+
+1. **Database**: `php artisan make:migration create_things_table`
+2. **Model**: `php artisan make:model Thing`
+3. **Factory**: `php artisan make:factory ThingFactory`
+4. **Service**: Create `app/Domains/Things/Services/ThingService.php`
+5. **Controller**: `php artisan make:controller ThingController`
+6. **Tests**: `php artisan make:test ThingTest`
+7. **Routes**: Add to `routes/web.php` or `routes/api.php`
+8. **Views**: Create in `resources/views/things/`
+
+### Testing
+```bash
+composer test              # Run all tests
+composer test:coverage     # With coverage report
+composer pint              # Code formatting
+composer phpstan           # Static analysis
+composer check             # All quality checks
+```
+
+## Deployment
+
+See `docs/deployment.md` for production setup.
+
+## Contributing
+
+1. Create feature branch: `git checkout -b feature/my-feature`
+2. Make changes with tests
+3. Run quality checks: `composer check`
+4. Submit pull request
+
+## License
+
+Proprietary - School Project
+
+XIII. Git Workflow & Version Control
+A. Branching Strategy
+bash# Main branches
+main              # Production-ready code
+develop           # Integration branch
+
+# Feature branches
+feature/services-crud
+feature/order-workflow
+feature/real-time-notifications
+
+# Bugfix branches
+bugfix/payment-calculation
+bugfix/image-upload-validation
+
+# Release branches
+release/v1.0.0
+
+# Hotfix branches (from main)
+hotfix/critical-payment-bug
+```
+
+### B. Commit Message Convention
+```
+# Format: <type>(<scope>): <subject>
+
+# Types:
+feat:     New feature
+fix:      Bug fix
+docs:     Documentation only
+style:    Code style (formatting, no logic change)
+refactor: Code restructuring (no feature/bug change)
+perf:     Performance improvement
+test:     Adding/updating tests
+chore:    Build process, dependencies, etc.
+
+# Examples:
+feat(services): add image upload functionality
+fix(orders): correct total calculation with platform fee
+docs(readme): update installation instructions
+refactor(auth): extract validation logic to FormRequest
+test(services): add factory and feature tests
+chore(deps): upgrade Laravel to 11.x
+C. .gitignore Essentials
+gitignore# Laravel
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+
+# IDE
+/.idea
+/.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+/public/build
+/public/css
+/public/js
+
+XIV. Performance Monitoring
+A. Query Performance
+php// Enable query logging in development
+// app/Providers/AppServiceProvider.php
+public function boot()
+{
+    if (config('app.debug')) {
+        DB::listen(function ($query) {
+            if ($query->time > 100) { // Log queries > 100ms
+                \Log::warning('Slow query', [
+                    'sql' => $query->sql,
+                    'bindings' => $query->bindings,
+                    'time' => $query->time,
+                ]);
+            }
+        });
+    }
+}
+B. Performance Budgets
+javascript// Lighthouse CI configuration
+// lighthouserc.json
+{
+  "ci": {
+    "collect": {
+      "numberOfRuns": 3,
+      "url": [
+        "http://localhost:8000",
+        "http://localhost:8000/browse",
+        "http://localhost:8000/services/1"
+      ]
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["error", {"minScore": 0.9}],
+        "categories:accessibility": ["error", {"minScore": 0.9}],
+        "categories:seo": ["error", {"minScore":RetryDDContinuejavascript// lighthouserc.json (continued)
+{
+  "ci": {
+    "collect": {
+      "numberOfRuns": 3,
+      "url": [
+        "http://localhost:8000",
+        "http://localhost:8000/browse",
+        "http://localhost:8000/services/1"
+      ]
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["error", {"minScore": 0.9}],
+        "categories:accessibility": ["error", {"minScore": 0.9}],
+        "categories:seo": ["error", {"minScore": 0.9}],
+        "first-contentful-paint": ["warn", {"maxNumericValue": 2000}],
+        "interactive": ["warn", {"maxNumericValue": 3500}],
+        "total-byte-weight": ["warn", {"maxNumericValue": 512000}]
+      }
+    }
+  }
+}
+
+XV. Troubleshooting Guide
+A. Common Issues & Solutions
+markdown## Issue: Real-time updates not working
+
+**Symptoms**: Events broadcast but frontend doesn't receive
+
+**Checklist**:
+1. ✓ Soketi server running? `soketi start`
+2. ✓ .env BROADCAST_DRIVER=pusher
+3. ✓ Check browser console for connection errors
+4. ✓ Verify Echo initialization in bootstrap.js
+5. ✓ Event implements ShouldBroadcast interface
+6. ✓ Channel name matches in backend/frontend
+
+**Debug**:
+```php
+// Backend: Log when event broadcasts
+Log::info('Broadcasting ServiceCreated', ['service_id' => $service->id]);
+event(new ServiceCreated($service));
+```
+```javascript
+// Frontend: Log when connection established
+window.Echo.connector.pusher.connection.bind('connected', () => {
+    console.log('WebSocket connected');
+});
+
+window.Echo.channel('listings')
+    .listen('ServiceCreated', (e) => {
+        console.log('Received ServiceCreated', e);
+    });
+```
+
+---
+
+## Issue: Image uploads failing
+
+**Symptoms**: 413 Payload Too Large or 500 error
+
+**Solutions**:
+```php
+// 1. Check Laravel limits (config/filesystems.php)
+'max_upload_size' => 10 * 1024, // 10MB
+
+// 2. Check PHP limits (php.ini)
+upload_max_filesize = 10M
+post_max_size = 10M
+memory_limit = 128M
+
+// 3. Check web server limits
+
+// Nginx (nginx.conf)
+client_max_body_size 10M;
+
+// Apache (.htaccess)
+php_value upload_max_filesize 10M
+php_value post_max_size 10M
+```
+
+---
+
+## Issue: Slow page loads
+
+**Diagnostic**:
+```bash
+# 1. Check for N+1 queries
+composer require barryvdh/laravel-debugbar --dev
+
+# 2. Profile specific routes
+Route::get('/debug/services', function () {
+    \Debugbar::startMeasure('services', 'Load services');
+    $services = Service::with('creator', 'category')->get();
+    \Debugbar::stopMeasure('services');
+    return $services;
+});
+
+# 3. Use Laravel Telescope for production monitoring
+composer require laravel/telescope --dev
+php artisan telescope:install
+php artisan migrate
+```
+
+**Solutions**:
+- Add eager loading: `::with(['relations'])`
+- Cache expensive queries: `Cache::remember()`
+- Paginate large datasets: `::paginate(20)`
+- Optimize images: Use thumbnails, lazy loading
+- Enable OPcache in production
+
+---
+
+## Issue: Tests failing after migration
+
+**Symptoms**: `SQLSTATE[HY000]: General error: 1 no such table`
+
+**Solution**:
+```php
+// Use RefreshDatabase trait in tests
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+class ServiceTest extends TestCase
+{
+    use RefreshDatabase;
+    
+    // Tests will automatically migrate before running
+}
+
+// Or manually:
+php artisan test --recreate-databases
+```
+
+---
+
+## Issue: CSRF token mismatch
+
+**Symptoms**: 419 Page Expired on form submission
+
+**Solutions**:
+```blade
+<!-- 1. Ensure @csrf in all POST forms -->
+<form method="POST" action="...">
+    @csrf
+    <!-- ... -->
+</form>
+
+<!-- 2. For AJAX, include token in meta tag -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
+<script>
+// Axios (automatic)
+axios.defaults.headers.common['X-CSRF-TOKEN'] = 
+    document.querySelector('meta[name="csrf-token"]').content;
+
+// Fetch (manual)
+fetch('/api/endpoint', {
+    headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+    }
+});
+</script>
+```
+
+---
+
+## Issue: Storage link not working
+
+**Symptoms**: Images return 404 or broken links
+
+**Solution**:
+```bash
+# 1. Create symbolic link
+php artisan storage:link
+
+# 2. Verify link exists
+ls -la public/storage  # Should point to ../storage/app/public
+
+# 3. Check file permissions
+chmod -R 755 storage/app/public
+chmod -R 755 public/storage
+
+# 4. In Blade, use asset() helper
+
+```
+B. Database Debugging
+php// Enable query log temporarily
+DB::enableQueryLog();
+
+// Your code
+$services = Service::with('creator')->get();
+
+// Dump queries
+dd(DB::getQueryLog());
+
+// Output:
+// [
+//   [
+//     "query" => "select * from services",
+//     "bindings" => [],
+//     "time" => 1.23
+//   ],
+//   [
+//     "query" => "select * from users where id in (?, ?, ?)",
+//     "bindings" => [1, 2, 3],
+//     "time" => 0.45
+//   ]
+// ]
+
+XVI. Mobile Development Considerations
+A. Touch Interactions
+css/* Make touch targets at least 44x44px (iOS guideline) */
+.btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px 24px;
+}
+
+/* Remove tap highlight on mobile */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Improve scrolling performance */
+.scrollable-container {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+}
+
+/* Prevent text selection on buttons */
+button, .btn {
+    user-select: none;
+    -webkit-user-select: none;
+}
+javascript// Handle touch events for swipe gestures
+let touchStartX = 0;
+let touchEndX = 0;
+
+element.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+});
+
+element.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+});
+
+function handleSwipe() {
+    if (touchEndX < touchStartX - 50) {
+        console.log('Swiped left');
+    }
+    if (touchEndX > touchStartX + 50) {
+        console.log('Swiped right');
+    }
+}
+B. Mobile-Specific Features
+blade<!-- PWA Support (Future) -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#16a34a">
+<link rel="apple-touch-icon" href="/icon-192.png">
+
+<!-- Prevent zoom on input focus (iOS) -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<!-- Or better: Fix input font size -->
+<style>
+input, select, textarea {
+    font-size: 16px; /* iOS won't zoom if >= 16px */
+}
+</style>
+
+<!-- Mobile-friendly input types -->
+<input type="tel" pattern="[0-9]*" inputmode="numeric"> <!-- Phone keypad -->
+<input type="email"> <!-- @ key visible -->
+<input type="url"> <!-- .com shortcut -->
+<input type="date"> <!-- Native date picker -->
+C. Performance on Mobile
+javascript// Debounce search input (reduce API calls)
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Usage in Alpine component
+{
+    searchQuery: '',
+    
+    init() {
+        this.debouncedSearch = debounce(this.performSearch, 300);
+        this.$watch('searchQuery', () => this.debouncedSearch());
+    },
+    
+    performSearch() {
+        fetch(`/api/search?q=${this.searchQuery}`)
+            .then(r => r.json())
+            .then(data => this.results = data);
+    }
+}
+php// Server-side: Paginate for mobile (smaller page sizes)
+public function index(Request $request)
+{
+    $perPage = $request->header('User-Agent', '') 
+        ? (str_contains($request->header('User-Agent'), 'Mobile') ? 10 : 20)
+        : 20;
+    
+    return Service::with('thumbnail')
+        ->paginate($perPage);
+}
+
+XVII. Environment-Specific Configuration
+A. Local Development (.env.local)
+bashAPP_NAME=Serbizyu
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=serbizyu_dev
+DB_USERNAME=root
+DB_PASSWORD=
+
+BROADCAST_DRIVER=pusher
+CACHE_DRIVER=file
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=file
+
+# Soketi (local WebSockets)
+PUSHER_APP_ID=local-app-id
+PUSHER_APP_KEY=local-app-key
+PUSHER_APP_SECRET=local-app-secret
+PUSHER_HOST=127.0.0.1
+PUSHER_PORT=6001
+PUSHER_SCHEME=http
+
+# Mail (log locally)
+MAIL_MAILER=log
+B. Staging (.env.staging)
+bashAPP_NAME=Serbizyu-Staging
+APP_ENV=staging
+APP_DEBUG=true  # Keep debug on for testing
+APP_URL=https://staging.serbizyu.com
+
+DB_CONNECTION=mysql
+DB_HOST=staging-db.internal
+DB_DATABASE=serbizyu_staging
+DB_USERNAME=staging_user
+DB_PASSWORD=strong_password_here
+
+BROADCAST_DRIVER=pusher
+CACHE_DRIVER=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
+
+REDIS_HOST=staging-redis.internal
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+# Soketi (staging)
+PUSHER_APP_ID=staging-app-id
+PUSHER_APP_KEY=staging-app-key
+PUSHER_APP_SECRET=staging-app-secret
+PUSHER_HOST=ws.staging.serbizyu.com
+PUSHER_PORT=443
+PUSHER_SCHEME=https
+
+# Mail (use Mailtrap for testing)
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=mailtrap_username
+MAIL_PASSWORD=mailtrap_password
+C. Production (.env.production)
+bashAPP_NAME=Serbizyu
+APP_ENV=production
+APP_DEBUG=false  # CRITICAL: Never true in production
+APP_URL=https://serbizyu.com
+
+DB_CONNECTION=mysql
+DB_HOST=production-db.internal
+DB_DATABASE=serbizyu_prod
+DB_USERNAME=prod_user
+DB_PASSWORD=very_strong_password_here
+
+BROADCAST_DRIVER=pusher
+CACHE_DRIVER=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
+SESSION_SECURE_COOKIE=true
+
+REDIS_HOST=production-redis.internal
+REDIS_PASSWORD=redis_password_here
+REDIS_PORT=6379
+
+# Soketi (production)
+PUSHER_APP_ID=prod-app-id
+PUSHER_APP_KEY=prod-app-key
+PUSHER_APP_SECRET=prod-app-secret
+PUSHER_HOST=ws.serbizyu.com
+PUSHER_PORT=443
+PUSHER_SCHEME=https
+
+# Mail (use real SMTP)
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=noreply@serbizyu.com
+MAIL_PASSWORD=app_specific_password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=noreply@serbizyu.com
+MAIL_FROM_NAME="${APP_NAME}"
+
+# Logging
+LOG_CHANNEL=stack
+LOG_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+
+# S3 Storage (when ready)
+# FILESYSTEM_DRIVER=s3
+# AWS_ACCESS_KEY_ID=
+# AWS_SECRET_ACCESS_KEY=
+# AWS_DEFAULT_REGION=ap-southeast-1
+# AWS_BUCKET=serbizyu-prod
+
+XVIII. Feature Flags & Toggles
+php// config/features.php
+return [
+    'quick_deals' => env('FEATURE_QUICK_DEALS', false),
+    'video_uploads' => env('FEATURE_VIDEO_UPLOADS', false),
+    'real_time_notifications' => env('FEATURE_REAL_TIME', true),
+    'payment_gateway' => env('FEATURE_PAYMENTS', false),
+];
+
+// Usage in code
+if (config('features.quick_deals')) {
+    // Show Quick Deals UI
+}
+
+// Usage in Blade
+@if(config('features.video_uploads'))
+    <button>Upload Video</button>
+@endif
+
+// Middleware for entire routes
+Route::middleware(['feature:quick_deals'])->group(function () {
+    Route::resource('quick-deals', QuickDealController::class);
+});
+
+// app/Http/Middleware/CheckFeatureFlag.php
+public function handle($request, Closure $next, $feature)
+{
+    if (!config("features.{$feature}")) {
+        abort(404);
+    }
+    return $next($request);
+}
+
+XIX. Quick Reference Checklists
+A. New Page Checklist
+markdown## Creating a New Page
+
+- [ ] Create route in routes/web.php
+- [ ] Create controller method
+- [ ] Create Blade view in resources/views/
+- [ ] Add page-specific CSS (if needed)
+- [ ] Add page-specific JS (if needed)
+- [ ] Add navigation link to navbar
+- [ ] Test on mobile (375px)
+- [ ] Test on tablet (768px)
+- [ ] Test on desktop (1920px)
+- [ ] Add authorization (middleware/policy)
+- [ ] Write feature test
+- [ ] Update documentation
+B. New API Endpoint Checklist
+markdown## Creating an API Endpoint
+
+- [ ] Create FormRequest for validation
+- [ ] Create/update Service class
+- [ ] Create controller method
+- [ ] Add route to routes/api.php
+- [ ] Add policy check (authorize)
+- [ ] Return proper HTTP status codes
+- [ ] Add API documentation comment
+- [ ] Write feature test (happy path)
+- [ ] Write feature test (validation failures)
+- [ ] Write feature test (authorization)
+- [ ] Test with Postman/Insomnia
+C. Database Change Checklist
+markdown## Modifying Database
+
+- [ ] Create migration file
+- [ ] Write up() method
+- [ ] Write down() method (reversible)
+- [ ] Add indexes for foreign keys
+- [ ] Update model $fillable/$casts
+- [ ] Update factory
+- [ ] Update seeder (if applicable)
+- [ ] Run migration locally: php artisan migrate
+- [ ] Test rollback: php artisan migrate:rollback
+- [ ] Update related tests
+- [ ] Update API documentation
+D. Pre-Commit Checklist
+markdown## Before Committing Code
+
+- [ ] Code formatted: composer pint
+- [ ] No static analysis errors: composer phpstan
+- [ ] All tests pass: composer test
+- [ ] No console.log() in production JS
+- [ ] No dd() or dump() in production PHP
+- [ ] .env.example updated (if new vars added)
+- [ ] README updated (if needed)
+- [ ] Commit message follows convention
+
+XX. Project Milestones & Timeline
+Phase 1: Foundation (Weeks 1-2)
+markdown✅ Week 1: Core Setup
+- [x] Authentication system
+- [x] User profiles & addresses
+- [x] Basic navigation
+- [x] Database schema foundation
+
+⏳ Week 2: Essential Features
+- [ ] Categories management
+- [ ] Services CRUD
+- [ ] Open Offers CRUD
+- [ ] Basic search/browse
+Phase 2: Core Functionality (Weeks 3-5)
+markdownWeek 3: Workflows & Orders
+- [ ] Workflow templates
+- [ ] Order creation
+- [ ] Work instances
+
+Week 4: Real-Time & Messaging
+- [ ] Broadcasting setup (Soketi)
+- [ ] Messaging system
+- [ ] Activity threads
+- [ ] Notifications
+
+Week 5: Payments (Basic)
+- [ ] Payment flow (Xendit simulation)
+- [ ] Escrow status tracking
+- [ ] Manual disbursements
+Phase 3: Enhancement (Weeks 6-8)
+markdownWeek 6: User Experience
+- [ ] Image uploads & optimization
+- [ ] Video support
+- [ ] Toast notifications
+- [ ] Loading states
+
+Week 7: Quality & Polish
+- [ ] Responsive refinements
+- [ ] Accessibility audit
+- [ ] Performance optimization
+- [ ] Error handling
+
+Week 8: Testing & Documentation
+- [ ] Feature test coverage
+- [ ] Browser testing
+- [ ] Documentation complete
+- [ ] Deployment prep
+Phase 4: Presentation (Week 9)
+markdownWeek 9: Final Sprint
+- [ ] Bug fixes
+- [ ] Demo data seeding
+- [ ] Presentation slides
+- [ ] Video walkthrough
+- [ ] School submission
+
+XXI. Conclusion & Success Criteria
+Project Success Metrics
+markdown## Must Have (MVP)
+✓ Users can register and login
+✓ Users can browse services and offers
+✓ Sellers can create services with workflows
+✓ Buyers can create open offers
+✓ Bidding system works
+✓ Order creation from bids/services
+✓ Basic messaging between parties
+✓ Mobile-responsive on all pages
+✓ No critical bugs
+
+## Should Have (Enhanced)
+- Real-time updates working
+- Image uploads functional
+- Payment flow simulated
+- Work execution with activities
+- Notification system
+- 80% test coverage on critical paths
+
+## Nice to Have (Polish)
+- Video uploads
+- Quick Deals with QR
+- Advanced search filters
+- Performance optimized (Lighthouse > 90)
+- PWA support
+```
+
+### Development Principles Summary
+```
+1. MOBILE FIRST: Every feature starts at 375px
+2. PROGRESSIVE ENHANCEMENT: Works without JS, better with JS
+3. TEST CRITICAL PATHS: Payments, orders, auth must have tests
+4. FUTURE-PROOF: Use interfaces for swappable implementations
+5. DOCUMENT AS YOU GO: Comments, README, and this guide
+6. ITERATE QUICKLY: Ship MVP, then enhance
+7. REAL-TIME BY DEFAULT: Broadcast user-facing state changes
+8. ACCESSIBILITY MATTERS: Keyboard nav, ARIA labels, semantic HTML
+9. PERFORMANCE BUDGET: < 2s FCP, < 3.5s TTI
+10. CODE QUALITY: Pint + PHPStan on every commit
+
+🎓 Final Notes for School Project
+Demonstrating Technical Competence
+For your defense/presentation, emphasize:
+
+Architecture Decisions
+
+Domain-driven design (app/Domains/)
+Service layer pattern
+Repository pattern (via Eloquent)
+Event-driven architecture (broadcasting)
+
+
+Best Practices Applied
+
+SOLID principles
+DRY (Don't Repeat Yourself)
+Separation of concerns
+Interface-based programming (StorageServiceInterface)
+
+
+Modern Technologies
+
+Laravel 11 (latest stable)
+Real-time with WebSockets (Soketi)
+Alpine.js for reactive UI
+Tailwind CSS utility-first approach
+PSR-12 code standards
+
+
+Testing & Quality
+
+Feature and unit tests
+Static analysis (PHPStan)
+Code formatting (Pint)
+Performance monitoring
+
+
+User Experience
+
+Mobile-first responsive design
+Progressive enhancement
+Accessibility (WCAG guidelines)
+Real-time feedback
+
+
+
+Common Faculty Questions & Answers
+Q: Why Laravel instead of raw PHP?
+A: Modern framework with built-in security, ORM, routing, and community support. Industry standard.
+Q: Why not use React/Vue?
+A: Alpine.js provides reactivity without build complexity. Blade templates are simpler for backend developers. Progressive enhancement philosophy.
+Q: How do you handle security?
+A: CSRF protection, XSS escaping, SQL injection prevention (Eloquent), authorization policies, password hashing (bcrypt), input validation.
+Q: How is this scalable?
+A: Redis caching, queue workers, database indexing, eager loading (N+1 prevention), stateless architecture, horizontal scaling ready.
+Q: What about real production deployment?
+A: Interface-based storage (S3 ready), environment configs, database migrations, zero-downtime deployment strategy, monitoring/logging.
+
+📚 Additional Resources
+Official Documentation:
+
+Laravel: https://laravel.com/docs/11.x
+Alpine.js: https://alpinejs.dev
+Tailwind CSS: https://tailwindcss.com/docs
+Laravel Echo: https://laravel.com/docs/11.x/broadcasting
+Soketi: https://docs.soketi.app
+
+Learning Resources:
+
+Laracasts (free tier): https://laracasts.com
+Laravel Daily: https://laraveldaily.com
+Tailwind UI Components: https://tailwindui.com/components
+
+Tools:
+
+Laravel Debugbar: Debug queries and performance
+Laravel Telescope: Production monitoring
+Postman: API testing
+Laravel Pint: Code formatting
+PHPStan/Larastan: Static analysis
+
+
+🚀 Getting Started Tomorrow
+Day 1 Action Plan:
+bash# 1. Pull latest code
+git pull origin main
+
+# 2. Review current implementation
+php artisan route:list  # See what routes exist
+php artisan migrate:status  # Check migrations
+
+# 3. Pick next milestone (from Phase 2)
+# Suggested: Complete Categories Management
+
+# 4. Create feature branch
+git checkout -b feature/categories-crud
+
+# 5. Follow workflow:
+#    - Migration (if needed)
+#    - Model
+#    - Service class
+#    - Controller
+#    - Routes
+#    - Views
+#    - Tests
+
+# 6. Test locally
+php artisan test
+composer pint
+composer phpstan
+
+# 7. Commit and push
+git add .
+git commit -m "feat(categories): implement CRUD operations"
+git push origin feature/categories-crud
+
+# 8. Repeat for next feature
+Remember: This guide is your blueprint. Refer back when stuck. You have all the patterns, examples, and strategies you need. Trust the process, code incrementally, test often, and you'll build a production-quality system. Good luck!
