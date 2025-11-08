@@ -341,18 +341,18 @@ Frontend:
 
 ---
 
-### Milestone 1.6: User Profile & Address Web UI [0/10]
+### Milestone 1.6: User Profile & Address Web UI [4/10]
 
 #### Backend Tasks
 - [ ] Update existing `ProfileController` in the `Users` domain.
-- [ ] Create `AddressController` in the `Users` domain.
-- [ ] Add address CRUD endpoints.
-- [ ] Add "set primary" endpoint.
+- [x] Create `AddressController` in the `Users` domain. *(Superseded by Livewire)*
+- [x] Add address CRUD endpoints. *(Superseded by Livewire)*
+- [x] Add "set primary" endpoint. *(Superseded by Livewire)*
 - [ ] Add public profile endpoint.
 
 #### Frontend Tasks
 - [ ] Update `resources/views/profile/edit.blade.php` to use a Livewire component.
-- [ ] Create an `AddressManager` Livewire component.
+- [x] Create an `AddressManager` Livewire component.
 - [ ] Show user's services/offers on their public profile page.
 
 #### Files:

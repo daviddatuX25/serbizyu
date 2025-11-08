@@ -43,10 +43,14 @@ class User extends Authenticatable implements MustVerifyEmail
         'remember_token',
     ];
 
-    // address
+    /**
+     * The addresses that belong to the user.
+     */
     public function addresses()
     {
-        return $this->hasMany(UserAddress::class);
+        return $this->belongsToMany(Address::class, 'user_addresses')
+                    ->withPivot('is_primary')
+                    ->withTimestamps();
     }
 
     /**

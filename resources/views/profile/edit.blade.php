@@ -15,6 +15,13 @@
         </div>
       </div>
 
+      {{-- Address Management --}}
+      <div class="mt-10">
+        <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+            <livewire:address-manager />
+        </div>
+      </div>
+
       {{-- Delete Account --}}
       <div class="mt-10">
         @include('profile.partials.delete-user-form')
