@@ -1,0 +1,12 @@
+{
+  "src": [
+    "."
+  ],
+  "except_folders": [
+    "vendor",
+    "node_modules",
+    "storage",
+    "public/build",
+    "tests"
+  ]
+}

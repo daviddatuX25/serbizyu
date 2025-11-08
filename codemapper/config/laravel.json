@@ -1,0 +1,22 @@
+{
+  "src": [
+    "."
+  ],
+  "folders": [
+    "app",
+    "config",
+    "database",
+    "routes",
+    "resources"
+  ],
+  "except_folders": [
+    "vendor",
+    "node_modules",
+    "storage",
+    "public/build",
+    "tests"
+  ],
+  "except_files": [
+    ".env"
+  ]
+}
