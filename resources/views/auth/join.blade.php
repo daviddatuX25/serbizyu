@@ -15,14 +15,14 @@
         @csrf
         <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label for="first_name" class="form-label">First Name</label>
-            <input type="text" id="first_name" name="first_name" placeholder="First name" required class="form-input">
-            <x-input-error :messages="$errors->get('first_name')" class="mt-2" />
+            <label for="firstname" class="form-label">First Name</label>
+            <input type="text" id="firstname" name="firstname" placeholder="First name" required class="form-input">
+            <x-input-error :messages="$errors->get('firstname')" class="mt-2" />
           </div>
           <div>
-            <label for="last_name" class="form-label">Last Name</label>
-            <input type="text" id="last_name" name="last_name" placeholder="Last name" required class="form-input">
-            <x-input-error :messages="$errors->get('last_name')" class="mt-2" />
+            <label for="lastname" class="form-label">Last Name</label>
+            <input type="text" id="lastname" name="lastname" placeholder="Last name" required class="form-input">
+            <x-input-error :messages="$errors->get('lastname')" class="mt-2" />
           </div>
         </div>
 

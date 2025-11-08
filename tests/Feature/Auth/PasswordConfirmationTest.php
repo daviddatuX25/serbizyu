@@ -2,7 +2,8 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\User;
+use App\Domains\Users\Models\User;
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -24,7 +25,7 @@ class PasswordConfirmationTest extends TestCase
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->post('/confirm-password', [
-            'password' => 'password',
+            'password' => 'password123',
         ]);
 
         $response->assertRedirect();

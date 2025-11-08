@@ -1,0 +1,27 @@
+{
+  "src": [
+    "."
+  ],
+  "except_folders": [
+    "vendor",
+    "node_modules",
+    "storage",
+    "public/build",
+    "Project essential"
+  ],
+
+  "except_files": [
+    ".env",
+    "composer.lock",
+    "package-lock.json",
+    "webpack.mix.js",
+    "vite.config.js"
+  ],
+  "folders": [
+    "app",
+    "config",
+    "database",
+    "routes",
+    "resources"
+  ]
+}

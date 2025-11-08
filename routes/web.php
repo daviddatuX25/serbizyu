@@ -1,5 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
+use App\Domains\Listings\Http\Controllers\ServiceController;
 use App\Domains\Users\Http\Controllers\ProfileController;
 use App\Domains\Users\Http\Controllers\UserVerificationController;
 use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
@@ -28,7 +29,7 @@ require __DIR__.'/auth.php';
     })->name('faq');
 
 // Creator space
-   Route::middleware(['auth'])->prefix('creator')->group(function () {
+    Route::prefix('creator')->group(function () {
        Route::get('/', function () {
            return view('home');
        })->name('creator.dashboard');

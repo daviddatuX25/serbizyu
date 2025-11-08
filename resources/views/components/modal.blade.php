@@ -15,62 +15,32 @@ $maxWidth = [
 @endphp
 
 <div
-    x-data="{
-        show: @js($show),
-        focusables() {
-            let selector = 'a, button, input:not([type=\'hidden\']), textarea, select, details, [tabindex]:not([tabindex=\'-1\'])'
-            return [...$el.querySelectorAll(selector)]
-                .filter(el => ! el.hasAttribute('disabled'))
-        },
-        firstFocusable() { return this.focusables()[0] },
-        lastFocusable() { return this.focusables().slice(-1)[0] },
-        nextFocusable() { return this.focusables()[this.nextFocusableIndex()] || this.firstFocusable() },
-        prevFocusable() { return this.focusables()[this.prevFocusableIndex()] || this.lastFocusable() },
-        nextFocusableIndex() { return (this.focusables().indexOf(document.activeElement) + 1) % (this.focusables().length + 1) },
-        prevFocusableIndex() { return Math.max(0, this.focusables().indexOf(document.activeElement)) -1 },
-    }"
-    x-init="$watch('show', value => {
-        if (value) {
-            document.body.classList.add('overflow-y-hidden');
-            {{ $attributes->has('focusable') ? 'setTimeout(() => firstFocusable().focus(), 100)' : '' }}
-        } else {
-            document.body.classList.remove('overflow-y-hidden');
-        }
-    })"
-    x-on:open-modal.window="$event.detail == '{{ $name }}' ? show = true : null"
-    x-on:close-modal.window="$event.detail == '{{ $name }}' ? show = false : null"
-    x-on:close.stop="show = false"
-    x-on:keydown.escape.window="show = false"
-    x-on:keydown.tab.prevent="$event.shiftKey || nextFocusable().focus()"
-    x-on:keydown.shift.tab.prevent="prevFocusable().focus()"
+    x-data="{ show: false }"
+    x-on:open-modal.window="if ($event.detail === '{{ $name }}') { show = true; }"
+    x-on:close-modal.window="if ($event.detail === '{{ $name }}') { show = false; }"
+    x-on:keydown.escape.window="if (show) { show = false; }"
     x-show="show"
-    class="modal-overlay"
-    style="display: {{ $show ? 'block' : 'none' }};"
+    x-cloak
+    class="fixed inset-0 z-50 overflow-y-auto"
+    style="display: none;"
 >
-    <div
+    {{-- Backdrop --}}
+    <div 
         x-show="show"
-        class="fixed inset-0 transform transition-all"
-        x-on:click="show = false"
-        x-transition:enter="modal-enter"
-        x-transition:enter-start="modal-enter-start"
-        x-transition:enter-end="modal-enter-end"
-        x-transition:leave="modal-leave"
-        x-transition:leave-start="modal-leave-start"
-        x-transition:leave-end="modal-leave-end"
-    >
-        <div class="modal-backdrop"></div>
-    </div>
+        x-transition.opacity
+        class="fixed inset-0 bg-black/50"
+        @click="show = false"
+    ></div>
 
-    <div
+    {{-- Modal Panel --}}
+    <div 
         x-show="show"
-        class="modal-content {{ $maxWidth }}"
-        x-transition:enter="modal-enter"
-        x-transition:enter-start="modal-enter-start"
-        x-transition:enter-end="modal-enter-end"
-        x-transition:leave="modal-leave"
-        x-transition:leave-start="modal-leave-start"
-        x-transition:leave-end="modal-leave-end"
+        x-transition.scale.origin.center
+        @click.stop
+        class="relative min-h-screen flex items-center justify-center p-4"
     >
-        {{ $slot }}
+        <div class="modal-content {{ $maxWidth }} bg-background dark:bg-secondary-dark rounded-xl shadow-xl">
+            {{ $slot }}
+        </div>
     </div>
 </div>
