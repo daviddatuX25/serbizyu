@@ -1,5 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
+use App\Domains\Listings\Http\Controllers\ServiceController;
 use App\Domains\Users\Http\Controllers\ProfileController;
 use App\Domains\Listings\Http\Controllers\CategoryController;
 
@@ -55,4 +56,17 @@ Route::middleware(['auth'])->prefix('creator')->group(function () {
     Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('creator.categories.destroy');
     // Restore soft-deleted category
     Route::patch('categories/{category}/restore', [CategoryController::class, 'restore'])->name('creator.categories.restore');
+});
+
+// Service Management (Creator only)
+Route::middleware(['auth'])->prefix('creator')->group(function () {
+    Route::resource('services', ServiceController::class)->names([
+        'index' => 'creator.services.index',
+        'create' => 'creator.services.create',
+        'store' => 'creator.services.store',
+        'show' => 'creator.services.show',
+        'edit' => 'creator.services.edit',
+        'update' => 'creator.services.update',
+        'destroy' => 'creator.services.destroy',
+    ]);
 });

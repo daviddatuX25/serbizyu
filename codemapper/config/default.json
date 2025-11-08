@@ -7,6 +7,21 @@
     "node_modules",
     "storage",
     "public/build",
-    "tests"
+    "Project essential"
+  ],
+
+  "except_files": [
+    ".env",
+    "composer.lock",
+    "package-lock.json",
+    "webpack.mix.js",
+    "vite.config.js"
+  ],
+  "folders": [
+    "app",
+    "config",
+    "database",
+    "routes",
+    "resources"
   ]
 }

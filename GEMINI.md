@@ -4,6 +4,9 @@
 *   [System Architecture Analysis](#system-architecture-analysis)
     *   [Already Implemented (From Code Map)](#already-implemented-from-code-map)
     *   [Needs Implementation](#needs-implementation)
+*   [Iteration Process & Rules](#iteration-process--rules)
+    *   [Fundamentals](#fundamentals)
+    *   [Iteration Process Checklist](#iteration-process-checklist)
 *   [PHASE 1: Foundation & Core API (Week 1-2)](#phase-1-foundation--core-api-week-1-2)
     *   [Milestone 1.1: API Infrastructure Setup [0/8]](#milestone-11-api-infrastructure-setup-08)
     *   [Milestone 1.2: Categories API [0/6]](#milestone-12-categories-api-06)
@@ -133,6 +136,37 @@
 
 ---
 
+## 📜 Iteration Process & Rules
+
+This guide refines the iterative development process for Laravel applications, incorporating frontend considerations alongside backend fundamentals. It maintains DDD for backend organization (domains as bounded contexts) and Spatie for RBAC, while extending to frontend using Blade templates for primary rendering, Livewire for interactive components (leveraging Alpine for reactivity), and minimal APIs (favor server-rendered Blade over SPA-style APIs unless explicitly needed for dynamic updates). The process emphasizes user collaboration on UI/UX, task decomposition for manageability, and holistic feature delivery.
+
+### Fundamentals:
+
+*   **Backend DDD:** Domains encapsulate logic; services orchestrate invariants; repositories abstract data; events decouple side effects.
+*   **Spatie RBAC:** Permissions are domain-specific and role-agnostic; enforce at policy level for both backend actions and frontend visibility.
+*   **Frontend Approach:** Prioritize Blade for static/server-rendered views. Use Livewire for stateful, interactive components (e.g., forms, real-time updates) integrated with Alpine for client-side reactivity. Avoid heavy APIs—use Livewire's `wire:model`/`action` for data binding and server calls. If dynamic, fall back to Alpine alone.
+*   **User Collaboration:** For frontend, always re-query the user on UI expectations, especially for follow-ups or iterations.
+*   **Task Decomposition:** If a step reveals complexity (e.g., a flow needs role-specific UIs), break into subtasks immediately to maintain momentum.
+*   **Quality Gates:** Lint/test at each step; use Livewire's testing utils; ensure responsive design (Tailwind) and accessibility.
+*   **Subtask Handling:** Nest as decimals; if frontend-specific, prefix with "F" (e.g., 9.1F: UI variant).
+
+### Iteration Process Checklist
+Execute sequentially per feature/subfeature. Document in a tracker; re-engage user for clarifications.
+
+1.  **Brainstorm and Scope Definition:** Define domain entities, invariants, and roles/permissions (Spatie). Extend to frontend: Sketch high-level UI needs (e.g., views, interactions). **Re-query user:** "Based on this scope, describe the desired look and feel for [feature], including any follow-up interactions." Output: Domain model + initial wireframes (text-based).
+2.  **Logic and Flow Mapping:** Map backend flows with DDD patterns, including role branches. For frontend: Map UI flows (e.g., Blade view → Livewire component → Alpine event). If task complexity emerges (e.g., multi-step form), break down here. **Re-query user if UI unclear:** "For [subflow], how should it appear on follow-up (e.g., modal, redirect)?" Output: Integrated flow map (backend + frontend paths).
+3.  **Database and Persistence Setup:** Create migrations/repositories aligned with domain. No frontend here, but consider data shaping for views (e.g., eager loading for Blade loops).
+4.  **Model Implementation:** Define entities with relationships/scopes. Integrate Spatie on relevant models. Prepare for frontend by adding accessors (e.g., formatted attributes for display).
+5.  **Service and Repository Layer:** Implement domain logic in services; use transactions/events. If sublogic arises (e.g., notification integration), nest subtasks. Ensure outputs are view-friendly (e.g., DTOs for Blade). **Subtask Rule:** Decompose oversized tasks (e.g., if service handles complex UI data prep, split to 5.1: Dedicated prep method).
+6.  **Validation with Requests:** Create requests with domain rules; tie authorization to Spatie. For Livewire: Use similar validation in components (e.g., `validateOnly()`).
+7.  **Authorization with Policies:** Define policy methods; register for models. Extend to frontend: Use policies in Livewire/Blade for conditional rendering (e.g., using the `@can` directive: `@can('update', $post)`).
+8.  **Controller and Routing:** Orchestrate backend; return Blade views or Livewire responses. Favor `return view()` over JSON APIs. Route with role middleware. **Subtask Rule:** For role/UI variants, nest (e.g., 8.1: Owner route with filtered data; 8.1F: Custom Blade partial).
+9.  **Frontend Implementation:** Build Blade views as primary (e.g., layouts, loops). Embed Livewire components for interactivity (e.g., `<livewire:entity-form />`). Add Alpine for client-side (e.g., `x-data` for toggles). **Re-query user:** "Confirm the look for [UI element]; any follow-ups like modals?" If complex, decompose (e.g., 9.1F: Break form into subcomponents). Ensure RBAC: Hide elements via directives. **Subtask Rule:** If UI task is large (e.g., dashboard with tabs), split (e.g., 9.1F: Tab 1; 9.2F: Tab 2 with Livewire polling).
+10. **Testing and Validation:** Unit/feature tests for backend; Livewire tests for components (e.g., `Livewire::test()`). Browser tests for full flows. Cover roles and UI states.
+11. **Refinement and Closure:** Optimize (e.g., Livewire defer loading). Review DDD/Spatie fidelity and UI consistency. If new iterations needed, re-query user and spawn cycle.
+
+---
+
 ## 📦 PHASE 1: Foundation & Core API (Week 1-2)
 
 ### Milestone 1.1: API Infrastructure Setup [0/8]
@@ -150,7 +184,7 @@
 
 #### Files to Create:
 ```
-app/Http/Controllers/Api/
+app/Domains/Common/Http/Controllers/Api/
 ├── ApiController.php
 └── .gitkeep
 
@@ -165,150 +199,140 @@ app/Traits/
 
 ---
 
-### Milestone 1.2: Categories API [0/6]
-**Goal:** Complete CRUD API for categories (foundation for listings)
+### Milestone 1.2: Categories Web CRUD [0/6]
+**Goal:** Complete Web CRUD for categories (foundation for listings)
 
 #### Backend Tasks
-- [ ] Create `CategoryController` API (extends existing functionality)
-- [ ] Add routes: GET, POST, PUT, DELETE `/api/categories`
-- [ ] Add filtering/search query parameters
-- [ ] Create `CategoryResource` for JSON transformation
-- [ ] Add authorization (admin only for write)
-- [ ] Test with Postman/browser console
+- [ ] Create `CategoryController` for Web CRUD in the `Listings` domain.
+- [ ] Add routes: GET, POST, PUT, DELETE `/creator/categories`
+- [ ] Add filtering/search query parameters to the `index` method.
+- [ ] Implement authorization (admin/creator only for write actions).
+- [ ] Test all CRUD operations via the browser.
 
 #### Frontend Tasks
-- [ ] Update existing category filter to use AJAX
-- [ ] Add Alpine.js component for category management (admin)
-- [ ] Show loading states with Alpine
+- [ ] Create Blade views for category management (`index`, `create`, `edit`).
+- [ ] Use Alpine.js for confirmations or minor UI enhancements.
+- [ ] Display success/error feedback messages.
 
 #### Files:
 ```
-app/Http/Controllers/Api/
+app/Domains/Listings/Http/Controllers/
 └── CategoryController.php
 
-app/Http/Resources/
+app/Domains/Listings/Http/Resources/
 ├── CategoryResource.php
 └── CategoryCollection.php
 
-resources/views/components/admin/
-└── category-manager.blade.php
+resources/views/creator/categories/
+├── index.blade.php
+├── create.blade.php
+└── edit.blade.php
 ```
 
 **Estimated Time:** 4 hours
 
 ---
 
-### Milestone 1.3: Services API & UI Enhancement [0/12]
+### Milestone 1.3: Services Web CRUD & UI [0/12]
 
 #### Backend Tasks
-- [ ] Create `ServiceController` API (full CRUD)
-- [ ] Add routes for services CRUD
-- [ ] Add image upload endpoint `/api/services/{id}/images`
-- [ ] Create `ServiceResource` with relationships
-- [ ] Add filtering (category, location, price range, search)
-- [ ] Add sorting (price, created_at, rating)
-- [ ] Implement `ServicePolicy` for authorization
-- [ ] Handle soft deletes properly
+- [ ] Create `ServiceController` for Web CRUD in the `Listings` domain.
+- [ ] Add resource routes for services CRUD under `/creator/services`.
+- [ ] Add image upload handling in the `ServiceService`.
+- [ ] Implement `ServicePolicy` for authorization (create, update, delete).
+- [ ] Handle soft deletes in all service queries.
+- [ ] Add filtering and sorting logic to the `index` method.
 
 #### Frontend Tasks
-- [ ] Enhance `resources/views/browse.blade.php` with AJAX
-- [ ] Create `resources/views/services/create.blade.php`
-- [ ] Create `resources/views/services/edit.blade.php`
-- [ ] Create `resources/views/services/show.blade.php`
-- [ ] Add Alpine.js image uploader component
-- [ ] Add real-time filter updates
-- [ ] Show loading states and skeletons
+- [ ] Enhance `resources/views/browse.blade.php` with Livewire for dynamic filtering.
+- [ ] Create `resources/views/creator/services/create.blade.php`.
+- [ ] Create `resources/views/creator/services/edit.blade.php`.
+- [ ] Create public-facing `resources/views/listings/show.blade.php`.
+- [ ] Create a Livewire component for image uploads to provide a better UX.
 
 #### Files:
 ```
 Backend:
-├── app/Http/Controllers/Api/ServiceController.php
-├── app/Http/Resources/ServiceResource.php
-├── app/Policies/ServicePolicy.php
+├── app/Domains/Listings/Http/Controllers/ServiceController.php
+├── app/Domains/Listings/Policies/ServicePolicy.php
 └── app/Http/Requests/StoreServiceRequest.php
 
 Frontend:
-├── resources/views/services/create.blade.php
-├── resources/views/services/edit.blade.php
-├── resources/views/services/show.blade.php
-├── resources/views/components/service-form.blade.php
-└── resources/views/components/image-uploader.blade.php
+├── resources/views/creator/services/create.blade.php
+├── resources/views/creator/services/edit.blade.php
+├── resources/views/listings/show.blade.php
+├── app/Http/Livewire/ImageUploader.php
+└── resources/views/livewire/image-uploader.blade.php
 ```
 
 **Estimated Time:** 8 hours
 
 ---
 
-### Milestone 1.4: Open Offers API & UI [0/12]
+### Milestone 1.4: Open Offers Web CRUD & UI [0/12]
 
 #### Backend Tasks
-- [ ] Create `OpenOfferController` API (full CRUD)
-- [ ] Add routes for offers CRUD
-- [ ] Add "close offer" endpoint
-- [ ] Create `OpenOfferResource`
-- [ ] Add filtering and search
-- [ ] Implement `OpenOfferPolicy`
-- [ ] Add auto-expiration job (optional field)
-- [ ] Handle offer fulfillment status
+- [ ] Create `OpenOfferController` for Web CRUD in the `Listings` domain.
+- [ ] Add routes for offers CRUD.
+- [ ] Add "close offer" endpoint/method.
+- [ ] Implement `OpenOfferPolicy`.
+- [ ] Add auto-expiration job for offers (optional field).
+- [ ] Handle offer fulfillment status changes.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/offers/create.blade.php`
-- [ ] Create `resources/views/offers/edit.blade.php`
-- [ ] Create `resources/views/offers/show.blade.php`
-- [ ] Add Alpine.js budget calculator
-- [ ] Show bid count dynamically
-- [ ] Add close offer button (owner only)
+- [ ] Create `resources/views/offers/create.blade.php`.
+- [ ] Create `resources/views/offers/edit.blade.php`.
+- [ ] Create `resources/views/offers/show.blade.php`.
+- [ ] Create a Livewire component for budget calculation or other interactive elements.
+- [ ] Show bid count dynamically.
+- [ ] Add close offer button (owner only, using a Livewire action).
 
 #### Files:
 ```
 Backend:
-├── app/Http/Controllers/Api/OpenOfferController.php
-├── app/Http/Resources/OpenOfferResource.php
-├── app/Policies/OpenOfferPolicy.php
+├── app/Domains/Listings/Http/Controllers/OpenOfferController.php
+├── app/Domains/Listings/Policies/OpenOfferPolicy.php
 └── app/Jobs/CloseExpiredOffers.php (optional)
 
 Frontend:
 ├── resources/views/offers/create.blade.php
 ├── resources/views/offers/edit.blade.php
 ├── resources/views/offers/show.blade.php
-└── resources/views/components/offer-form.blade.php
+└── app/Http/Livewire/OfferForm.php
 ```
 
 **Estimated Time:** 8 hours
 
 ---
 
-### Milestone 1.5: Bidding System API & UI [0/14]
+### Milestone 1.5: Bidding System Web & UI [0/14]
 
 #### Backend Tasks
-- [ ] Create `OpenOfferBidController` API
-- [ ] Add routes for bid CRUD
-- [ ] Add accept/reject bid endpoints
-- [ ] Create `OpenOfferBidResource`
-- [ ] Validate: no duplicate bids, service owner matches bidder
-- [ ] Implement `BidPolicy`
-- [ ] Auto-close offer when bid accepted
-- [ ] Send notifications (email for now)
+- [ ] Create `OpenOfferBidController` for handling bid actions.
+- [ ] Add routes for bid CRUD.
+- [ ] Add accept/reject bid methods.
+- [ ] Validate: no duplicate bids, service owner matches bidder.
+- [ ] Implement `BidPolicy`.
+- [ ] Auto-close offer when bid accepted.
+- [ ] Send notifications (email for now).
 
 #### Frontend Tasks
-- [ ] Add bid form to offer detail page
-- [ ] Create `resources/views/components/bid-list.blade.php`
-- [ ] Add accept/reject buttons (Alpine.js)
-- [ ] Show bid status badges
-- [ ] Add "My Bids" section to dashboard
-- [ ] Show bid notifications
+- [ ] Add bid form to offer detail page (as a Livewire component).
+- [ ] Create a `BidList` Livewire component.
+- [ ] Add accept/reject buttons with `wire:click` actions.
+- [ ] Show bid status badges.
+- [ ] Add "My Bids" section to the user dashboard.
 
 #### Files:
 ```
 Backend:
-├── app/Http/Controllers/Api/OpenOfferBidController.php
-├── app/Http/Resources/OpenOfferBidResource.php
-├── app/Policies/BidPolicy.php
+├── app/Domains/Listings/Http/Controllers/OpenOfferBidController.php
+├── app/Domains/Listings/Policies/BidPolicy.php
 └── app/Notifications/BidPlacedNotification.php
 
 Frontend:
-├── resources/views/components/bid-form.blade.php
-├── resources/views/components/bid-list.blade.php
+├── app/Http/Livewire/BidForm.php
+├── app/Http/Livewire/BidList.php
 └── resources/views/dashboard/bids.blade.php
 ```
 
@@ -316,31 +340,28 @@ Frontend:
 
 ---
 
-### Milestone 1.6: User Profile & Address API [0/10]
+### Milestone 1.6: User Profile & Address Web UI [0/10]
 
 #### Backend Tasks
-- [ ] Create `ProfileController` API (update existing)
-- [ ] Create `AddressController` API
-- [ ] Add address CRUD endpoints
-- [ ] Add "set primary" endpoint
-- [ ] Create `AddressResource`
-- [ ] Add public profile endpoint
+- [ ] Update existing `ProfileController` in the `Users` domain.
+- [ ] Create `AddressController` in the `Users` domain.
+- [ ] Add address CRUD endpoints.
+- [ ] Add "set primary" endpoint.
+- [ ] Add public profile endpoint.
 
 #### Frontend Tasks
-- [ ] Update `resources/views/profile/edit.blade.php` to use AJAX
-- [ ] Create address manager component (Alpine.js)
-- [ ] Add address form modal
-- [ ] Show user's services/offers on public profile
+- [ ] Update `resources/views/profile/edit.blade.php` to use a Livewire component.
+- [ ] Create an `AddressManager` Livewire component.
+- [ ] Show user's services/offers on their public profile page.
 
 #### Files:
 ```
 Backend:
-├── app/Http/Controllers/Api/ProfileController.php
-├── app/Http/Controllers/Api/AddressController.php
-└── app/Http/Resources/AddressResource.php
+├── app/Domains/Users/Http/Controllers/ProfileController.php
+├── app/Domains/Users/Http/Controllers/AddressController.php
 
 Frontend:
-├── resources/views/components/address-manager.blade.php
+├── app/Http/Livewire/AddressManager.php
 └── resources/views/profile/public.blade.php
 ```
 
@@ -348,36 +369,34 @@ Frontend:
 
 ---
 
-### Milestone 1.7: Workflow Management API & UI [0/15]
+### Milestone 1.7: Workflow Management Web UI [0/15]
 
 #### Backend Tasks
-- [ ] Create `WorkflowTemplateController` API
-- [ ] Create `WorkTemplateController` API
-- [ ] Create `WorkCatalogController` API
-- [ ] Add all necessary resources
-- [ ] Add step reordering endpoint
-- [ ] Handle public/private workflows
-- [ ] Add workflow duplication feature
+- [ ] Create `WorkflowTemplateController` in the `Listings` domain.
+- [ ] Create `WorkTemplateController` in the `Listings` domain.
+- [ ] Create `WorkCatalogController` in the `Listings` domain.
+- [ ] Add step reordering endpoint.
+- [ ] Handle public/private workflows.
+- [ ] Add workflow duplication feature.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/workflows/index.blade.php`
-- [ ] Create `resources/views/workflows/builder.blade.php`
-- [ ] Add drag-drop step builder (Alpine.js + Sortable.js)
-- [ ] Create step editor component
-- [ ] Add workflow selector for services/offers
+- [ ] Create `resources/views/workflows/index.blade.php`.
+- [ ] Create `resources/views/workflows/builder.blade.php` to host the Livewire component.
+- [ ] Create a `WorkflowBuilder` Livewire component for drag-drop functionality.
+- [ ] Create a step editor component (can be part of the main builder).
+- [ ] Add a workflow selector for services/offers.
 
 #### Files:
 ```
 Backend:
-├── app/Http/Controllers/Api/WorkflowTemplateController.php
-├── app/Http/Controllers/Api/WorkTemplateController.php
-├── app/Http/Controllers/Api/WorkCatalogController.php
-└── app/Http/Resources/WorkflowTemplateResource.php
+├── app/Domains/Listings/Http/Controllers/WorkflowTemplateController.php
+├── app/Domains/Listings/Http/Controllers/WorkTemplateController.php
+├── app/Domains/Listings/Http/Controllers/WorkCatalogController.php
 
 Frontend:
 ├── resources/views/workflows/index.blade.php
 ├── resources/views/workflows/builder.blade.php
-└── resources/views/components/workflow-builder.blade.php
+└── app/Http/Livewire/WorkflowBuilder.php
 ```
 
 **Estimated Time:** 10 hours
@@ -389,23 +408,23 @@ Frontend:
 ### Milestone 2.1: Order System Foundation [0/16]
 
 #### Backend Tasks
-- [ ] Create `Order` model + migration
-- [ ] Create `OrderController` API
-- [ ] Add create order endpoint (from accepted bid)
-- [ ] Add order status enum (pending, in_progress, completed, cancelled, disputed)
-- [ ] Add cancel order endpoint (if no work started)
-- [ ] Implement order state machine
-- [ ] Create `OrderPolicy`
-- [ ] Send order notifications (email)
+- [ ] Create `Order` model + migration in the `Orders` domain.
+- [ ] Create `OrderController` in the `Orders` domain.
+- [ ] Add create order endpoint (from accepted bid).
+- [ ] Add order status enum (pending, in_progress, completed, cancelled, disputed).
+- [ ] Add cancel order endpoint (if no work started).
+- [ ] Implement order state machine logic in the `OrderService`.
+- [ ] Create `OrderPolicy`.
+- [ ] Send order notifications (email).
 
 #### Frontend Tasks
-- [ ] Create `resources/views/orders/index.blade.php`
-- [ ] Create `resources/views/orders/show.blade.php`
-- [ ] Add order status timeline component
-- [ ] Add cancel button (if eligible)
-- [ ] Show order details clearly
-- [ ] Add "My Orders" dashboard section
-- [ ] Create order creation flow from bid acceptance
+- [ ] Create `resources/views/orders/index.blade.php`.
+- [ ] Create `resources/views/orders/show.blade.php`.
+- [ ] Add order status timeline component.
+- [ ] Add cancel button (if eligible).
+- [ ] Show order details clearly.
+- [ ] Add "My Orders" dashboard section.
+- [ ] Create order creation flow from bid acceptance.
 
 #### Database:
 ```sql
@@ -429,10 +448,9 @@ orders table:
 #### Files:
 ```
 Backend:
-├── app/Models/Order.php
-├── app/Http/Controllers/Api/OrderController.php
-├── app/Http/Resources/OrderResource.php
-├── app/Policies/OrderPolicy.php
+├── app/Domains/Orders/Models/Order.php
+├── app/Domains/Orders/Http/Controllers/OrderController.php
+├── app/Domains/Orders/Policies/OrderPolicy.php
 ├── app/Enums/OrderStatus.php
 └── database/migrations/xxxx_create_orders_table.php
 
@@ -449,26 +467,23 @@ Frontend:
 ### Milestone 2.2: Work Instance Execution [0/20]
 
 #### Backend Tasks
-- [ ] Create `WorkInstance` model + migration
-- [ ] Clone workflow on order creation
-- [ ] Create `WorkInstanceController` API
-- [ ] Add start/complete step endpoints
-- [ ] Add work instance timeline endpoint
-- [ ] Create `ActivityThread` model (discussions per step)
-- [ ] Create `ActivityMessage` model
-- [ ] Add activity CRUD endpoints
-- [ ] Add file upload to activities
-- [ ] Send activity notifications
+- [ ] Create `WorkInstance` model + migration in the `Work` domain.
+- [ ] Clone workflow on order creation.
+- [ ] Create `WorkInstanceController` in the `Work` domain.
+- [ ] Add start/complete step endpoints.
+- [ ] Add work instance timeline endpoint.
+- [ ] Create `ActivityThread` and `ActivityMessage` models.
+- [ ] Add activity CRUD endpoints via `ActivityController`.
+- [ ] Add file upload to activities.
+- [ ] Send activity notifications.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/work/show.blade.php`
-- [ ] Add step-by-step progress UI
-- [ ] Create activity thread component (per step)
-- [ ] Add file upload component
-- [ ] Show real-time progress
-- [ ] Add notes/comment section
-- [ ] Create work dashboard for sellers
-- [ ] Add buyer work monitoring view
+- [ ] Create `resources/views/work/show.blade.php`.
+- [ ] Create a `WorkProgress` Livewire component for the step-by-step UI.
+- [ ] Create an `ActivityThread` Livewire component for discussions.
+- [ ] Add a file upload component.
+- [ ] Show real-time progress with Livewire polling or broadcasting.
+- [ ] Create a work dashboard for sellers.
 
 #### Database:
 ```sql
@@ -497,18 +512,17 @@ activity_attachments:
 #### Files:
 ```
 Backend:
-├── app/Models/WorkInstance.php
-├── app/Models/WorkInstanceStep.php
-├── app/Models/ActivityThread.php
-├── app/Models/ActivityMessage.php
-├── app/Http/Controllers/Api/WorkInstanceController.php
-└── app/Http/Controllers/Api/ActivityController.php
+├── app/Domains/Work/Models/WorkInstance.php
+├── app/Domains/Work/Models/WorkInstanceStep.php
+├── app/Domains/Work/Models/ActivityThread.php
+├── app/Domains/Work/Models/ActivityMessage.php
+├── app/Domains/Work/Http/Controllers/WorkInstanceController.php
+└── app/Domains/Work/Http/Controllers/ActivityController.php
 
 Frontend:
 ├── resources/views/work/show.blade.php
-├── resources/views/components/work-progress.blade.php
-├── resources/views/components/activity-thread.blade.php
-└── resources/views/components/file-uploader.blade.php
+├── app/Http/Livewire/WorkProgress.php
+└── app/Http/Livewire/ActivityThread.php
 ```
 
 **Estimated Time:** 12 hours
@@ -551,21 +565,19 @@ Frontend:
 ### Milestone 3.2: Real-time Notifications [0/15]
 
 #### Backend Tasks
-- [ ] Create notification system (database notifications)
-- [ ] Create `Notification` component
-- [ ] Create events: `BidPlaced`, `BidAccepted`, `OrderCreated`
-- [ ] Create events: `WorkStepCompleted`, `ActivityMessageSent`
-- [ ] Broadcast to private user channels
-- [ ] Add mark as read endpoint
-- [ ] Add notification preferences
+- [ ] Create notification system (database notifications).
+- [ ] Create events: `BidPlaced`, `BidAccepted`, `OrderCreated`.
+- [ ] Create events: `WorkStepCompleted`, `ActivityMessageSent`.
+- [ ] Broadcast to private user channels.
+- [ ] Add `NotificationController` with a `markAsRead` endpoint.
+- [ ] Add user preferences for notifications.
 
 #### Frontend Tasks
-- [ ] Add notification dropdown (navbar)
-- [ ] Listen for notifications in real-time
-- [ ] Show toast/banner for new notifications
-- [ ] Add unread count badge
-- [ ] Create notifications page
-- [ ] Add notification sound (optional)
+- [ ] Add a `NotificationDropdown` Livewire component to the navbar.
+- [ ] Listen for notifications in real-time using Echo.
+- [ ] Show toast/banner for new notifications.
+- [ ] Add unread count badge.
+- [ ] Create a full notifications page/view.
 
 #### Files:
 ```
@@ -574,11 +586,11 @@ Backend:
 ├── app/Events/BidAccepted.php
 ├── app/Events/OrderCreated.php
 ├── app/Events/WorkStepCompleted.php
-├── app/Http/Controllers/Api/NotificationController.php
+├── app/Domains/Notifications/Http/Controllers/NotificationController.php
 └── database/migrations/xxxx_create_notifications_table.php
 
 Frontend:
-├── resources/views/components/notification-dropdown.blade.php
+├── app/Http/Livewire/NotificationDropdown.php
 └── resources/views/notifications/index.blade.php
 ```
 
@@ -589,26 +601,22 @@ Frontend:
 ### Milestone 3.3: Messaging System [0/18]
 
 #### Backend Tasks
-- [ ] Create `MessageThread` model + migration
-- [ ] Create `Message` model + migration
-- [ ] Create `MessageAttachment` model
-- [ ] Create `MessageController` API
-- [ ] Add create thread endpoint
-- [ ] Add send message endpoint
-- [ ] Add mark as read endpoint
-- [ ] Add message listing with pagination
-- [ ] Broadcast `MessageSent` event
-- [ ] Add file attachment handling
+- [ ] Create `MessageThread`, `Message`, and `MessageAttachment` models in the `Messaging` domain.
+- [ ] Create `MessageController` in the `Messaging` domain.
+- [ ] Add create thread endpoint.
+- [ ] Add send message endpoint.
+- [ ] Add mark as read endpoint.
+- [ ] Add message listing with pagination.
+- [ ] Broadcast `MessageSent` event.
+- [ ] Add file attachment handling.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/messages/index.blade.php`
-- [ ] Create thread list component
-- [ ] Create chat interface (Alpine.js)
-- [ ] Listen for real-time messages
-- [ ] Add file attachment preview
-- [ ] Show unread count
-- [ ] Add message search
-- [ ] Link from orders/bids
+- [ ] Create `resources/views/messages/index.blade.php`.
+- [ ] Create a `ChatInterface` Livewire component.
+- [ ] Listen for real-time messages with Echo.
+- [ ] Add file attachment preview.
+- [ ] Show unread count.
+- [ ] Add message search.
 
 #### Database:
 ```sql
@@ -629,17 +637,16 @@ message_attachments:
 #### Files:
 ```
 Backend:
-├── app/Models/MessageThread.php
-├── app/Models/Message.php
-├── app/Models/MessageAttachment.php
-├── app/Http/Controllers/Api/MessageController.php
+├── app/Domains/Messaging/Models/MessageThread.php
+├── app/Domains/Messaging/Models/Message.php
+├── app/Domains/Messaging/Models/MessageAttachment.php
+├── app/Domains/Messaging/Http/Controllers/MessageController.php
 ├── app/Events/MessageSent.php
 └── database/migrations/xxxx_create_messages_tables.php
 
 Frontend:
 ├── resources/views/messages/index.blade.php
-├── resources/views/components/message-thread.blade.php
-└── resources/views/components/chat-interface.blade.php
+└── app/Http/Livewire/ChatInterface.php
 ```
 
 **Estimated Time:** 8 hours
@@ -651,26 +658,26 @@ Frontend:
 ### Milestone 4.1: Payment Integration [0/18]
 
 #### Backend Tasks
-- [ ] Choose provider (Xendit recommended for PH)
-- [ ] Set up Xendit/PayMongo account
-- [ ] Install payment SDK via Composer
-- [ ] Create `Payment` model + migration
-- [ ] Create `PaymentController` API
-- [ ] Add create payment intent endpoint
-- [ ] Add webhook endpoint for payment status
-- [ ] Handle payment callbacks
-- [ ] Create payment verification logic
-- [ ] Calculate platform fee (e.g., 5% on top of service price)
-- [ ] Update order payment_status on success
+- [ ] Choose provider (Xendit recommended for PH).
+- [ ] Set up Xendit/PayMongo account.
+- [ ] Install payment SDK via Composer.
+- [ ] Create `Payment` model + migration in the `Payments` domain.
+- [ ] Create `PaymentController` in the `Payments` domain.
+- [ ] Add create payment intent endpoint.
+- [ ] Add webhook endpoint for payment status.
+- [ ] Handle payment callbacks in `PaymentWebhookController`.
+- [ ] Create payment verification logic in `PaymentService`.
+- [ ] Calculate platform fee.
+- [ ] Update order `payment_status` on success.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/payments/checkout.blade.php`
-- [ ] Add payment method selector (GCash, Card, BankTransfer)
-- [ ] Integrate payment SDK (Xendit checkout)
-- [ ] Show payment instructions
-- [ ] Create payment success page
-- [ ] Create payment failed page
-- [ ] Show payment history
+- [ ] Create `resources/views/payments/checkout.blade.php`.
+- [ ] Add payment method selector (GCash, Card, BankTransfer).
+- [ ] Integrate payment SDK (Xendit checkout).
+- [ ] Show payment instructions.
+- [ ] Create payment success page.
+- [ ] Create payment failed page.
+- [ ] Show payment history.
 
 #### Database:
 ```sql
@@ -688,10 +695,10 @@ payments:
 #### Files:
 ```
 Backend:
-├── app/Services/PaymentService.php
-├── app/Models/Payment.php
-├── app/Http/Controllers/Api/PaymentController.php
-├── app/Http/Controllers/PaymentWebhookController.php
+├── app/Domains/Payments/Services/PaymentService.php
+├── app/Domains/Payments/Models/Payment.php
+├── app/Domains/Payments/Http/Controllers/PaymentController.php
+├── app/Domains/Payments/Http/Controllers/PaymentWebhookController.php
 └── config/payment.php
 
 Frontend:
@@ -708,24 +715,24 @@ Frontend:
 ### Milestone 4.2: Escrow & Disbursement [0/16]
 
 #### Backend Tasks
-- [ ] Create `Disbursement` model + migration
-- [ ] Hold payment in escrow on order creation
-- [ ] Add release payment endpoint (buyer confirms work)
-- [ ] Calculate platform fee deduction
-- [ ] Create manual disbursement dashboard (admin)
-- [ ] Add earnings calculation per seller
-- [ ] Track pending disbursements
-- [ ] Create disbursement request system
-- [ ] Send disbursement notifications
+- [ ] Create `Disbursement` model + migration in the `Payments` domain.
+- [ ] Hold payment in escrow on order creation.
+- [ ] Add release payment endpoint (buyer confirms work).
+- [ ] Calculate platform fee deduction.
+- [ ] Create manual disbursement dashboard (admin).
+- [ ] Add earnings calculation per seller.
+- [ ] Track pending disbursements.
+- [ ] Create disbursement request system.
+- [ ] Send disbursement notifications.
 
 #### Frontend Tasks
-- [ ] Show escrow status in order detail
-- [ ] Add "Release Payment" button (buyer, after work completed)
-- [ ] Create `resources/views/earnings/index.blade.php` (seller)
-- [ ] Show pending balance
-- [ ] Show disbursement history
-- [ ] Add request payout button
-- [ ] Show earnings timeline
+- [ ] Show escrow status in order detail.
+- [ ] Add "Release Payment" button (buyer, after work completed).
+- [ ] Create `resources/views/earnings/index.blade.php` (seller).
+- [ ] Show pending balance.
+- [ ] Show disbursement history.
+- [ ] Add request payout button.
+- [ ] Show earnings timeline.
 
 #### Database:
 ```sql
@@ -742,8 +749,8 @@ disbursements:
 #### Files:
 ```
 Backend:
-├── app/Models/Disbursement.php
-├── app/Http/Controllers/Api/DisbursementController.php
+├── app/Domains/Payments/Models/Disbursement.php
+├── app/Domains/Payments/Http/Controllers/DisbursementController.php
 └── database/migrations/xxxx_create_disbursements_table.php
 
 Frontend:
@@ -759,20 +766,20 @@ Frontend:
 ### Milestone 4.3: Refunds & Cancellations [0/12]
 
 #### Backend Tasks
-- [ ] Create `Refund` model + migration
-- [ ] Add refund request endpoint
-- [ ] Add approve/reject refund endpoint (admin)
-- [ ] Handle order cancellation (before work starts)
-- [ ] Process refund via bank transfer (manual for now)
-- [ ] Update order and payment status
-- [ ] Send refund notifications
+- [ ] Create `Refund` model + migration in the `Payments` domain.
+- [ ] Add refund request endpoint.
+- [ ] Add approve/reject refund endpoint (admin).
+- [ ] Handle order cancellation (before work starts).
+- [ ] Process refund via bank transfer (manual for now).
+- [ ] Update order and payment status.
+- [ ] Send refund notifications.
 
 #### Frontend Tasks
-- [ ] Add cancel order button (if no work started)
-- [ ] Add refund request form
-- [ ] Show refund status
-- [ ] Create admin refund management page
-- [ ] Show refund history
+- [ ] Add cancel order button (if no work started).
+- [ ] Add refund request form.
+- [ ] Show refund status.
+- [ ] Create admin refund management page.
+- [ ] Show refund history.
 
 #### Database:
 ```sql
@@ -787,8 +794,8 @@ refunds:
 #### Files:
 ```
 Backend:
-├── app/Models/Refund.php
-├── app/Http/Controllers/Api/RefundController.php
+├── app/Domains/Payments/Models/Refund.php
+├── app/Domains/Payments/Http/Controllers/RefundController.php
 └── database/migrations/xxxx_create_refunds_table.php
 
 Frontend:
@@ -805,21 +812,21 @@ Frontend:
 ### Milestone 5.1: User Verification System [0/14]
 
 #### Backend Tasks
-- [ ] Create `UserVerification` model + migration
-- [ ] Add ID upload endpoint
-- [ ] Add verification status to users table
-- [ ] Create admin verification review endpoint
-- [ ] Add approve/reject verification
-- [ ] Send verification notifications
-- [ ] Add "verified" badge logic
+- [ ] Create `UserVerification` model + migration in the `Users` domain.
+- [ ] Add ID upload endpoint.
+- [ ] Add verification status to users table.
+- [ ] Create admin verification review endpoint in `VerificationController`.
+- [ ] Add approve/reject verification.
+- [ ] Send verification notifications.
+- [ ] Add "verified" badge logic.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/verification/submit.blade.php`
-- [ ] Add ID upload form (front & back)
-- [ ] Show verification status on profile
-- [ ] Add verified badge to listings
-- [ ] Create admin verification queue
-- [ ] Add verification review page (admin)
+- [ ] Create `resources/views/verification/submit.blade.php`.
+- [ ] Add ID upload form (front & back).
+- [ ] Show verification status on profile.
+- [ ] Add verified badge to listings.
+- [ ] Create admin verification queue.
+- [ ] Add verification review page (admin).
 
 #### Database:
 ```sql
@@ -839,8 +846,8 @@ Add to users table:
 #### Files:
 ```
 Backend:
-├── app/Models/UserVerification.php
-├── app/Http/Controllers/Api/VerificationController.php
+├── app/Domains/Users/Models/UserVerification.php
+├── app/Domains/Users/Http/Controllers/VerificationController.php
 └── database/migrations/xxxx_create_user_verifications_table.php
 
 Frontend:
@@ -856,23 +863,22 @@ Frontend:
 ### Milestone 5.2: Reviews & Ratings [0/16]
 
 #### Backend Tasks
-- [ ] Create `ListingReview` model + migration
-- [ ] Create `UserReview` model + migration
-- [ ] Create `ReviewController` API
-- [ ] Add submit review endpoint (after order completion)
-- [ ] Prevent duplicate reviews
-- [ ] Calculate average ratings (services & users)
-- [ ] Add review moderation flags
-- [ ] Update rating on models
+- [ ] Create `ListingReview` and `UserReview` models in the `Reviews` domain.
+- [ ] Create `ReviewController` in the `Reviews` domain.
+- [ ] Add submit review endpoint (after order completion).
+- [ ] Prevent duplicate reviews.
+- [ ] Calculate average ratings (services & users).
+- [ ] Add review moderation flags.
+- [ ] Update rating on relevant models.
 
 #### Frontend Tasks
-- [ ] Create review submission form
-- [ ] Add star rating component (Alpine.js)
-- [ ] Display reviews on service page
-- [ ] Display reviews on user profile
-- [ ] Add review filtering
-- [ ] Show average rating badges
-- [ ] Add "Leave Review" prompt after order
+- [ ] Create review submission form.
+- [ ] Add star rating component (Alpine.js).
+- [ ] Display reviews on service page.
+- [ ] Display reviews on user profile.
+- [ ] Add review filtering.
+- [ ] Show average rating badges.
+- [ ] Add "Leave Review" prompt after order.
 
 #### Database:
 ```sql
@@ -893,9 +899,9 @@ Add to services/users:
 #### Files:
 ```
 Backend:
-├── app/Models/ListingReview.php
-├── app/Models/UserReview.php
-├── app/Http/Controllers/Api/ReviewController.php
+├── app/Domains/Reviews/Models/ListingReview.php
+├── app/Domains/Reviews/Models/UserReview.php
+├── app/Domains/Reviews/Http/Controllers/ReviewController.php
 └── database/migrations/xxxx_create_reviews_tables.php
 
 Frontend:
@@ -911,20 +917,20 @@ Frontend:
 ### Milestone 5.3: Dispute Resolution [0/12]
 
 #### Backend Tasks
-- [ ] Create `Dispute` model + migration
-- [ ] Add file dispute endpoint
-- [ ] Add dispute statuses (open, under_review, resolved, closed)
-- [ ] Add dispute response endpoint
-- [ ] Create admin dispute management
-- [ ] Link disputes to orders
-- [ ] Send dispute notifications
+- [ ] Create `Dispute` model + migration in the `Disputes` domain.
+- [ ] Add file dispute endpoint.
+- [ ] Add dispute statuses (open, under_review, resolved, closed).
+- [ ] Add dispute response endpoint.
+- [ ] Create admin dispute management.
+- [ ] Link disputes to orders.
+- [ ] Send dispute notifications.
 
 #### Frontend Tasks
-- [ ] Add "File Dispute" button on orders
-- [ ] Create dispute submission form
-- [ ] Show dispute status timeline
-- [ ] Add dispute chat/thread
-- [ ] Create admin dispute dashboard
+- [ ] Add "File Dispute" button on orders.
+- [ ] Create dispute submission form.
+- [ ] Show dispute status timeline.
+- [ ] Add dispute chat/thread.
+- [ ] Create admin dispute dashboard.
 
 #### Database:
 ```sql
@@ -939,8 +945,8 @@ disputes:
 #### Files:
 ```
 Backend:
-├── app/Models/Dispute.php
-├── app/Http/Controllers/Api/DisputeController.php
+├── app/Domains/Disputes/Models/Dispute.php
+├── app/Domains/Disputes/Http/Controllers/DisputeController.php
 └── database/migrations/xxxx_create_disputes_table.php
 
 Frontend:
@@ -955,19 +961,19 @@ Frontend:
 ### Milestone 5.4: Content Moderation [0/10]
 
 #### Backend Tasks
-- [ ] Create `Report` model + migration
-- [ ] Add report listing endpoint
-- [ ] Add flag reasons (spam, inappropriate, fraud, etc.)
-- [ ] Create admin moderation dashboard
-- [ ] Add hide/remove listing actions
-- [ ] Add ban user action
-- [ ] Send moderation notifications
+- [ ] Create `Report` model + migration in the `Moderation` domain.
+- [ ] Add report listing endpoint.
+- [ ] Add flag reasons (spam, inappropriate, fraud, etc.).
+- [ ] Create admin moderation dashboard.
+- [ ] Add hide/remove listing actions.
+- [ ] Add ban user action.
+- [ ] Send moderation notifications.
 
 #### Frontend Tasks
-- [ ] Add "Report" button on listings
-- [ ] Create report modal
-- [ ] Show report status
-- [ ] Create admin moderation queue
+- [ ] Add "Report" button on listings.
+- [ ] Create report modal.
+- [ ] Show report status.
+- [ ] Create admin moderation queue.
 
 #### Database:
 ```sql
@@ -981,8 +987,8 @@ reports:
 #### Files:
 ```
 Backend:
-├── app/Models/Report.php
-├── app/Http/Controllers/Api/ReportController.php
+├── app/Domains/Moderation/Models/Report.php
+├── app/Domains/Moderation/Http/Controllers/ReportController.php
 └── database/migrations/xxxx_create_reports_table.php
 
 Frontend:
@@ -999,24 +1005,23 @@ Frontend:
 ### Milestone 6.1: Quick Deal Core [0/16]
 
 #### Backend Tasks
-- [ ] Create `QuickDeal` model + migration
-- [ ] Create `QuickDealRequest` model + migration
-- [ ] Create `QuickDealController` API
-- [ ] Add create deal endpoint
-- [ ] Add propose service endpoint
-- [ ] Add accept/reject proposal endpoints
-- [ ] Add deal expiration logic (30 min default)
-- [ ] Broadcast real-time proposals
-- [ ] Convert accepted deal to order
+- [ ] Create `QuickDeal` and `QuickDealRequest` models in the `Deals` domain.
+- [ ] Create `QuickDealController` in the `Deals` domain.
+- [ ] Add create deal endpoint.
+- [ ] Add propose service endpoint.
+- [ ] Add accept/reject proposal endpoints.
+- [ ] Add deal expiration logic (30 min default).
+- [ ] Broadcast real-time proposals.
+- [ ] Convert accepted deal to order.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/quick-deals/start.blade.php`
-- [ ] Create deal room interface
-- [ ] Add service proposal form
-- [ ] Show live proposals (Alpine + Echo)
-- [ ] Add countdown timer
-- [ ] Create deal history page
-- [ ] Add QR code scanner integration
+- [ ] Create `resources/views/quick-deals/start.blade.php`.
+- [ ] Create deal room interface.
+- [ ] Add service proposal form.
+- [ ] Show live proposals (Livewire + Echo).
+- [ ] Add countdown timer.
+- [ ] Create deal history page.
+- [ ] Add QR code scanner integration.
 
 #### Database:
 ```sql
@@ -1035,16 +1040,16 @@ quick_deal_requests:
 #### Files:
 ```
 Backend:
-├── app/Models/QuickDeal.php
-├── app/Models/QuickDealRequest.php
-├── app/Http/Controllers/Api/QuickDealController.php
+├── app/Domains/Deals/Models/QuickDeal.php
+├── app/Domains/Deals/Models/QuickDealRequest.php
+├── app/Domains/Deals/Http/Controllers/QuickDealController.php
 ├── app/Events/DealProposed.php
 └── database/migrations/xxxx_create_quick_deals_tables.php
 
 Frontend:
 ├── resources/views/quick-deals/start.blade.php
 ├── resources/views/quick-deals/room.blade.php
-└── resources/views/components/deal-proposal.blade.php
+└── app/Http/Livewire/DealProposal.php
 ```
 
 **Estimated Time:** 8 hours
@@ -1054,20 +1059,20 @@ Frontend:
 ### Milestone 6.2: QR Code System [0/12]
 
 #### Backend Tasks
-- [ ] Install `simple-qrcode` package
-- [ ] Create `QRCode` model + migration
-- [ ] Create QR generation endpoint
-- [ ] Generate static QR for services
-- [ ] Generate dynamic QR for quick deals
-- [ ] Add QR scan/decode endpoint
-- [ ] Link QR to entities
+- [ ] Install `simple-qrcode` package.
+- [ ] Create `QRCode` model + migration in the `Deals` domain.
+- [ ] Create QR generation endpoint in `QRCodeController`.
+- [ ] Generate static QR for services.
+- [ ] Generate dynamic QR for quick deals.
+- [ ] Add QR scan/decode endpoint.
+- [ ] Link QR to entities via `QRCodeService`.
 
 #### Frontend Tasks
-- [ ] Add "Generate QR" button on services
-- [ ] Display generated QR codes
-- [ ] Add QR scanner (use phone camera or library)
-- [ ] Show QR on service detail page
-- [ ] Add download QR functionality
+- [ ] Add "Generate QR" button on services.
+- [ ] Display generated QR codes.
+- [ ] Add QR scanner (use phone camera or library).
+- [ ] Show QR on service detail page.
+- [ ] Add download QR functionality.
 
 #### Database:
 ```sql
@@ -1082,9 +1087,9 @@ qr_codes:
 #### Files:
 ```
 Backend:
-├── app/Models/QRCode.php
-├── app/Services/QRCodeService.php
-├── app/Http/Controllers/Api/QRCodeController.php
+├── app/Domains/Deals/Models/QRCode.php
+├── app/Domains/Deals/Services/QRCodeService.php
+├── app/Domains/Deals/Http/Controllers/QRCodeController.php
 └── database/migrations/xxxx_create_qr_codes_table.php
 
 Frontend:
@@ -1101,29 +1106,29 @@ Frontend:
 ### Milestone 7.1: Admin Dashboard [0/15]
 
 #### Backend Tasks
-- [ ] Create `AdminController`
-- [ ] Add platform statistics endpoint
-- [ ] Add analytics endpoint (users, orders, revenue)
-- [ ] Add user management endpoints (ban, unban, verify)
-- [ ] Add listing management endpoint
-- [ ] Add platform settings endpoint
-- [ ] Create admin middleware/gate
-- [ ] Add activity logs
+- [ ] Create `DashboardController` in the `Admin` domain.
+- [ ] Add platform statistics endpoint.
+- [ ] Add analytics endpoint (users, orders, revenue).
+- [ ] Add user management endpoints in `UserManagementController`.
+- [ ] Add listing management endpoint.
+- [ ] Add platform settings endpoint in `SettingsController`.
+- [ ] Create admin middleware/gate.
+- [ ] Add activity logs.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/admin/dashboard.blade.php`
-- [ ] Add statistics cards (total users, orders, revenue)
-- [ ] Create charts with Chart.js
-- [ ] Add recent activity feed
-- [ ] Create user management page
-- [ ] Create settings page
+- [ ] Create `resources/views/admin/dashboard.blade.php`.
+- [ ] Add statistics cards (total users, orders, revenue).
+- [ ] Create charts with Chart.js.
+- [ ] Add recent activity feed.
+- [ ] Create user management page.
+- [ ] Create settings page.
 
 #### Files:
 ```
 Backend:
-├── app/Http/Controllers/Admin/DashboardController.php
-├── app/Http/Controllers/Admin/UserManagementController.php
-├── app/Http/Controllers/Admin/SettingsController.php
+├── app/Domains/Admin/Http/Controllers/DashboardController.php
+├── app/Domains/Admin/Http/Controllers/UserManagementController.php
+├── app/Domains/Admin/Http/Controllers/SettingsController.php
 └── app/Http/Middleware/EnsureUserIsAdmin.php
 
 Frontend:
@@ -1140,33 +1145,33 @@ Frontend:
 ### Milestone 7.2: Search & Discovery [0/14]
 
 #### Backend Tasks
-- [ ] Install Laravel Scout (database driver for now)
-- [ ] Make models searchable (Service, OpenOffer)
-- [ ] Create `SearchController` API
-- [ ] Add full-text search endpoint
-- [ ] Add location-based filtering (address)
-- [ ] Add advanced filters (price range, category, ratings)
-- [ ] Add sorting options
-- [ ] Optimize queries with eager loading
-- [ ] Add search suggestions
+- [ ] Install Laravel Scout (database driver for now).
+- [ ] Make models searchable (Service, OpenOffer).
+- [ ] Create `SearchController` in the `Search` domain.
+- [ ] Add full-text search endpoint.
+- [ ] Add location-based filtering (address).
+- [ ] Add advanced filters (price range, category, ratings).
+- [ ] Add sorting options.
+- [ ] Optimize queries with eager loading.
+- [ ] Add search suggestions.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/search/index.blade.php`
-- [ ] Add search autocomplete (Alpine.js)
-- [ ] Create filter sidebar
-- [ ] Add sorting dropdown
-- [ ] Show search results
-- [ ] Add "No results" state
+- [ ] Create `resources/views/search/index.blade.php`.
+- [ ] Add a `SearchAutocomplete` Livewire component.
+- [ ] Create a filter sidebar.
+- [ ] Add a sorting dropdown.
+- [ ] Show search results.
+- [ ] Add "No results" state.
 
 #### Files:
 ```
 Backend:
-├── app/Http/Controllers/Api/SearchController.php
-└── app/Services/SearchService.php
+├── app/Domains/Search/Http/Controllers/SearchController.php
+└── app/Domains/Search/Services/SearchService.php
 
 Frontend:
 ├── resources/views/search/index.blade.php
-├── resources/views/components/search-autocomplete.blade.php
+├── app/Http/Livewire/SearchAutocomplete.php
 └── resources/views/components/filter-sidebar.blade.php
 ```
 
@@ -1177,22 +1182,22 @@ Frontend:
 ### Milestone 7.3: Activity Logs & Audit Trail [0/8]
 
 #### Backend Tasks
-- [ ] Install `spatie/laravel-activitylog` package
-- [ ] Configure activity logging
-- [ ] Log critical actions (order creation, payment, disputes)
-- [ ] Create activity log viewer (admin)
-- [ ] Add export functionality
+- [ ] Install `spatie/laravel-activitylog` package.
+- [ ] Configure activity logging.
+- [ ] Log critical actions (order creation, payment, disputes).
+- [ ] Create activity log viewer in `ActivityLogController`.
+- [ ] Add export functionality.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/admin/activity-logs.blade.php`
-- [ ] Add filtering by user/action/date
-- [ ] Show activity timeline
+- [ ] Create `resources/views/admin/activity-logs.blade.php`.
+- [ ] Add filtering by user/action/date.
+- [ ] Show activity timeline.
 
 #### Files:
 ```
 Backend:
 ├── config/activitylog.php (configure)
-└── app/Http/Controllers/Admin/ActivityLogController.php
+└── app/Domains/Admin/Http/Controllers/ActivityLogController.php
 
 Frontend:
 └── resources/views/admin/activity-logs.blade.php

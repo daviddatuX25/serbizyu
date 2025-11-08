@@ -102,4 +102,31 @@ class ServiceService
         
         return $services;
     }
+
+    public function getPaginatedServices()
+    {
+        return Service::with('category', 'creator', 'address', 'workflowTemplate.workTemplates', 'thumbnail')
+            ->latest()
+            ->paginate(15);
+    }
+
+    public function updateService(Service $service, array $data): Service
+    {
+        // Step 1: Update the main service record (excluding images)
+        $service->update(collect($data)->except('images')->toArray());
+
+        // Step 2: Upload and attach new images (if any)
+        if (!empty($data['images'])) {
+            foreach ($data['images'] as $image) {
+                $this->listingImageService->attachToModel($service, $image);
+            }
+        }
+
+        return $service->load('images');
+    }
+
+    public function deleteService(Service $service): bool
+    {
+        return $service->delete();
+    }
 }

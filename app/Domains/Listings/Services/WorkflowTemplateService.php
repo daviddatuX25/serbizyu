@@ -52,6 +52,14 @@ class WorkflowTemplateService
         return WorkflowTemplate::create($data);
     }
 
+    public function getWorkflowTemplatesByCreator(int $creatorId): Collection
+    {
+        return WorkflowTemplate::where('creator_id', $creatorId)
+            ->orWhere('is_public', true)
+            ->orderBy('name')
+            ->get();
+    }
+
    
 }
 

@@ -74,4 +74,9 @@ class CategoryService
         return $category->forceDelete();
         // return $category->delete();
     }
+
+    public function listAllCategories(): Collection
+    {
+        return Category::orderBy('name')->get();
+    }
 }
