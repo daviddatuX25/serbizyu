@@ -67,68 +67,20 @@
 
     <!-- Card Grid -->
     <div class="browse-grid">
-      <!-- Service Card -->
-      <article class="listing-card">
-        <div class="card-top">
-          <span class="badge-service">Service</span>
-          <span class="rating">★★★★★</span>
-        </div>
-        <h3 class="card-title">Arnel’s Plumbing</h3>
-        <p class="card-desc">Diagnose &gt; Buy materials &gt; On field &gt; Finish</p>
-        <p class="card-meta">Rate: ₱200/hr</p>
-        <p class="card-meta">Location: Tagudin, Ilocos Sur</p>
-        <div class="card-footer">
-          <span class="text-xs text-text-secondary">Verified Servicer</span>
-          <div class="card-avatar">👤</div>
-        </div>
-      </article>
+        @forelse($listings as $listing)
+            @if($listing instanceof \App\Domains\Listings\Models\Service)
+                @include('listings.partials.service-card', ['service' => $listing])
+            @elseif($listing instanceof \App\Domains\Listings\Models\OpenOffer)
+                @include('listings.partials.offer-card', ['offer' => $listing])
+            @endif
+        @empty
+            <p class="text-center text-gray-500 col-span-full">No listings found at the moment.</p>
+        @endforelse
+    </div>
 
-      <!-- Open Offer Card -->
-      <article class="listing-card">
-        <div class="card-top">
-          <span class="badge-offer">Open Offer</span>
-          <span class="text-sm text-text-secondary">Budget: ₱5,000</span>
-        </div>
-        <h3 class="card-title">Looking for Catering Service</h3>
-        <p class="card-desc">Event for 50 guests</p>
-        <p class="card-meta">Sta. Cruz, Ilocos Sur</p>
-        <div class="card-footer">
-          <span class="text-xs text-text-secondary">Posted 2h ago</span>
-          <div class="card-avatar">📝</div>
-        </div>
-      </article>
-
-      <!-- Service Card -->
-      <article class="listing-card">
-        <div class="card-top">
-          <span class="badge-service">Service</span>
-          <span class="rating">★★★★☆</span>
-        </div>
-        <h3 class="card-title">General Home Repairs</h3>
-        <p class="card-desc">Diagnose &gt; Buy materials &gt; On field &gt; Finish</p>
-        <p class="card-meta">Rate: ₱150/hr</p>
-        <p class="card-meta">Candon, Ilocos Sur</p>
-        <div class="card-footer">
-          <span class="text-xs text-text-secondary">Trusted Local</span>
-          <div class="card-avatar">👤</div>
-        </div>
-      </article>
-
-      <!-- Open Offer Card -->
-      <article class="listing-card">
-        <div class="card-top">
-          <span class="badge-offer">Open Offer</span>
-          <span class="text-sm text-text-secondary">Budget: ₱12,000</span>
-        </div>
-        <h3 class="card-title">Need House Painting</h3>
-        <p class="card-desc">2-story house, labor only</p>
-        <p class="card-meta">Luna, La Union</p>
-        <div class="card-footer">
-          <span class="text-xs text-text-secondary">Posted 1d ago</span>
-          <div class="card-avatar">📝</div>
-        </div>
-      </article>
+    <!-- Pagination -->
+    <div class="mt-8">
+        {{ $listings->links() }}
     </div>
   </div>
 </x-app-layout>
-

@@ -1,0 +1,295 @@
+
+# Code Mapper 🗺️
+
+**Generate a complete text map of your codebase for AI context windows.**  
+Perfect for feeding your **entire project** to ChatGPT, Claude, Gemini, Grok, or any LLM in one shot!
+
+```
+--app/UserController.php          (full source code)
+--public/logo.png                 (binary – name only)
+--SUMMARY
+Text: 142  Binary: 38  Skipped: 2,847
+```
+
+One file → full project context. No more "upload 4 files at a time"!
+
+---
+
+### 🚀 Quick Start (Zero Setup)
+
+**Option 1 – Easiest (Double-click)**
+```
+1. Drop codemapper.exe into your project folder
+2. Double-click it
+3. Done → codemapper/output/code_map.txt
+```
+
+**Option 2 – Terminal**
+```bash
+# In your project folder
+codemapper.exe
+```
+
+---
+
+### 📋 What It Does
+
+- Includes **full content** of 70+ text file types (.py, .js, .php, .html, .md, .json, .sql, etc.)
+- Lists binary files (images, PDFs, videos) by path only
+- Skips junk automatically: `node_modules`, `.git`, `vendor`, `dist`, `build`, `__pycache__`, **codemapper folder itself**
+- Outputs **one clean, copy-paste-ready** `.txt` file
+- Optional timestamp: `code_map_110825-1430.txt`
+
+---
+
+### 💾 Save Your Settings (Configs)
+
+#### Create Default Config (Run Once)
+```bash
+codemapper.exe --folders app,database,config --except-folders tests,storage --savetoconfig
+```
+→ Now just **double-click** `codemapper.exe` forever – it remembers!
+
+#### Create Named Configs
+```bash
+codemapper.exe --folders app,src,public --savetoconfig frontend
+codemapper.exe --folders api,database --savetoconfig backend
+```
+
+#### Use Them
+```bash
+codemapper.exe --config frontend
+codemapper.exe --config backend
+```
+
+Configs live in: `codemapper/config/*.json`
+
+---
+
+### 🎯 Common Commands
+
+| Goal                              | Command                                                                 |
+|-----------------------------------|-------------------------------------------------------------------------|
+| Scan entire project               | `codemapper.exe`                                                        |
+| Specific folders only             | `codemapper.exe --folders app,src,config`                               |
+| Specific files only               | `codemapper.exe --files config.php,.env.example,README.md`              |
+| Exclude folders                   | `codemapper.exe --except-folders tests,logs,storage`                    |
+| Exclude files                     | `codemapper.exe --except-files .env,package-lock.json`                  |
+| Multiple source roots             | `codemapper.exe --src ./frontend --src ./backend`                       |
+| Custom output path                | `codemapper.exe --output D:\maps\myproject.txt`                         |
+| Only PHP files                    | `codemapper.exe --extensions .php`                                      |
+| Load saved config                 | `codemapper.exe --config myapp`                                         |
+| Save current flags as config      | `codemapper.exe --folders app --savetoconfig myapp`                     |
+
+---
+
+### ⚡ Framework-Specific One-Liner Starters (Copy → Paste → Done)
+
+Save these as your **default config** and never type flags again!  
+Just copy a line → paste in terminal → hit Enter → double-click `codemapper.exe` forever.
+
+#### Laravel / Laravel + Vue / Inertia
+```bash
+codemapper.exe --except-folders vendor,node_modules,storage,public/build,tests --folders app,config,database,routes,resources --except-files .env --savetoconfig laravel
+```
+→ Perfect Laravel map every time.
+
+#### Symfony
+```bash
+codemapper.exe --except-folders vendor,var,public/bundles,tests --folders config,src,templates,public/assets --except-files .env --savetoconfig symfony
+```
+
+#### Node.js / Express / NestJS
+```bash
+codemapper.exe --except-folders node_modules,dist,.git,coverage,.env --folders src,config,routes,controllers,middleware --savetoconfig node
+```
+
+#### React / Vite / Create-React-App
+```bash
+codemapper.exe --except-folders node_modules,dist,.git,public,build --folders src,components,pages,hooks,context --except-files .env --savetoconfig react
+```
+
+#### Vue 3 / Nuxt 3
+```bash
+codemapper.exe --except-folders node_modules,.nuxt,dist,.output,public --folders components,composables,pages,server,stores --except-files .env --savetoconfig vue
+```
+
+#### Django
+```bash
+codemapper.exe --except-folders venv,env,__pycache__,migrations,staticfiles,media --folders apps,templates,core,project --except-files .env,db.sqlite3 --savetoconfig django
+```
+
+#### Flask / FastAPI
+```bash
+codemapper.exe --except-folders venv,__pycache__,instance,.git,htmlcov,.pytest_cache --folders app,templates,static,migrations --except-files .env --savetoconfig flask
+```
+
+#### PHP (plain / Composer)
+```bash
+codemapper.exe --except-folders vendor,node_modules,cache,logs,sessions --folders src,public,config,app --except-files .env --savetoconfig php
+```
+
+#### WordPress
+```bash
+codemapper.exe --except-folders wp-admin,wp-includes,wp-content/uploads,wp-content/plugins,wp-content/themes/twentytwenty* --folders wp-content/themes/your-theme,wp-content/plugins/your-plugin --except-files .env --savetoconfig wordpress
+```
+
+#### Full-stack (Laravel + React/Vue frontend in same repo)
+```bash
+codemapper.exe --except-folders vendor,node_modules,storage,public/build,tests,resources/js/node_modules --folders app,resources/js,resources/sass,routes --except-files .env --savetoconfig laravel-react
+```
+
+#### Mega-clean (skip everything noisy)
+```bash
+codemapper.exe --except-folders vendor,node_modules,storage,public,tests,coverage,dist,build,.git,__pycache__,.next,.nuxt,.output,.cache,.phpunit.result.cache --savetoconfig clean
+```
+
+#### Use any saved config instantly
+```bash
+codemapper.exe --config laravel
+codemapper.exe --config react
+codemapper.exe --config django
+```
+
+**Pro tip**: After running any one-liner above, just **double-click** `codemapper.exe` forever — it auto-loads your default config!  
+Switch projects? Use `--config projectname` or drop the exe in a new folder and run another one-liner.
+
+### 📋 Framework Quick Lookup Table
+
+| Framework          | Saved name       | Main skipped folders                                      |
+|--------------------|------------------|-----------------------------------------------------------|
+| Laravel            | `laravel`        | `vendor`, `node_modules`, `storage`, `tests`              |
+| Symfony            | `symfony`        | `vendor`, `var`, `tests`                                  |
+| Node.js / Express  | `node`           | `node_modules`, `dist`, `coverage`                        |
+| React / Vite       | `react`          | `node_modules`, `build`, `public`                         |
+| Vue 3 / Nuxt 3     | `vue`            | `node_modules`, `.nuxt`, `dist`, `.output`                |
+| Django             | `django`         | `venv`, `__pycache__`, `migrations`, `staticfiles`, `media` |
+| Flask / FastAPI    | `flask`          | `venv`, `__pycache__`, `instance`, `.pytest_cache`        |
+| PHP (plain)        | `php`            | `vendor`, `node_modules`, `cache`, `logs`                 |
+| WordPress          | `wordpress`      | `wp-admin`, `wp-includes`, `uploads`, most plugins/themes |
+| Laravel + React    | `laravel-react`  | All Laravel + frontend build folders                      |
+| Mega-clean         | `clean`          | Literally everything noisy                                |
+
+Copy → Paste → Done. Your AI now sees **exactly** what matters. 🚀
+
+---
+
+### 🤖 Paste into Any AI (Example Prompts)
+
+1. Generate map → open `codemapper/output/code_map.txt` → **Ctrl+A, Ctrl+C**
+2. Paste into chat:
+
+```text
+Here's my entire codebase:
+
+[PASTE MAP HERE]
+
+Refactor the authentication system to use Laravel Sanctum.
+```
+
+Other great prompts:
+- "Find security vulnerabilities"
+- "Add file upload with progress bar"
+- "Explain how User → Order → Payment models are related"
+- "Convert this to TypeScript + React"
+
+---
+
+### 📁 Folder Structure After Running
+
+```
+your-project/
+├── codemapper.exe
+├── codemapper/
+│   ├── config/
+│   │   ├── default.json
+│   │   └── frontend.json
+│   └── output/
+│       ├── code_map.txt
+│       └── code_map_110825-1430.txt
+├── src/
+├── app/
+└── public/
+```
+
+---
+
+### 💡 Pro Tips
+
+1. **Timestamp maps** → press `y` when asked → never overwrite old versions
+2. **Open folder instantly** → choose `folder` at the end
+3. **Large files?** Edit any `.json` in `codemapper/config/`:
+   ```json
+   { "max_file_size_mb": 50 }
+   ```
+4. **Multiple projects?** One exe → unlimited named configs!
+
+---
+
+### 🔧 Advanced Examples
+
+```bash
+# Only app folder, PHP files, 50MB limit
+codemapper.exe --folders app --extensions .php --savetoconfig php-only
+
+# Everything except tests + logs
+codemapper.exe --except-folders tests,logs,storage/logs
+
+# Full scan of two separate repos
+codemapper.exe --src ../frontend --src ../api
+```
+
+---
+
+### 🐍 Developers (Python Version)
+
+```bash
+python codemapper.py --folders app,src
+```
+
+Build your own exe:
+```bash
+pip install pyinstaller
+pyinstaller --onefile --name codemapper codemapper.py
+```
+
+---
+
+### ❓ FAQ
+
+| Question                                   | Answer                                                                 |
+|--------------------------------------------|------------------------------------------------------------------------|
+| Where is the output?                       | `codemapper/output/code_map.txt` (or timestamped)                      |
+| Can I use on 10 projects?                  | Yes – create 10 named configs                                          |
+| What’s skipped by default?                 | `node_modules`, `.git`, `vendor`, `dist`, `build`, `codemapper` folder |
+| How to reset defaults?                     | Delete `codemapper/config/default.json`                                |
+| Works on Mac/Linux?                        | Yes with Python version (`codemapper.py`)                              |
+| Can I exclude .env?                        | `codemapper.exe --except-files .env`                                   |
+
+---
+
+### 📄 Example Config (`codemapper/config/default.json`)
+
+```json
+{
+  "src": ["."],
+  "folders": ["app", "database", "config"],
+  "except_folders": ["tests", "storage/logs"],
+  "except_files": [".env", "package-lock.json"],
+  "text_extensions": [".php", ".js", ".py", ".html", ".json", ".md"],
+  "max_file_size_mb": 20
+}
+```
+
+---
+
+### 📄 License
+
+**Free for personal and commercial use.**  
+Made with ❤️ by an AI power user (Yours truly) – enjoy unlimited context!
+
+**Download `codemapper.exe` → drop → double-click → paste into AI → profit!** 🚀
+
+---
+
+*Last updated: November 08, 2025*

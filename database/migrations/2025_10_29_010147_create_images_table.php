@@ -11,11 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('listing_images', function (Blueprint $table) {
+        Schema::create('images', function (Blueprint $table) {
             $table->id();
 
             // Polymorphic relation fields
             $table->morphs('imageable'); // creates imageable_id & imageable_type columns
+            $table->string('collection_name')->nullable()->default('default'); // For grouping images (e.g., 'gallery', 'avatar')
 
             // Image attributes
             $table->string('path');             // e.g., storage path or S3 URL
@@ -33,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('listing_images');
+        Schema::dropIfExists('images');
     }
 };

@@ -118,6 +118,14 @@ class OpenOfferService
         return $openOffers;
     }
 
+    public function getPaginatedOpenOffers(array $filters = [])
+    {
+        // TODO: Implement filtering logic similar to ServiceService
+        return OpenOffer::with('creator', 'category', 'address')
+            ->latest()
+            ->paginate(10); // Using a different pagination count to test merging
+    }
+
     /**
      * Close an open offer by updating its is_closed field to true.
      *

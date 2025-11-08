@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Domains\Listings\Models;
+namespace App\Domains\Common\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Domains\Listings\Models\WorkflowTemplate;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Domains\Listings\Models\WorkCatalog;
 
-class ListingImage extends Model
+class Image extends Model
 {
     use HasFactory;
+
+    protected $table = 'images';
 
     protected $fillable = [
         'path',
@@ -17,6 +17,7 @@ class ListingImage extends Model
         'alt_text',
         'order_index',
         'is_primary',
+        'collection_name',
     ];
 
     protected $casts = [
@@ -37,10 +38,5 @@ class ListingImage extends Model
     public function getThumbnailUrlAttribute()
     {
         return asset('storage/' . $this->thumbnail_path);
-    }
-
-    public function listing()
-    {
-        return $this->morphTo();
     }
 }

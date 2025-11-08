@@ -76,14 +76,7 @@
                         
                         <!-- Images -->
                         <div class="mb-4">
-                            <label for="images" class="block text-sm font-medium text-gray-700">Upload New Images</label>
-                            <input type="file" name="images[]" id="images" multiple class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                             @error('images')
-                                <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
-                            @enderror
-                             @error('images.*')
-                                <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
-                            @enderror
+                            <livewire:image-uploader :model="$service" />
                         </div>
 
                         <!-- Active Status -->
