@@ -149,6 +149,7 @@ This guide refines the iterative development process for Laravel applications, i
 *   **Task Decomposition:** If a step reveals complexity (e.g., a flow needs role-specific UIs), break into subtasks immediately to maintain momentum.
 *   **Quality Gates:** Lint/test at each step; use Livewire's testing utils; ensure responsive design (Tailwind) and accessibility.
 *   **Subtask Handling:** Nest as decimals; if frontend-specific, prefix with "F" (e.g., 9.1F: UI variant).
+*   **Contextual Scaffolding:** For complex or multi-step tasks, create a temporary context file in the `progress-context/` directory (e.g., `milestone-X.Y-context.md`). This file should outline the sub-tasks, dependencies, and agent's plan, and can be removed upon task completion.
 
 ### Iteration Process Checklist
 Execute sequentially per feature/subfeature. Document in a tracker; re-engage user for clarifications.
