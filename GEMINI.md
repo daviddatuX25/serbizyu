@@ -91,7 +91,7 @@
 ## 📋 Project Overview
 
 **Tech Stack Confirmed:**
-- **Backend:** Laravel 11 with Domain-Driven Design
+- **Backend:** Laravel 12 with Domain-Driven Design
 - **Frontend:** Blade + Alpine.js + Tailwind CSS (existing setup)
 - **Real-time:** Laravel Broadcasting + Laravel Echo
 - **Payments:** Xendit/PayMongo with manual disbursement
@@ -199,7 +199,7 @@ app/Traits/
 
 ---
 
-### Milestone 1.2: Categories Web CRUD [0/6]
+### Milestone 1.2: Categories Web CRUD [6/6]
 **Goal:** Complete Web CRUD for categories (foundation for listings)
 
 #### Backend Tasks
@@ -233,20 +233,20 @@ resources/views/creator/categories/
 
 ---
 
-### Milestone 1.3: Services Web CRUD & UI [0/12]
+### Milestone 1.3: Services Web CRUD & UI [5/12]
 
 #### Backend Tasks
-- [ ] Create `ServiceController` for Web CRUD in the `Listings` domain.
-- [ ] Add resource routes for services CRUD under `/creator/services`.
+- [x] Create `ServiceController` for Web CRUD in the `Listings` domain.
+- [x] Add resource routes for services CRUD under `/creator/services`.
 - [ ] Add image upload handling in the `ServiceService`.
-- [ ] Implement `ServicePolicy` for authorization (create, update, delete).
+- [x] Implement `ServicePolicy` for authorization (create, update, delete).
 - [ ] Handle soft deletes in all service queries.
 - [ ] Add filtering and sorting logic to the `index` method.
 
 #### Frontend Tasks
 - [ ] Enhance `resources/views/browse.blade.php` with Livewire for dynamic filtering.
-- [ ] Create `resources/views/creator/services/create.blade.php`.
-- [ ] Create `resources/views/creator/services/edit.blade.php`.
+- [x] Create `resources/views/creator/services/create.blade.php`.
+- [x] Create `resources/views/creator/services/edit.blade.php`.
 - [ ] Create public-facing `resources/views/listings/show.blade.php`.
 - [ ] Create a Livewire component for image uploads to provide a better UX.
 
@@ -1618,7 +1618,7 @@ deploy.sh
 ## 📝 Technical Decisions Made
 
 ### Stack Confirmation
-- **Backend:** Laravel 11 + PHP 8.2+
+- **Backend:** Laravel 12 + PHP 8.2+
 - **Frontend:** Blade + Alpine.js + Tailwind CSS
 - **Database:** MySQL 8.0+
 - **Cache:** Redis
