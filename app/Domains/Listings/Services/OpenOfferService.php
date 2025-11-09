@@ -121,9 +121,10 @@ class OpenOfferService
     public function getPaginatedOpenOffers(array $filters = [])
     {
         // TODO: Implement filtering logic similar to ServiceService
+        $perPage = $filters['per_page'] ?? 10;
         return OpenOffer::with('creator', 'category', 'address')
             ->latest()
-            ->paginate(10); // Using a different pagination count to test merging
+            ->paginate($perPage);
     }
 
     /**

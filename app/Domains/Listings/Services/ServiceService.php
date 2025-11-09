@@ -134,7 +134,8 @@ class ServiceService
             $query->orderBy($sortBy, $sortDirection);
         }
 
-        return $query->paginate(15)->withQueryString();
+        $perPage = $filters['per_page'] ?? 15;
+        return $query->paginate($perPage)->withQueryString();
     }
 
     public function updateService(Service $service, array $data): Service
