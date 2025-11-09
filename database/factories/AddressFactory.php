@@ -22,11 +22,11 @@ class AddressFactory extends Factory
     public function definition()
     {
         return [
-            'address_line_1' => $this->faker->streetAddress,
-            'address_line_2' => $this->faker->secondaryAddress,
-            'city' => $this->faker->city,
-            'state' => $this->faker->state,
-            'postal_code' => $this->faker->postcode,
+            'house_no' => $this->faker->buildingNumber,
+            'street' => $this->faker->streetName,
+            'barangay' => $this->faker->citySuffix, // Using citySuffix as a proxy for barangay
+            'town' => $this->faker->city,
+            'province' => $this->faker->state,
             'country' => $this->faker->country,
             'lat' => $this->faker->latitude,
             'lng' => $this->faker->longitude,

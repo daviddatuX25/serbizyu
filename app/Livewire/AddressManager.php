@@ -2,7 +2,7 @@
 
 namespace App\Livewire;
 
-use App\Domains\Users\Services\AddressService;
+use App\Domains\Common\Services\AddressService;
 use App\Domains\Common\Models\Address;
 use Illuminate\Support\Collection;
 use Livewire\Component;
@@ -16,11 +16,11 @@ class AddressManager extends Component
 
     // Form fields
     public ?int $addressId = null;
-    public string $address_line_1 = '';
-    public string $address_line_2 = '';
-    public string $city = '';
-    public string $state = '';
-    public string $postal_code = '';
+    public string $house_no = '';
+    public string $street = '';
+    public string $barangay = '';
+    public string $town = '';
+    public string $province = '';
     public string $country = '';
     public bool $is_primary = false;
 
@@ -44,13 +44,13 @@ class AddressManager extends Component
     protected function rules(): array
     {
         return [
-            'address_line_1' => 'required|string|max:255',
-            'address_line_2' => 'nullable|string|max:255',
-            'city' => 'required|string|max:255',
-            'state' => 'required|string|max:255',
-            'postal_code' => 'required|string|max:20',
+            'house_no' => 'nullable|string|max:255',
+            'street' => 'nullable|string|max:255',
+            'barangay' => 'nullable|string|max:255',
+            'town' => 'required|string|max:255',
+            'province' => 'required|string|max:255',
             'country' => 'required|string|max:255',
-            'is_primary' => 'nullable|boolean',
+            'is_primary' => 'boolean',
         ];
     }
 
@@ -59,9 +59,14 @@ class AddressManager extends Component
         return view('livewire.address-manager');
     }
 
-    public function openModal()
+    public function addAddress()
     {
         $this->resetForm();
+        $this->isOpen = true;
+    }
+
+    public function openModal()
+    {
         $this->isOpen = true;
     }
 
@@ -83,11 +88,11 @@ class AddressManager extends Component
     private function resetForm()
     {
         $this->addressId = null;
-        $this->address_line_1 = '';
-        $this->address_line_2 = '';
-        $this->city = '';
-        $this->state = '';
-        $this->postal_code = '';
+        $this->house_no = '';
+        $this->street = '';
+        $this->barangay = '';
+        $this->town = '';
+        $this->province = '';
         $this->country = '';
         $this->is_primary = false;
         $this->resetErrorBag();
@@ -117,16 +122,19 @@ class AddressManager extends Component
 
     public function edit(int $id)
     {
-        $address = $this->addresses->firstWhere('id', $id);
+        /** @var \App\Domains\Users\Models\User $user */
+        $user = auth()->user();
+        $address = $user->addresses()->withPivot('is_primary')->findOrFail($id);
+
         if ($address) {
             $this->addressId = $address->id;
-            $this->address_line_1 = $address->address_line_1;
-            $this->address_line_2 = $address->address_line_2 ?? '';
-            $this->city = $address->city;
-            $this->state = $address->state;
-            $this->postal_code = $address->postal_code;
+            $this->house_no = $address->house_no ?? '';
+            $this->street = $address->street ?? '';
+            $this->barangay = $address->barangay ?? '';
+            $this->town = $address->town;
+            $this->province = $address->province;
             $this->country = $address->country;
-            $this->is_primary = $address->pivot->is_primary;
+            $this->is_primary = (bool) $address->pivot->is_primary;
             $this->openModal();
         }
     }

@@ -9,8 +9,7 @@ class Address extends Model
 {
     use HasFactory;
 
-     protected $fillable = [
-        'id',
+    protected $fillable = [
         'house_no',
         'street',
         'barangay',
@@ -26,4 +25,3 @@ class Address extends Model
         return \Database\Factories\AddressFactory::new();
     }
 }
-

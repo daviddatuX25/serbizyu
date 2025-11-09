@@ -1,7 +1,7 @@
 <div>
     <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-medium text-gray-900">Your Addresses</h3>
-        <button wire:click="openModal()" type="button" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150">
+        <button wire:click="addAddress()" type="button" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150">
             Add New Address
         </button>
     </div>
@@ -11,18 +11,18 @@
         @forelse ($addresses as $address)
             <div class="p-4 border rounded-lg flex justify-between items-center">
                 <div>
-                    <p class="font-semibold">{{ $address->address_line_1 }}, {{ $address->city }}</p>
-                    <p class="text-sm text-gray-600">{{ $address->state }}, {{ $address->postal_code }}, {{ $address->country }}</p>
-                    @if ($address->pivot->is_primary)
+                    <p class="font-semibold">{{ $address->house_no }} {{ $address->street }}, {{ $address->barangay }}</p>
+                    <p class="text-sm text-gray-600">{{ $address->town }}, {{ $address->province }}, {{ $address->country }}</p>
+                    @if ($address->pivot && $address->pivot->is_primary)
                         <span class="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full">Primary</span>
                     @endif
                 </div>
                 <div class="flex space-x-2">
                     <button wire:click="edit({{ $address->id }})" type="button" class="text-sm font-medium text-indigo-600 hover:text-indigo-900">Edit</button>
                     <button wire:click="confirmDelete({{ $address->id }})" type="button" class="text-sm font-medium text-red-600 hover:text-red-900">Delete</button>
-                    @unless ($address->pivot->is_primary)
+                    @if (!$address->pivot || !$address->pivot->is_primary)
                         <button wire:click="setPrimary({{ $address->id }})" type="button" class="text-sm font-medium text-gray-600 hover:text-gray-900">Set as Primary</button>
-                    @endunless
+                    @endif
                 </div>
             </div>
         @empty
@@ -45,24 +45,29 @@
                             <div class="mt-4 space-y-4">
                                 <!-- Form Fields -->
                                 <div>
-                                    <label for="address_line_1" class="block text-sm font-medium text-gray-700">Address Line 1</label>
-                                    <input type="text" wire:model.defer="address_line_1" id="address_line_1" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    @error('address_line_1') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <label for="house_no" class="block text-sm font-medium text-gray-700">House/Unit/Building No.</label>
+                                    <input type="text" wire:model.defer="house_no" id="house_no" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    @error('house_no') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                                 </div>
                                 <div>
-                                    <label for="city" class="block text-sm font-medium text-gray-700">City</label>
-                                    <input type="text" wire:model.defer="city" id="city" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    @error('city') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <label for="street" class="block text-sm font-medium text-gray-700">Street</label>
+                                    <input type="text" wire:model.defer="street" id="street" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    @error('street') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                                 </div>
                                 <div>
-                                    <label for="state" class="block text-sm font-medium text-gray-700">State / Province</label>
-                                    <input type="text" wire:model.defer="state" id="state" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    @error('state') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <label for="barangay" class="block text-sm font-medium text-gray-700">Barangay</label>
+                                    <input type="text" wire:model.defer="barangay" id="barangay" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    @error('barangay') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                                 </div>
                                 <div>
-                                    <label for="postal_code" class="block text-sm font-medium text-gray-700">Postal Code</label>
-                                    <input type="text" wire:model.defer="postal_code" id="postal_code" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    @error('postal_code') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <label for="town" class="block text-sm font-medium text-gray-700">Town/City</label>
+                                    <input type="text" wire:model.defer="town" id="town" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    @error('town') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                </div>
+                                <div>
+                                    <label for="province" class="block text-sm font-medium text-gray-700">Province</label>
+                                    <input type="text" wire:model.defer="province" id="province" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    @error('province') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                                 </div>
                                 <div>
                                     <label for="country" class="block text-sm font-medium text-gray-700">Country</label>
