@@ -2,12 +2,14 @@
 
 namespace App\Domains\Common\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Address extends Model
 {
-     protected $fillable = [
-        'id',
+    use HasFactory;
+
+    protected $fillable = [
         'house_no',
         'street',
         'barangay',
@@ -18,4 +20,8 @@ class Address extends Model
         'lng',
     ];
 
+    protected static function newFactory()
+    {
+        return \Database\Factories\AddressFactory::new();
+    }
 }
