@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Domains\Common\Models\Address;
 
+use App\Domains\Common\Models\Image;
+
 class Service extends Model
 {
     use HasFactory;
@@ -22,17 +24,17 @@ class Service extends Model
     // morph many images
     public function images()
     {
-        return $this->morphMany(ListingImage::class, 'imageable');
+        return $this->morphMany(Image::class, 'imageable');
     }
     public function thumbnail()
     {
-        $primaryImage = $this->morphOne(ListingImage::class, 'imageable')
+        $primaryImage = $this->morphOne(Image::class, 'imageable')
             ->where('is_primary', true)
             ->select(['id', 'path', 'imageable_id', 'imageable_type']); // minimal columns
         
         if ($primaryImage->doesntExist()) {
             // Fallback to the first image if no primary is set
-            $primaryImage = $this->morphOne(ListingImage::class, 'imageable')
+            $primaryImage = $this->morphOne(Image::class, 'imageable')
                 ->select(['id', 'path', 'imageable_id', 'imageable_type'])
                 ->orderBy('order_index', 'asc');
         }

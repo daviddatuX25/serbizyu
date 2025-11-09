@@ -10,6 +10,8 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use App\Domains\Common\Models\UserAddress;
 
+use App\Domains\Common\Models\Image;
+
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -47,6 +49,12 @@ class User extends Authenticatable implements MustVerifyEmail
     public function addresses()
     {
         return $this->hasMany(UserAddress::class);
+    }
+
+    // Profile Image
+    public function profileImage()
+    {
+        return $this->morphOne(Image::class, 'imageable')->where('collection_name', 'profile');
     }
 
     /**

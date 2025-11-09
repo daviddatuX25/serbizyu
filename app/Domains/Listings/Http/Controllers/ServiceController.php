@@ -26,9 +26,9 @@ class ServiceController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $services = $this->serviceService->getPaginatedServices();
+        $services = $this->serviceService->getPaginatedServices($request->all());
         return view('creator.services.index', compact('services'));
     }
 
@@ -50,6 +50,10 @@ class ServiceController extends Controller
     {
         $validatedData = $request->validated();
         $validatedData['creator_id'] = Auth::id();
+        
+        // Add image data from the request for the service layer to handle
+        $validatedData['images'] = $request->file('newImages');
+        $validatedData['images_to_remove'] = $request->input('images_to_remove', []);
         $validatedData['is_active'] = $request->has('is_active');
 
         try {
@@ -65,7 +69,9 @@ class ServiceController extends Controller
      */
     public function show(Service $service)
     {
-        //
+        // The getService method eager loads all necessary relationships
+        $service = $this->serviceService->getService($service->id);
+        return view('listings.show', compact('service'));
     }
 
     /**
@@ -89,6 +95,10 @@ class ServiceController extends Controller
         $this->authorize('update', $service);
 
         $validatedData = $request->validated();
+
+        // Add image data from the request for the service layer to handle
+        $validatedData['images'] = $request->file('newImages');
+        $validatedData['images_to_remove'] = $request->input('images_to_remove', []);
         $validatedData['is_active'] = $request->has('is_active');
 
         try {

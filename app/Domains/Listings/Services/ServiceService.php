@@ -1,16 +1,18 @@
 <?php
+
 namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\Service;    
+use App\Exceptions\BusinessRuleException;
+use App\Exceptions\AuthorizationException;
+use App\Exceptions\ResourceNotFoundException;
+use Illuminate\Database\Eloquent\Collection;
 use App\Domains\Users\Services\UserService;
 use App\Domains\Listings\Services\CategoryService;
 use App\Domains\Listings\Services\WorkflowTemplateService;
 use App\Domains\Common\Services\AddressService;
 
-use App\Domains\Listings\Models\Service;
-
-use App\Exceptions\ResourceNotFoundException;
-use App\Exceptions\AuthorizationException;
-use App\Exceptions\BusinessRuleException;
-use Illuminate\Database\Eloquent\Collection;
+use App\Domains\Common\Services\ImageService;
 
 class ServiceService
 {
@@ -20,7 +22,7 @@ class ServiceService
         private CategoryService $categoryService,
         private WorkflowTemplateService $workflowTemplateService,
         private AddressService $addressService,
-        private ListingImageService $listingImageService
+        private ImageService $imageService
         ){}
         
     public function createService($data): Service
@@ -60,15 +62,16 @@ class ServiceService
             $data['address_id'] = $address->id;
         }
 
-        // Step 1: Create the service record first (without images)
-        $service = Service::create(collect($data)->except('images')->toArray());
+        // Step 1: Create the service record first
+        $service = Service::create(collect($data)->except(['images', 'images_to_remove'])->toArray());
 
-        // Step 2: Upload and attach images (if any)
-        if (!empty($data['images'])) {
-            foreach ($data['images'] as $image) {
-                $this->listingImageService->attachToModel($service, $image);
-            }
-        }
+        // Step 2: Sync images
+        $this->imageService->sync(
+            $service,
+            'gallery',
+            $data['images_to_remove'] ?? [],
+            $data['images'] ?? []
+        );
 
         return $service->load('images');
     }
@@ -103,24 +106,50 @@ class ServiceService
         return $services;
     }
 
-    public function getPaginatedServices()
+    public function getPaginatedServices(array $filters = [])
     {
-        return Service::with('category', 'creator', 'address', 'workflowTemplate.workTemplates', 'thumbnail')
-            ->latest()
-            ->paginate(15);
+        $query = Service::with('category', 'creator', 'address', 'thumbnail');
+
+        // Apply search filter
+        if (!empty($filters['search'])) {
+            $searchTerm = $filters['search'];
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                  ->orWhere('description', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Apply category filter
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        // Apply sorting
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDirection = $filters['sort_direction'] ?? 'desc';
+
+        // Validate sort_by to prevent arbitrary column sorting
+        $sortableColumns = ['created_at', 'price', 'title'];
+        if (in_array($sortBy, $sortableColumns)) {
+            $query->orderBy($sortBy, $sortDirection);
+        }
+
+        $perPage = $filters['per_page'] ?? 15;
+        return $query->paginate($perPage)->withQueryString();
     }
 
     public function updateService(Service $service, array $data): Service
     {
-        // Step 1: Update the main service record (excluding images)
-        $service->update(collect($data)->except('images')->toArray());
+        // Step 1: Update the main service record
+        $service->update(collect($data)->except(['images', 'images_to_remove'])->toArray());
 
-        // Step 2: Upload and attach new images (if any)
-        if (!empty($data['images'])) {
-            foreach ($data['images'] as $image) {
-                $this->listingImageService->attachToModel($service, $image);
-            }
-        }
+        // Step 2: Sync images
+        $this->imageService->sync(
+            $service,
+            'gallery',
+            $data['images_to_remove'] ?? [],
+            $data['images'] ?? []
+        );
 
         return $service->load('images');
     }

@@ -234,7 +234,7 @@ resources/views/creator/categories/
 
 ---
 
-### Milestone 1.3: Services Web CRUD & UI [5/12]
+### Milestone 1.3: Services Web CRUD & UI [10/12]
 
 #### Backend Tasks
 - [x] Create `ServiceController` for Web CRUD in the `Listings` domain.
@@ -242,13 +242,14 @@ resources/views/creator/categories/
 - [ ] Add image upload handling in the `ServiceService`.
 - [x] Implement `ServicePolicy` for authorization (create, update, delete).
 - [ ] Handle soft deletes in all service queries.
-- [ ] Add filtering and sorting logic to the `index` method.
+- [x] Add filtering and sorting logic to the `index` method.
 
 #### Frontend Tasks
-- [ ] Enhance `resources/views/browse.blade.php` with Livewire for dynamic filtering.
+- [x] Create `resources/views/creator/services/index.blade.php`.
+- [x] Enhance `resources/views/browse.blade.php` with Livewire for dynamic filtering.
 - [x] Create `resources/views/creator/services/create.blade.php`.
 - [x] Create `resources/views/creator/services/edit.blade.php`.
-- [ ] Create public-facing `resources/views/listings/show.blade.php`.
+- [x] Create public-facing `resources/views/listings/show.blade.php`.
 - [ ] Create a Livewire component for image uploads to provide a better UX.
 
 #### Files:
