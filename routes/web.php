@@ -4,6 +4,10 @@ use App\Domains\Listings\Http\Controllers\ServiceController;
 use App\Domains\Users\Http\Controllers\ProfileController;
 use App\Domains\Users\Http\Controllers\UserVerificationController;
 use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
+use App\Domains\Listings\Http\Controllers\CategoryController;
+
+use App\Domains\Listings\Http\Controllers\ListingController;
+
 // Authentication routes
 require __DIR__.'/auth.php';
 
@@ -12,9 +16,7 @@ require __DIR__.'/auth.php';
         return view('home');
     })->name('home');
 
-    Route::get('browse', function () {
-        return view('browse');
-    })->name('browse');
+    Route::get('browse', [ListingController::class, 'index'])->name('browse');
 
     Route::get('create', function () {
         return view('create');
@@ -27,6 +29,9 @@ require __DIR__.'/auth.php';
     Route::get('faq', function () {
         return view('faq');
     })->name('faq');
+
+// Public-facing service page
+Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
 
 // Creator space
     Route::prefix('creator')->group(function () {

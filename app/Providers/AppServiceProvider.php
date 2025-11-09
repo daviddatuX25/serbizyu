@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 use App\Domains\Listings\Services\ServiceService;
 use App\Domains\Listings\Services\CategoryService;
 use App\Domains\Listings\Services\WorkflowTemplateService;
-use App\Domains\Listings\Services\ListingImageService;
+use App\Domains\Common\Services\ImageService;
 use App\Domains\Listings\Services\OpenOfferService;
 use App\Domains\Listings\Services\OpenOfferBidService;
 use App\Domains\Listings\Services\WorkCatalogService;
@@ -41,8 +41,8 @@ class AppServiceProvider extends ServiceProvider
         // Register AddressService
         $this->app->singleton(AddressService::class);
 
-        // Register ListingImageService
-        $this->app->singleton(ListingImageService::class);
+        // Register ImageService
+        $this->app->singleton(ImageService::class);
 
         // Register WorkflowTemplateService
         $this->app->singleton(WorkflowTemplateService::class);
@@ -65,7 +65,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(CategoryService::class),
                 $app->make(WorkflowTemplateService::class),
                 $app->make(AddressService::class),
-                $app->make(ListingImageService::class)
+                $app->make(ImageService::class)
             );
         });
 
@@ -111,7 +111,7 @@ class AppServiceProvider extends ServiceProvider
                 $authProfileData = [
                     'greeting' => 'Hi, ' . ($user->firstname ?? 'User') . '!',
                     'email' => $user->email,
-                    'img_path' => $user->profile_image_path ?? null,
+                    'img_path' => $user->profileImage?->path ?? null, // Use the new relationship
                 ];
             }
 

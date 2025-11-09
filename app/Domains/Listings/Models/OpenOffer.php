@@ -7,6 +7,7 @@ use App\Domains\Users\Models\User;
 use App\Domains\Listings\Models\Category;
 use App\Domains\Listings\Models\WorkflowTemplate;
 use App\Domains\Common\Models\Address;
+use App\Domains\Common\Models\Image;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -27,18 +28,18 @@ class OpenOffer extends Model
 
     public function images()
     {
-        return $this->morphMany(ListingImage::class, 'imageable');
+        return $this->morphMany(Image::class, 'imageable');
     }
 
     public function thumbnail()
     {
-        $primaryImage = $this->morphOne(ListingImage::class, 'imageable')
+        $primaryImage = $this->morphOne(Image::class, 'imageable')
             ->where('is_primary', true)
             ->select(['id', 'path', 'imageable_id', 'imageable_type']); // minimal columns
         
         if ($primaryImage->doesntExist()) {
             // Fallback to the first image if no primary is set
-            $primaryImage = $this->morphOne(ListingImage::class, 'imageable')
+            $primaryImage = $this->morphOne(Image::class, 'imageable')
                 ->select(['id', 'path', 'imageable_id', 'imageable_type'])
                 ->orderBy('order_index', 'asc');
         }
@@ -76,7 +77,7 @@ class OpenOffer extends Model
         return \Database\Factories\OpenOfferFactory::new();
     }
 
-    protected function address()
+    public function address()
     {
         return $this->belongsTo(Address::class);
     }

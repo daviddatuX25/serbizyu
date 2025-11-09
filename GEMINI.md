@@ -294,7 +294,7 @@ resources/views/creator/categories/
 
 ---
 
-### Milestone 1.3: Services Web CRUD & UI [5/12]
+### Milestone 1.3: Services Web CRUD & UI [10/12]
 
 #### Backend Tasks
 - [x] Create `ServiceController` for Web CRUD in the `Listings` domain.
@@ -302,13 +302,14 @@ resources/views/creator/categories/
 - [ ] Add image upload handling in the `ServiceService`.
 - [x] Implement `ServicePolicy` for authorization (create, update, delete).
 - [ ] Handle soft deletes in all service queries.
-- [ ] Add filtering and sorting logic to the `index` method.
+- [x] Add filtering and sorting logic to the `index` method.
 
 #### Frontend Tasks
-- [ ] Enhance `resources/views/browse.blade.php` with Livewire for dynamic filtering.
+- [x] Create `resources/views/creator/services/index.blade.php`.
+- [x] Enhance `resources/views/browse.blade.php` with Livewire for dynamic filtering.
 - [x] Create `resources/views/creator/services/create.blade.php`.
 - [x] Create `resources/views/creator/services/edit.blade.php`.
-- [ ] Create public-facing `resources/views/listings/show.blade.php`.
+- [x] Create public-facing `resources/views/listings/show.blade.php`.
 - [ ] Create a Livewire component for image uploads to provide a better UX.
 
 #### Files:
@@ -401,30 +402,27 @@ Frontend:
 
 ---
 
-### Milestone 1.6: User Profile & Address Web UI [0/10]
+### Milestone 1.6: User Profile & Address Web UI [10/10]
+
+**Goal:** Allow users to manage their addresses via a Livewire component on their profile page.
 
 #### Backend Tasks
-- [ ] Update existing `ProfileController` in the `Users` domain.
-- [ ] Create `AddressController` in the `Users` domain.
-- [ ] Add address CRUD endpoints.
-- [ ] Add "set primary" endpoint.
-- [ ] Add public profile endpoint.
+- [x] Refactor `AddressService` to the `Common` domain.
+- [x] Ensure `AddressService` correctly handles creating, updating, and deleting addresses.
+- [x] Ensure `AddressService` correctly handles setting a primary address and loading pivot data.
+- [x] Fix namespace conflicts in `AppServiceProvider` and dependent classes.
 
 #### Frontend Tasks
-- [ ] Update `resources/views/profile/edit.blade.php` to use a Livewire component.
-- [ ] Create an `AddressManager` Livewire component.
-- [ ] Show user's services/offers on their public profile page.
+- [x] Create `AddressManager` Livewire component for full CRUD functionality.
+- [x] Implement a modal form within the component for adding/editing addresses.
+- [x] Update `profile/edit.blade.php` to include the `AddressManager` component.
+- [x] Update `livewire/address-manager.blade.php` view to use correct form fields and logic.
 
-#### Files:
-```
-Backend:
-├── app/Domains/Users/Http/Controllers/ProfileController.php
-├── app/Domains/Users/Http/Controllers/AddressController.php
+#### Testing Tasks
+- [x] Create `AddressManagerTest.php` feature test.
+- [x] Write and pass tests for all component actions (create, update, delete, set primary, authorization).
 
-Frontend:
-├── app/Http/Livewire/AddressManager.php
-└── resources/views/profile/public.blade.php
-```
+**Summary:** The address management feature is complete and fully tested. The initial API-based plan was superseded by a more interactive Livewire component. All underlying namespace and service layer bugs have been resolved.
 
 **Estimated Time:** 5 hours
 

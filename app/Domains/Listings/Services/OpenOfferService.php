@@ -118,6 +118,15 @@ class OpenOfferService
         return $openOffers;
     }
 
+    public function getPaginatedOpenOffers(array $filters = [])
+    {
+        // TODO: Implement filtering logic similar to ServiceService
+        $perPage = $filters['per_page'] ?? 10;
+        return OpenOffer::with('creator', 'category', 'address')
+            ->latest()
+            ->paginate($perPage);
+    }
+
     /**
      * Close an open offer by updating its is_closed field to true.
      *
