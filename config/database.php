@@ -32,11 +32,12 @@ return [
     'connections' => [
 
         'testing' => [
-            'driver' => 'sqlite',
-            'database' => database_path('testing.sqlite'),
+            'driver' => env('DB_CONNECTION', 'sqlite'),
+            'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
-            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+            'foreign_key_constraints' => true,
         ],
+
 
         'sqlite' => [
             'driver' => 'sqlite',
