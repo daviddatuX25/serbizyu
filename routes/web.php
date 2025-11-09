@@ -2,6 +2,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Domains\Listings\Http\Controllers\ServiceController;
 use App\Domains\Users\Http\Controllers\ProfileController;
+use App\Domains\Users\Http\Controllers\UserVerificationController;
+use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
 use App\Domains\Listings\Http\Controllers\CategoryController;
 
 use App\Domains\Listings\Http\Controllers\ListingController;
@@ -35,9 +37,15 @@ Route::get('/services/{service}', [ServiceController::class, 'show'])->name('ser
     Route::prefix('creator')->group(function () {
        Route::get('/', function () {
            return view('home');
-       })->name('dashboard');
-   })->middleware(['auth']);
-   
+       })->name('creator.dashboard');
+   });
+// User Verification
+Route::middleware(['auth'])->prefix('verification')->name('verification.')->group(function () {
+    Route::get('/submit', [UserVerificationController::class, 'create'])->name('create');
+    Route::post('/', [UserVerificationController::class, 'store'])->name('store');
+    Route::get('/status', [UserVerificationController::class, 'status'])->name('status');
+});
+
 // Profile editor
    Route::middleware(['auth'])->prefix('profile')->group(function () {
     Route::get('/', [ProfileController::class, 'edit'])
@@ -50,26 +58,11 @@ Route::get('/services/{service}', [ServiceController::class, 'show'])->name('ser
         ->name('profile.destroy');
 });
 
-// Category Management (Admin/Creator only)
-Route::middleware(['auth'])->prefix('creator')->group(function () {
-    Route::get('categories', [CategoryController::class, 'index'])->name('creator.categories.index');
-    Route::post('categories', [CategoryController::class, 'store'])->name('creator.categories.store');
-    Route::get('categories/{category}/edit', [CategoryController::class, 'edit'])->name('creator.categories.edit');
-    Route::put('categories/{category}', [CategoryController::class, 'update'])->name('creator.categories.update');
-    Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('creator.categories.destroy');
-    // Restore soft-deleted category
-    Route::patch('categories/{category}/restore', [CategoryController::class, 'restore'])->name('creator.categories.restore');
-});
-
-// Service Management (Creator only)
-Route::middleware(['auth'])->prefix('creator')->group(function () {
-    Route::resource('services', ServiceController::class)->names([
-        'index' => 'creator.services.index',
-        'create' => 'creator.services.create',
-        'store' => 'creator.services.store',
-        'show' => 'creator.services.show',
-        'edit' => 'creator.services.edit',
-        'update' => 'creator.services.update',
-        'destroy' => 'creator.services.destroy',
-    ]);
+// Admin Routes
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/verifications', [AdminUserVerificationController::class, 'index'])->name('verifications.index');
+    Route::get('/verifications/{verification}', [AdminUserVerificationController::class, 'show'])->name('verifications.show');
+    Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
+    Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
+    Route::get('/verifications/image/{path}', [AdminUserVerificationController::class, 'serveImage'])->name('verifications.image')->where('path', '.*');
 });

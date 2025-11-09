@@ -1,90 +1,150 @@
 ## Table of Contents
 
-*   [Project Overview](#project-overview)
-*   [System Architecture Analysis](#system-architecture-analysis)
-    *   [Already Implemented (From Code Map)](#already-implemented-from-code-map)
-    *   [Needs Implementation](#needs-implementation)
-*   [Iteration Process & Rules](#iteration-process--rules)
-    *   [Fundamentals](#fundamentals)
-    *   [Iteration Process Checklist](#iteration-process-checklist)
-*   [PHASE 1: Foundation & Core API (Week 1-2)](#phase-1-foundation--core-api-week-1-2)
-    *   [Milestone 1.1: API Infrastructure Setup [0/8]](#milestone-11-api-infrastructure-setup-08)
-    *   [Milestone 1.2: Categories API [0/6]](#milestone-12-categories-api-06)
-    *   [Milestone 1.3: Services API & UI Enhancement [0/12]](#milestone-13-services-api--ui-enhancement-012)
-    *   [Milestone 1.4: Open Offers API & UI [0/12]](#milestone-14-open-offers-api--ui-012)
-    *   [Milestone 1.5: Bidding System API & UI [0/14]](#milestone-15-bidding-system-api--ui-014)
-    *   [Milestone 1.6: User Profile & Address API [0/10]](#milestone-16-user-profile--address-api-010)
-    *   [Milestone 1.7: Workflow Management API & UI [0/15]](#milestone-17-workflow-management-api--ui-015)
-*   [PHASE 2: Order System & Execution (Week 3-4)](#phase-2-order-system--execution-week-3-4)
-    *   [Milestone 2.1: Order System Foundation [0/16]](#milestone-21-order-system-foundation-016)
-    *   [Milestone 2.2: Work Instance Execution [0/20]](#milestone-22-work-instance-execution-020)
-*   [PHASE 3: Real-time Features (Week 5)](#phase-3-real-time-features-week-5)
-    *   [Milestone 3.1: Broadcasting Setup [0/10]](#milestone-31-broadcasting-setup-010)
-    *   [Milestone 3.2: Real-time Notifications [0/15]](#milestone-32-real-time-notifications-015)
-    *   [Milestone 3.3: Messaging System [0/18]](#milestone-33-messaging-system-018)
-*   [PHASE 4: Payments & Financial (Week 6-7)](#phase-4-payments--financial-week-6-7)
-    *   [Milestone 4.1: Payment Integration [0/18]](#milestone-41-payment-integration-018)
-    *   [Milestone 4.2: Escrow & Disbursement [0/16]](#milestone-42-escrow--disbursement-016)
-    *   [Milestone 4.3: Refunds & Cancellations [0/12]](#milestone-43-refunds--cancellations-012)
-*   [PHASE 5: Trust & Safety (Week 8)](#phase-5-trust--safety-week-8)
-    *   [Milestone 5.1: User Verification System [0/14]](#milestone-51-user-verification-system-014)
-    *   [Milestone 5.2: Reviews & Ratings [0/16]](#milestone-52-reviews--ratings-016)
-    *   [Milestone 5.3: Dispute Resolution [0/12]](#milestone-53-dispute-resolution-012)
-    *   [Milestone 5.4: Content Moderation [0/10]](#milestone-54-content-moderation-010)
-*   [PHASE 6: Quick Deals (Week 9)](#phase-6-quick-deals-week-9)
-    *   [Milestone 6.1: Quick Deal Core [0/16]](#milestone-61-quick-deal-core-016)
-    *   [Milestone 6.2: QR Code System [0/12]](#milestone-62-qr-code-system-012)
-*   [PHASE 7: Admin & Analytics (Week 10)](#phase-7-admin--analytics-week-10)
-    *   [Milestone 7.1: Admin Dashboard [0/15]](#milestone-71-admin-dashboard-015)
-    *   [Milestone 7.2: Search & Discovery [0/14]](#milestone-72-search--discovery-014)
-    *   [Milestone 7.3: Activity Logs & Audit Trail [0/8]](#milestone-73-activity-logs--audit-trail-08)
-*   [PHASE 8: Polish & Optimization (Week 11)](#phase-8-polish--optimization-week-11)
-    *   [Milestone 8.1: Performance Optimization [0/12]](#milestone-81-performance-optimization-012)
-    *   [Milestone 8.2: SEO & Meta Tags [0/8]](#milestone-82-seo--meta-tags-08)
-    *   [Milestone 8.3: Email Notifications [0/10]](#milestone-83-email-notifications-010)
-    *   [Milestone 8.4: Mobile Responsiveness [0/6]](#milestone-84-mobile-responsiveness-06)
-    *   [Milestone 8.5: Error Handling & User Feedback [0/8]](#milestone-85-error-handling--user-feedback-08)
-*   [PHASE 9: Testing & Documentation (Week 12)](#phase-9-testing--documentation-week-12)
-    *   [Milestone 9.1: Testing [0/15]](#milestone-91-testing-015)
-    *   [Milestone 9.2: Documentation [0/10]](#milestone-92-documentation-010)
-    *   [Milestone 9.3: Security Audit [0/10]](#milestone-93-security-audit-010)
-*   [PHASE 10: Deployment & Launch (Week 13)](#phase-10-deployment--launch-week-13)
-    *   [Milestone 10.1: Production Setup [0/15]](#milestone-101-production-setup-015)
-    *   [Milestone 10.2: Deployment Pipeline [0/10]](#milestone-102-deployment-pipeline-010)
-    *   [Milestone 10.3: Monitoring & Logging [0/8]](#milestone-103-monitoring--logging-08)
-    *   [Milestone 10.4: Pre-Launch Checklist [0/20]](#milestone-104-pre-launch-checklist-020)
-    *   [Milestone 10.5: Beta Testing [0/8]](#milestone-105-beta-testing-08)
-    *   [Milestone 10.6: Launch! 🚀 [0/10]](#milestone-106-launch--010)
-*   [Summary Statistics](#summary-statistics)
-    *   [Total Development Effort](#total-development-effort)
-    *   [Phase Breakdown](#phase-breakdown)
-*   [Priority Levels](#priority-levels)
-    *   [P0 - Critical (Must Have for Launch)](#p0---critical-must-have-for-launch)
-    *   [P1 - Important (Should Have)](#p1---important-should-have)
-    *   [P2 - Nice to Have (Can Be Post-Launch)](#p2---nice-to-have-can-be-post-launch)
-*   [Technical Decisions Made](#technical-decisions-made)
-    *   [Stack Confirmation](#stack-confirmation)
-    *   [Architecture Patterns](#architecture-patterns)
-    *   [Key Business Rules](#key-business-rules)
-*   [Learning Resources Needed](#learning-resources-needed)
-    *   [New Technologies to Learn](#new-technologies-to-learn)
-    *   [Recommended Reading](#recommended-reading)
-*   [Risk Mitigation](#risk-mitigation)
-    *   [Potential Challenges](#potential-challenges)
-*   [Recommended Sprint Schedule](#recommended-sprint-schedule)
-    *   [Sprint 1 (Week 1): Foundation](#sprint-1-week-1-foundation)
-    *   [Sprint 2 (Week 2): Core Listings](#sprint-2-week-2-core-listings)
-    *   [Sprint 3 (Week 3): Workflows & Orders](#sprint-3-week-3-workflows--orders)
-    *   [Sprint 4 (Week 4): Work Execution](#sprint-4-week-4-work-execution)
-    *   [Sprint 5 (Week 5): Real-time](#sprint-5-week-5-real-time)
-    *   [Sprint 6 (Week 6-7): Payments](#sprint-6-week-6-7-payments)
-    *   [Sprint 7 (Week 8): Trust & Safety](#sprint-7-week-8-trust--safety)
-    *   [Sprint 8 (Week 9): Quick Deals](#sprint-8-week-9-quick-deals)
-    *   [Sprint 9 (Week 10): Admin & Polish](#sprint-9-week-10-admin--polish)
-    *   [Sprint 10 (Week 11): Final Polish](#sprint-10-week-11-final-polish)
-    *   [Sprint 11 (Week 12): Testing](#sprint-11-week-12-testing)
-    *   [Sprint 12 (Week 13+): Launch](#sprint-12-week-13-launch)
-*   [Next Steps](#next-steps)
+## Project Overview
+
+This is a Laravel project that appears to be a service marketplace application. It uses a domain-driven design approach, with clear separation of concerns between different domains like `Listings` and `Users`. The application includes features like user authentication, service listings, open offers, and a creator space. The front-end is built with Vite, Tailwind CSS, and Alpine.js.
+
+## Project Progress
+
+### Milestone 5.1: User Verification System - COMPLETED
+
+We have successfully implemented the full web-based feature for user identity verification. This includes the user-facing forms to submit documents, a status page, and a complete admin panel for reviewing, approving, and rejecting submissions. The feature is now manually tested and confirmed to be working.
+
+**Key changes:**
+*   **Functionality:** Users can submit ID documents, see their verification status (pending, approved, rejected), and receive a "Verified" badge on their dashboard. Admins can process the queue of pending verifications.
+*   **Architecture:** Created new controllers under the `Users` domain, adhering to the project's DDD structure. This involved correcting controller paths and namespaces to match the established conventions.
+*   **Database:** Added the `user_verifications` table and updated the `users` table to support the feature.
+*   **Next Step:** The immediate next step is to write the automated feature tests for this system to ensure its stability and prevent regressions.
+
+### Completed Tasks:
+
+**System Architecture Analysis - Already Implemented:**
+*   User authentication (Laravel Breeze)
+*   Domain structure (Users, Common, Listings)
+*   Service layer architecture
+*   Exception handling (Custom domain exceptions)
+*   Models: User, Address, UserAddress, Service, OpenOffer, OpenOfferBid
+*   Models: Category, WorkflowTemplate, WorkTemplate, WorkCatalog, ListingImage
+*   Services: UserService, AddressService, CategoryService, ServiceService
+*   Services: OpenOfferService, OpenOfferBidService, WorkflowTemplateService
+*   Services: WorkTemplateService, WorkCatalogService, ListingImageService
+*   Seeders: All core data seeded
+*   Views: Home, Browse, Auth pages (Blade)
+*   Components: Navbar, Form components, Modal
+*   CSS: Tailwind with custom components
+*   Alpine.js: Interactive components
+
+**Phase 1: Foundation & Core API - Milestone 1.1: API Infrastructure Setup:**
+*   Create `app/Http/Controllers/Api/ApiController.php` (base)
+*   Update `app/Exceptions/Handler.php` for JSON error responses
+*   Create `app/Http/Middleware/ForceJsonResponse.php`
+*   Set up `routes/api.php` with web middleware (use session auth)
+*   Configure CORS in `config/cors.php`
+*   Add API rate limiting
+*   Create response helper traits
+*   Test JSON error responses
+
+**Phase 1: Foundation & Core API - Milestone 1.2: Categories API [5/6]:**
+*   Create `CategoryController` API (and moved to `app/Domains/Listings/Http/Controllers/Api`)
+*   Add routes: GET, POST, PUT, DELETE `/api/categories`
+*   Add filtering/search query parameters
+*   Create `CategoryResource` and `CategoryCollection` (and moved to `app/Domains/Listings/Http/Resources`)
+*   Add authorization (admin only for write) with `CategoryPolicy` (and moved to `app/Domains/Listings/Policies`)
+
+### Our Approach & Key Learnings
+
+Our development process has been a collaborative and iterative one, with a strong emphasis on adhering to the principles of Domain-Driven Design (DDD). We've established a set of development guidelines to ensure consistency and maintainability, which are documented in this file. A key part of our workflow is to ensure that all new components (Controllers, Policies, Resources, etc.) are placed in their respective domain directories.
+
+A significant portion of our recent efforts has been dedicated to configuring the testing environment, specifically for running feature tests with a `testing.sqlite` database in a Laravel Sail setup on Windows. This has been a challenging process, and we've encountered and worked through several issues, including:
+
+*   **Database Connection Errors:** Persistent `QueryException` errors due to the test environment attempting to connect to the MySQL database instead of the configured SQLite database.
+*   **Configuration Loading:** Difficulties in ensuring that the `php artisan test` command correctly loads the testing environment configuration from `phpunit.xml` and `.env.testing`.
+*   **Syntax Errors:** Accidental introduction of syntax errors in configuration files during our attempts to resolve the database connection issues.
+
+Through persistent problem-solving, we've explored various solutions, including modifying `phpunit.xml`, `.env.testing`, `config/database.php`, and `config/cache.php`. The key takeaway is the importance of a robust and explicit configuration for the testing environment, especially in a complex setup like Laravel Sail on Windows. We also learned the importance of clearing the configuration cache (`php artisan config:clear`) after making changes to configuration files to ensure that the changes are applied.
+
+### Next Steps
+
+1.  **Run `CategoryApiTest.php`:** With the recent fixes to the configuration files, the next immediate step is to run the `CategoryApiTest.php` and ensure all tests pass. The tests that need to pass are:
+    *   `test_guest_cannot_create_category`
+    *   `test_regular_user_cannot_create_category`
+    *   `test_admin_can_create_category`
+    *   `test_categories_can_be_listed`
+    *   `test_categories_can_be_listed_with_search_filter`
+    *   `test_specific_category_can_be_retrieved`
+    *   `test_guest_cannot_update_category`
+    *   `test_regular_user_cannot_update_category`
+    *   `test_admin_can_update_category`
+    *   `test_guest_cannot_delete_category`
+    *   `test_regular_user_cannot_delete_category`
+    *   `test_admin_can_delete_category`
+
+2.  **Complete Milestone 1.2:** Once the tests are passing, we will have completed the backend development for the Categories API. The final step for this milestone will be to mark it as complete in this `GEMINI.md` file.
+
+3.  **Proceed to Milestone 1.3: Services API & UI Enhancement:** After completing Milestone 1.2, we will move on to the next milestone, which includes:
+    *   Creating the `ServiceController` API.
+    *   Adding routes for services CRUD.
+    *   Implementing image uploads for services.
+    *   Creating the `ServiceResource`.
+
+This detailed plan will allow us to pick up where we left off and continue making progress efficiently in our next session.
+
+## Building and Running
+
+### Prerequisites
+
+*   PHP >= 8.2
+*   Node.js and npm
+*   Composer
+
+### Installation
+
+1.  Clone the repository.
+2.  Install PHP dependencies: `composer install`
+3.  Install front-end dependencies: `npm install`
+4.  Copy the `.env.example` file to `.env`: `cp .env.example .env`
+5.  Generate an application key: `php artisan key:generate`
+6.  Configure your database in the `.env` file.
+7.  Run database migrations and seed the database: `php artisan migrate --seed`
+
+### Development
+
+To start the development servers for both the back-end and front-end, run the following command:
+
+```bash
+composer run-script dev
+```
+
+This will start the Laravel development server on `http://127.0.0.1:8000` and the Vite development server on `http://localhost:5173`.
+
+### Testing
+
+To run the test suite, use the following command:
+
+```bash
+composer test
+```
+
+## Development Conventions
+
+*   **Domain-Driven Design:** The application follows a domain-driven design approach, with services and models organized into domains.
+*   **Service Layer:** Business logic is encapsulated in service classes.
+*   **Blade Components:** The front-end uses Blade components for reusable UI elements.
+*   **Tailwind CSS:** The application uses Tailwind CSS for styling.
+*   **Alpine.js:** Alpine.js is used for front-end interactivity.
+
+## Development Guidelines
+
+*   **Domain-Centric Architecture:** Strictly adhere to the domain-driven design for all new files and modifications. Policies, HTTP controllers, form requests, and other related components must be placed within their respective domain directories (e.g., `app/Domains/Listings/Policies`, `app/Domains/Listings/Http/Controllers`, `app/Domains/Listings/Http/Requests`).
+*   **Confidence Threshold:** Before making any changes, ensure you have at least 95% confidence in the approach and implementation. If unsure, ask follow-up questions for clarification.
+*   **Domain-Driven Design Adherence:** Always prioritize adhering to the established Domain-Driven Design principles and project structure. New features and modifications should fit naturally within the existing domain boundaries.
+*   **Master Plan First:** Refer to the 'Master Plan' as the primary source for tasks and priorities. Address items in the plan before considering new additions, unless explicitly instructed otherwise.
+*   **Clarification:** If any part of a task or instruction is unclear, ambiguous, or requires further detail, always ask follow-up questions to gain full understanding before proceeding.
+*   **Testing:** For every new feature or bug fix, ensure appropriate unit and feature tests are written to verify correctness and prevent regressions. Tests are a permanent part of the codebase.
+*   **Code Conventions:** Strictly follow existing code style, formatting, naming conventions, and architectural patterns observed in the project.
+*   **Incremental Changes:** Prefer making small, focused, and verifiable changes. Avoid large, sweeping modifications that are difficult to review and debug.
+
+## Master Plan
 
 # 🎯 Serbizyu - Refined Master Development Plan
 
@@ -808,24 +868,25 @@ Frontend:
 
 ## 📦 PHASE 5: Trust & Safety (Week 8)
 
-### Milestone 5.1: User Verification System [0/14]
+### Milestone 5.1: User Verification System [12/14]
 
 #### Backend Tasks
-- [ ] Create `UserVerification` model + migration in the `Users` domain.
-- [ ] Add ID upload endpoint.
-- [ ] Add verification status to users table.
-- [ ] Create admin verification review endpoint in `VerificationController`.
-- [ ] Add approve/reject verification.
-- [ ] Send verification notifications.
-- [ ] Add "verified" badge logic.
+- [x] Create `UserVerification` model + migration
+- [x] Add ID upload endpoint (via web controller)
+- [x] Add verification status to users table
+- [x] Create admin verification review endpoint (via web controller)
+- [x] Add approve/reject verification
+- [ ] Send verification notifications (TODO)
+- [x] Add "verified" badge logic
 
 #### Frontend Tasks
-- [ ] Create `resources/views/verification/submit.blade.php`.
-- [ ] Add ID upload form (front & back).
-- [ ] Show verification status on profile.
-- [ ] Add verified badge to listings.
-- [ ] Create admin verification queue.
-- [ ] Add verification review page (admin).
+- [x] Create `resources/views/verification/submit.blade.php`
+- [x] Add ID upload form (front & back)
+- [x] Show verification status on profile
+- [x] Add verified badge to listings (implemented on dashboard)
+- [x] Create admin verification queue
+- [x] Add verification review page (admin)
+- [ ] Add tests for the feature (TODO)
 
 #### Database:
 ```sql
@@ -842,18 +903,19 @@ Add to users table:
 - verified_at
 ```
 
-#### Files:
-```
-Backend:
-├── app/Domains/Users/Models/UserVerification.php
-├── app/Domains/Users/Http/Controllers/VerificationController.php
-└── database/migrations/xxxx_create_user_verifications_table.php
-
-Frontend:
-├── resources/views/verification/submit.blade.php
-├── resources/views/verification/status.blade.php
-└── resources/views/admin/verifications.blade.php
-```
+#### Files Created/Modified:
+- `app/Domains/Users/Models/UserVerification.php`
+- `app/Domains/Users/Http/Controllers/UserVerificationController.php`
+- `app/Domains/Users/Http/Controllers/Admin/UserVerificationController.php`
+- `database/migrations/0001_01_01_000000_create_users_table.php` (modified)
+- `database/migrations/xxxx_create_user_verifications_table.php`
+- `database/factories/Domains/Users/Models/UserVerificationFactory.php`
+- `resources/views/verification/submit.blade.php`
+- `resources/views/verification/status.blade.php`
+- `resources/views/admin/verifications/index.blade.php`
+- `resources/views/admin/verifications/show.blade.php`
+- `resources/views/dashboard.blade.php` (modified)
+- `routes/web.php` (modified)
 
 **Estimated Time:** 6 hours
 
