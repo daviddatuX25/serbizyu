@@ -7,15 +7,17 @@ use App\Domains\Users\Models\User;
 use App\Domains\Listings\Models\Category;
 use App\Domains\Listings\Models\WorkflowTemplate;
 use App\Domains\Common\Models\Address;
-use App\Domains\Common\Models\Image;
+use Plank\Mediable\Mediable;
+use Plank\Mediable\MediableInterface;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class OpenOffer extends Model
+class OpenOffer extends Model implements MediableInterface
 {
     use HasFactory;
     use SoftDeletes;
+    use Mediable;
 
     protected $table = 'open_offers';
     
@@ -25,26 +27,6 @@ class OpenOffer extends Model
     protected $casts = [
         'fulfilled' => 'boolean',
     ];
-
-    public function images()
-    {
-        return $this->morphMany(Image::class, 'imageable');
-    }
-
-    public function thumbnail()
-    {
-        $primaryImage = $this->morphOne(Image::class, 'imageable')
-            ->where('is_primary', true)
-            ->select(['id', 'path', 'imageable_id', 'imageable_type']); // minimal columns
-        
-        if ($primaryImage->doesntExist()) {
-            // Fallback to the first image if no primary is set
-            $primaryImage = $this->morphOne(Image::class, 'imageable')
-                ->select(['id', 'path', 'imageable_id', 'imageable_type'])
-                ->orderBy('order_index', 'asc');
-        }
-        return $primaryImage;    
-    }
 
 
 

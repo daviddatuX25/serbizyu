@@ -15,8 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('id_type');
-            $table->string('id_front_path');
-            $table->string('id_back_path');
             $table->string('status')->default('pending');
             $table->text('rejection_reason')->nullable();
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->onDelete('set null');

@@ -34,10 +34,11 @@ require __DIR__.'/auth.php';
 Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
 
 // Creator space
-    Route::prefix('creator')->group(function () {
+    Route::prefix('creator')->name('creator.')->group(function () {
        Route::get('/', function () {
            return view('home');
-       })->name('creator.dashboard');
+       })->name('dashboard');
+       Route::resource('services', ServiceController::class);
    });
 // User Verification
 Route::middleware(['auth'])->prefix('verification')->name('verification.')->group(function () {
@@ -65,4 +66,5 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
     Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
     Route::get('/verifications/image/{path}', [AdminUserVerificationController::class, 'serveImage'])->name('verifications.image')->where('path', '.*');
+    Route::get('/media/serve/{encryptedPath}', \App\Http\Controllers\MediaServeController::class)->name('media.serve');
 });
