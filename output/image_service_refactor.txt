@@ -1,0 +1,272 @@
+MAP: Generated 2025-11-11 20:01:15
+--app/Domains/Common/Models/Image.php
+<?php
+
+namespace App\Domains\Common\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Image extends Model
+{
+    use HasFactory;
+
+    protected $table = 'images';
+
+    protected $fillable = [
+        'path',
+        'thumbnail_path',
+        'alt_text',
+        'order_index',
+        'is_primary',
+        'collection_name',
+    ];
+
+    protected $casts = [
+        'is_primary' => 'boolean',
+    ];
+
+    public function imageable()
+    {
+        return $this->morphTo();
+    }
+
+    // Optional helper for generating URLs if using storage
+    public function getUrlAttribute()
+    {
+        return asset('storage/' . $this->path);
+    }
+
+    public function getThumbnailUrlAttribute()
+    {
+        return asset('storage/' . $this->thumbnail_path);
+    }
+}
+----
+--app/Domains/Common/Services/ImageService.php
+<?php
+
+namespace App\Domains\Common\Services;
+
+use App\Domains\Common\Models\Image;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+
+class ImageService
+{
+    /**
+     * Attaches an uploaded file to a model and stores it.
+     *
+     * @param Model $model The Eloquent model to attach the image to.
+     * @param UploadedFile $file The file to upload.
+     * @param string|null $collection The collection name to group the image under.
+     * @param array $attributes Additional attributes for the Image model.
+     * @return Image
+     */
+    public function attach(Model $model, UploadedFile $file, ?string $collection = 'default', array $attributes = []): Image
+    {
+        // Define a dynamic path based on the model type and collection
+        $modelType = strtolower(class_basename($model));
+        $path = $file->store("public/{$modelType}/{$collection}");
+
+        // If setting this as primary, ensure no others in the same collection are.
+        if (!empty($attributes['is_primary'])) {
+            $model->images()->where('collection_name', $collection)->update(['is_primary' => false]);
+        }
+
+        $defaults = [
+            'path' => Storage::url($path),
+            'collection_name' => $collection,
+            'alt_text' => $model->title ?? $model->name ?? 'image',
+        ];
+
+        return $model->images()->create(array_merge($defaults, $attributes));
+    }
+
+    /**
+     * Deletes an Image record and its corresponding file from storage.
+     *
+     * @param Image $image
+     * @return bool|null
+     */
+    public function delete(Image $image): ?bool
+    {
+        // Convert public URL back to a storage path
+        $storagePath = str_replace('/storage/', 'public/', $image->path);
+        Storage::delete($storagePath);
+
+        return $image->delete();
+    }
+
+    /**
+     * Synchronizes a collection of images for a model.
+     *
+     * @param Model $model The model to sync images for.
+     * @param string $collection The collection to synchronize.
+     * @param array $newImageIdsToRemove IDs of existing images to remove.
+     * @param array $newFilesToAttach Array of new UploadedFile objects to attach.
+     */
+    public function sync(Model $model, string $collection, array $newImageIdsToRemove = [], array $newFilesToAttach = []): void
+    {
+        // 1. Remove images marked for deletion
+        if (!empty($newImageIdsToRemove)) {
+            $images = Image::whereIn('id', $newImageIdsToRemove)->get();
+            foreach ($images as $image) {
+                if ($image->imageable_id === $model->id && $image->imageable_type === get_class($model)) {
+                    $this->delete($image);
+                }
+            }
+        }
+
+        // 2. Attach new files
+        if (!empty($newFilesToAttach)) {
+            foreach ($newFilesToAttach as $file) {
+                $this->attach($model, $file, $collection);
+            }
+        }
+    }
+}
+----
+--app/Domains/Users/Http/Controllers/UserVerificationController.php
+<?php
+
+namespace App\Domains\Users\Http\Controllers;
+
+use App\Domains\Users\Models\UserVerification;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class UserVerificationController extends Controller
+{
+    public function create()
+    {
+        $existingVerification = UserVerification::where('user_id', Auth::id())->first();
+
+        if ($existingVerification && in_array($existingVerification->status, ['pending', 'approved'])) {
+            return redirect()->route('verification.status');
+        }
+
+        return view('verification.submit');
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'id_type' => ['required', 'string', 'in:national_id,drivers_license,passport'],
+            'id_front' => ['required', 'image', 'max:2048'],
+            'id_back' => ['required', 'image', 'max:2048'],
+        ]);
+
+        $user = Auth::user();
+
+        // Prevent re-submission if already pending or approved
+        $existingVerification = UserVerification::where('user_id', $user->id)->first();
+        if ($existingVerification && in_array($existingVerification->status, ['pending', 'approved'])) {
+             return redirect()->route('verification.status')->with('error', 'You already have a pending or approved verification request.');
+        }
+
+        $path_front = $request->file('id_front')->store("private/verifications/{$user->id}");
+        $path_back = $request->file('id_back')->store("private/verifications/{$user->id}");
+
+        UserVerification::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'id_type' => $request->id_type,
+                'id_front_path' => $path_front,
+                'id_back_path' => $path_back,
+                'status' => 'pending',
+                'rejection_reason' => null,
+                'reviewed_at' => null,
+                'reviewed_by' => null,
+            ]
+        );
+
+        return redirect()->route('verification.status')->with('success', 'Your verification documents have been submitted successfully.');
+    }
+
+    public function status()
+    {
+        $verification = UserVerification::where('user_id', Auth::id())->first();
+
+        return view('verification.status', ['verification' => $verification]);
+    }
+}
+----
+--app/Domains/Users/Models/UserVerification.php
+<?php
+
+namespace App\Domains\Users\Models;
+
+use Database\Factories\Domains\Users\Models\UserVerificationFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class UserVerification extends Model
+{
+    use HasFactory;
+
+    protected $guarded = [];
+
+    /**
+     * Create a new factory instance for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    protected static function newFactory()
+    {
+        return UserVerificationFactory::new();
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+}
+----
+--database/migrations/2025_11_08_134640_create_user_verifications_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('user_verifications', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('id_type');
+            $table->string('id_front_path');
+            $table->string('id_back_path');
+            $table->string('status')->default('pending');
+            $table->text('rejection_reason')->nullable();
+            $table->foreignId('reviewed_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('reviewed_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('user_verifications');
+    }
+};
+----
+--SUMMARY
+Text:5 Binary:0 Skipped:443
