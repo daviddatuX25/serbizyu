@@ -89,20 +89,22 @@ class ListingsSeeder extends Seeder
 
         foreach ($services as $serviceData) {
             $category = $categories->firstWhere('name', $serviceData['category']);
-            $workflow = $workflows->firstWhere('title', $serviceData['workflow']);
+            $workflow = $workflows->firstWhere('name', $serviceData['workflow']);
             $user = $users->random();
             $address = $addresses->random();
 
-            Service::create([
-                'title' => $serviceData['title'],
-                'description' => $serviceData['description'],
-                'price' => $serviceData['price'],
-                'pay_first' => $serviceData['pay_first'],
-                'category_id' => $category->id,
-                'creator_id' => $user->id,
-                'workflow_template_id' => $workflow->id,
-                'address_id' => $address->id,
-            ]);
+            if ($workflow) {
+                Service::create([
+                    'title' => $serviceData['title'],
+                    'description' => $serviceData['description'],
+                    'price' => $serviceData['price'],
+                    'pay_first' => $serviceData['pay_first'],
+                    'category_id' => $category->id,
+                    'creator_id' => $user->id,
+                    'workflow_template_id' => $workflow->id,
+                    'address_id' => $address->id,
+                ]);
+            }
         }
 
         // Create Open Offers
@@ -167,21 +169,23 @@ class ListingsSeeder extends Seeder
 
         foreach ($openOffers as $offerData) {
             $category = $categories->firstWhere('name', $offerData['category']);
-            $workflow = $workflows->firstWhere('title', $offerData['workflow']);
+            $workflow = $workflows->firstWhere('name', $offerData['workflow']);
             $user = $users->random();
             $address = $addresses->random();
 
-            OpenOffer::create([
-                'title' => $offerData['title'],
-                'description' => $offerData['description'],
-                'budget' => $offerData['budget'],
-                'pay_first' => true,
-                'fulfilled' => $offerData['fulfilled'],
-                'category_id' => $category->id,
-                'creator_id' => $user->id,
-                'workflow_template_id' => $workflow->id,
-                'address_id' => $address->id,
-            ]);
+            if ($workflow) {
+                OpenOffer::create([
+                    'title' => $offerData['title'],
+                    'description' => $offerData['description'],
+                    'budget' => $offerData['budget'],
+                    'pay_first' => true,
+                    'fulfilled' => $offerData['fulfilled'],
+                    'category_id' => $category->id,
+                    'creator_id' => $user->id,
+                    'workflow_template_id' => $workflow->id,
+                    'address_id' => $address->id,
+                ]);
+            }
         }
     }
 }

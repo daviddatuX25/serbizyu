@@ -32,10 +32,7 @@
         @vite("resources/css/{$css}")
     @endforeach
 
-    @foreach ($jsFiles as $js)
-        @vite("resources/js/{$js}")
-    @endforeach
-</head>
+    </head>
 
 <body>
     <div class="min-h-screen">
@@ -55,6 +52,9 @@
 
         @include('layouts.footer')
     </div>
-    
+    @livewireScripts
+    @foreach ($jsFiles as $js)
+        @vite("resources/js/{$js}")
+    @endforeach
 </body>
 </html>

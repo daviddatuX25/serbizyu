@@ -13,7 +13,7 @@ class WorkCatalogSeeder extends Seeder
             [
                 'name' => 'Initial Consultation',
                 'description' => 'Meet with client to discuss requirements and expectations',
-                'default_config' => [
+                'config' => [
                     'estimated_duration' => '1-2 hours',
                     'location' => 'client_location',
                     'requirements' => ['notepad', 'measuring_tools']
@@ -22,7 +22,7 @@ class WorkCatalogSeeder extends Seeder
             [
                 'name' => 'Site Inspection',
                 'description' => 'Visit and assess the work location',
-                'default_config' => [
+                'config' => [
                     'estimated_duration' => '30 minutes - 1 hour',
                     'requirements' => ['camera', 'measuring_tape']
                 ]
@@ -30,7 +30,7 @@ class WorkCatalogSeeder extends Seeder
             [
                 'name' => 'Material Purchase',
                 'description' => 'Acquire necessary materials and supplies',
-                'default_config' => [
+                'config' => [
                     'estimated_duration' => '2-4 hours',
                     'payment_type' => 'client_advance'
                 ]
@@ -38,7 +38,7 @@ class WorkCatalogSeeder extends Seeder
             [
                 'name' => 'On-site Work',
                 'description' => 'Perform the actual service work',
-                'default_config' => [
+                'config' => [
                     'estimated_duration' => 'varies',
                     'location' => 'client_location'
                 ]
@@ -46,7 +46,7 @@ class WorkCatalogSeeder extends Seeder
             [
                 'name' => 'Quality Check',
                 'description' => 'Review completed work for quality assurance',
-                'default_config' => [
+                'config' => [
                     'estimated_duration' => '30 minutes',
                     'requires_client' => true
                 ]
@@ -54,14 +54,14 @@ class WorkCatalogSeeder extends Seeder
             [
                 'name' => 'Final Cleanup',
                 'description' => 'Clean up work area and remove debris',
-                'default_config' => [
+                'config' => [
                     'estimated_duration' => '30 minutes - 1 hour',
                 ]
             ],
             [
                 'name' => 'Client Walkthrough',
                 'description' => 'Present finished work to client for approval',
-                'default_config' => [
+                'config' => [
                     'estimated_duration' => '15-30 minutes',
                     'requires_client' => true
                 ]
@@ -69,14 +69,14 @@ class WorkCatalogSeeder extends Seeder
             [
                 'name' => 'Payment Collection',
                 'description' => 'Collect payment from client',
-                'default_config' => [
+                'config' => [
                     'payment_methods' => ['cash', 'gcash', 'bank_transfer']
                 ]
             ],
             [
                 'name' => 'Documentation',
                 'description' => 'Take photos and document completed work',
-                'default_config' => [
+                'config' => [
                     'estimated_duration' => '15 minutes',
                     'requirements' => ['camera', 'smartphone']
                 ]
@@ -84,7 +84,7 @@ class WorkCatalogSeeder extends Seeder
             [
                 'name' => 'Follow-up Visit',
                 'description' => 'Return to check on completed work',
-                'default_config' => [
+                'config' => [
                     'estimated_duration' => '30 minutes',
                     'typical_timeframe' => '1-2 weeks after completion'
                 ]
@@ -92,6 +92,7 @@ class WorkCatalogSeeder extends Seeder
         ];
 
         foreach ($workCatalogs as $catalog) {
+            $catalog['config'] = json_encode($catalog['config']);
             WorkCatalog::create($catalog);
         }
     }

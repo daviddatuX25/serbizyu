@@ -62,6 +62,11 @@ class Service extends Model
         return $this->belongsTo(Address::class);
     }
 
+    public function reviews()
+    {
+        return $this->morphMany(\App\Domains\Listings\Models\ListingReview::class, 'listing');
+    }
+
     protected static function newFactory()
     {
         return \Database\Factories\ServiceFactory::new();

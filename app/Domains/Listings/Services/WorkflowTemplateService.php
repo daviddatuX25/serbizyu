@@ -3,63 +3,69 @@
 namespace App\Domains\Listings\Services;
 
 use App\Domains\Listings\Models\WorkflowTemplate;
-use App\Domains\Listings\Models\WorkTemplate;
-use App\Domains\Listings\Models\WorkCatalog;
 use App\Exceptions\ResourceNotFoundException;
-use App\Exceptions\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class WorkflowTemplateService
 {
-
-    public function getAllWorkflowTemplates(): Collection
+    public function getWorkflowTemplate(int $id): WorkflowTemplate
     {
-        $workflowTemplates = WorkflowTemplate::all();
-
-        if ($workflowTemplates->isEmpty()) {
-            throw new ResourceNotFoundException('No workflow templates found.');
-        }
-
-        if ($workflowTemplates->every->trashed()) {
-            throw new ResourceNotFoundException('Workflow templates have all been deleted.');
-        }
-        
-        return $workflowTemplates;
-    }
-
-    public function getWorkflowTemplate($id): WorkflowTemplate
-    {
-        // get a workflow template
-        $workflowTemplate = WorkflowTemplate::find($id)->with('work');
+        $workflowTemplate = WorkflowTemplate::with('workTemplates')->find($id);
         if ($workflowTemplate == null) {
             throw new ResourceNotFoundException('Workflow template does not exist.');
         }
-        if ($workflowTemplate->trashed()) {
-            throw new ResourceNotFoundException('Workflow template has been deleted.');
-        }
-
-        if ($workflowTemplate->work == null) {
-            throw new ResourceNotFoundException('Associated work template does not exist.');
-        }
-
         return $workflowTemplate;
+    }
+
+    public function getWorkflowTemplatesByCreator(int $creatorId, array $filters = []): Collection
+    {
+        $query = WorkflowTemplate::where('creator_id', $creatorId)
+            ->orWhere('is_public', true)
+            ->orderBy('name');
+
+        if (isset($filters['search'])) {
+            $query->where('name', 'like', '%' . $filters['search'] . '%');
+        }
+
+        return $query->get();
     }
 
     public function createWorkflowTemplate(array $data): WorkflowTemplate
     {
-        // check if already exists, exact matches since the id is the identifier
-    
         return WorkflowTemplate::create($data);
     }
 
-    public function getWorkflowTemplatesByCreator(int $creatorId): Collection
+    public function updateWorkflowTemplate(WorkflowTemplate $workflowTemplate, array $data): WorkflowTemplate
     {
-        return WorkflowTemplate::where('creator_id', $creatorId)
-            ->orWhere('is_public', true)
-            ->orderBy('name')
-            ->get();
+        $workflowTemplate->update($data);
+        return $workflowTemplate;
     }
 
-   
-}
+    public function deleteWorkflowTemplate(WorkflowTemplate $workflowTemplate): void
+    {
+        DB::transaction(function () use ($workflowTemplate) {
+            $workflowTemplate->workTemplates()->delete();
+            $workflowTemplate->delete();
+        });
+    }
 
+    public function duplicateWorkflowTemplate(WorkflowTemplate $workflowTemplate): WorkflowTemplate
+    {
+        return DB::transaction(function () use ($workflowTemplate) {
+            $newWorkflowTemplate = $workflowTemplate->replicate([
+                'name' // You might want to adjust the name of the duplicate
+            ]);
+            $newWorkflowTemplate->name = $workflowTemplate->name . ' (Copy)';
+            $newWorkflowTemplate->save();
+
+            foreach ($workflowTemplate->workTemplates as $workTemplate) {
+                $newWorkTemplate = $workTemplate->replicate();
+                $newWorkflowTemplate->workTemplates()->save($newWorkTemplate);
+            }
+
+            return $newWorkflowTemplate;
+        });
+    }
+}

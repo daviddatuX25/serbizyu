@@ -138,6 +138,37 @@ class ServiceService
         return $query->paginate($perPage)->withQueryString();
     }
 
+    public function getAllServicesFiltered(array $filters = [])
+    {
+        $query = Service::with('category', 'creator', 'address', 'thumbnail');
+
+        // Apply search filter
+        if (!empty($filters['search'])) {
+            $searchTerm = $filters['search'];
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                    ->orWhere('description', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Apply category filter
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        // Apply sorting
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDirection = $filters['sort_direction'] ?? 'desc';
+
+        // Validate sort_by to prevent arbitrary column sorting
+        $sortableColumns = ['created_at', 'price', 'title'];
+        if (in_array($sortBy, $sortableColumns)) {
+            $query->orderBy($sortBy, $sortDirection);
+        }
+
+        return $query->get();
+    }
+
     public function updateService(Service $service, array $data): Service
     {
         // Step 1: Update the main service record

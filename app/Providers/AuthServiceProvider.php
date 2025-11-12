@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Domains\Listings\Models\Category;
 use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Models\WorkflowTemplate;
 use App\Domains\Listings\Policies\CategoryPolicy;
 use App\Domains\Listings\Policies\ServicePolicy;
+use App\Domains\Listings\Policies\WorkflowPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -18,6 +20,7 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         Category::class => CategoryPolicy::class,
         Service::class => ServicePolicy::class,
+        WorkflowTemplate::class => WorkflowPolicy::class,
     ];
 
     /**

@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('workflow_templates', function (Blueprint $table) {
-            $table->id('id');
-            $table->string('title');
-            $table->string('description');
+            $table->id();
+            $table->string('name');
+            $table->text('description')->nullable();
             $table->foreignId('creator_id')->constrained('users');
             $table->boolean('is_public')->default(false);
             $table->timestamps();
