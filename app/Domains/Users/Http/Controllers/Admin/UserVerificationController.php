@@ -20,7 +20,15 @@ class UserVerificationController extends Controller
 
     public function show(UserVerification $verification)
     {
-        return view('admin.verifications.show', ['verification' => $verification]);
+        // Get media directly from the verification model
+        $idFrontMedia = $verification->getMedia('verification-id-front')->first();
+        $idBackMedia = $verification->getMedia('verification-id-back')->first();
+
+        return view('admin.verifications.show', [
+            'verification' => $verification,
+            'idFrontMedia' => $idFrontMedia,
+            'idBackMedia' => $idBackMedia,
+        ]);
     }
 
     public function approve(UserVerification $verification)
@@ -59,24 +67,5 @@ class UserVerificationController extends Controller
         return redirect()->route('admin.verifications.index')->with('success', 'User verification rejected.');
     }
 
-    public function serveImage($path)
-    {
-        // Basic authorization: ensure the user is an admin.
-        // In a real app, this would use a dedicated admin middleware.
-        if (!Auth::check()) { // A real app should check for an admin role
-            abort(403);
-        }
 
-        if (!Storage::exists($path)) {
-            abort(404);
-        }
-
-        $file = Storage::get($path);
-        $type = Storage::mimeType($path);
-
-        $response = Response::make($file, 200);
-        $response->header("Content-Type", $type);
-
-        return $response;
-    }
 }

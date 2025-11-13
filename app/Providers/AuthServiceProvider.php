@@ -6,7 +6,9 @@ use App\Domains\Listings\Models\Category;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Policies\CategoryPolicy;
 use App\Domains\Listings\Policies\ServicePolicy;
+use App\Policies\MediaPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Plank\Mediable\Media;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -18,6 +20,7 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         Category::class => CategoryPolicy::class,
         Service::class => ServicePolicy::class,
+        \App\Domains\Users\Models\UserVerification::class => \App\Domains\Users\Policies\UserVerificationPolicy::class,
     ];
 
     /**

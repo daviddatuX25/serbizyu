@@ -49,11 +49,19 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                             <div>
                                 <h4 class="font-semibold">Front of ID</h4>
-                                <img src="{{ route('admin.verifications.image', ['path' => $verification->id_front_path]) }}" alt="Front of ID" class="mt-2 border rounded-md">
+                                @if ($idFrontMedia)
+                                    <img src="{{ route('media.serve', ['payload' => \Illuminate\Support\Facades\Crypt::encryptString(json_encode(['media_id' => $idFrontMedia->id]))]) }}" alt="Front of ID" class="mt-2 border rounded-md">
+                                @else
+                                    <p>No image uploaded.</p>
+                                @endif
                             </div>
                             <div>
                                 <h4 class="font-semibold">Back of ID</h4>
-                                <img src="{{ route('admin.verifications.image', ['path' => $verification->id_back_path]) }}" alt="Back of ID" class="mt-2 border rounded-md">
+                                @if ($idBackMedia)
+                                    <img src="{{ route('media.serve', ['payload' => \Illuminate\Support\Facades\Crypt::encryptString(json_encode(['media_id' => $idBackMedia->id]))]) }}" alt="Back of ID" class="mt-2 border rounded-md">
+                                @else
+                                    <p>No image uploaded.</p>
+                                @endif
                             </div>
                         </div>
                     </div>
