@@ -20,6 +20,7 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         Category::class => CategoryPolicy::class,
         Service::class => ServicePolicy::class,
+        \App\Domains\Users\Models\UserVerification::class => \App\Domains\Users\Policies\UserVerificationPolicy::class,
     ];
 
     /**
