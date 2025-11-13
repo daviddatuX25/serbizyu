@@ -5,7 +5,7 @@ use App\Domains\Users\Http\Controllers\ProfileController;
 use App\Domains\Users\Http\Controllers\UserVerificationController;
 use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
 use App\Domains\Listings\Http\Controllers\CategoryController;
-
+use App\Domains\Common\Http\Controllers\MediaServeController;
 use App\Domains\Listings\Http\Controllers\ListingController;
 
 // Authentication routes
@@ -65,6 +65,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/verifications/{verification}', [AdminUserVerificationController::class, 'show'])->name('verifications.show');
     Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
     Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
-    Route::get('/verifications/image/{path}', [AdminUserVerificationController::class, 'serveImage'])->name('verifications.image')->where('path', '.*');
-    Route::get('/media/serve/{encryptedPath}', \App\Http\Controllers\MediaServeController::class)->name('media.serve');
 });
+
+Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
+    ->middleware('auth')
+    ->name('media.serve');

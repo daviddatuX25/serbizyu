@@ -13,11 +13,9 @@ use Plank\Mediable\MediableInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class OpenOffer extends Model implements MediableInterface
+class OpenOffer extends Model
 {
-    use HasFactory;
-    use SoftDeletes;
-    use Mediable;
+    use HasFactory, SoftDeletes, Mediable;
 
     protected $table = 'open_offers';
     

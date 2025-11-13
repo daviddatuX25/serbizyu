@@ -8,15 +8,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Domains\Common\Models\Address;
 use Plank\Mediable\Mediable;
-use Plank\Mediable\MediableInterface;
 
-use App\Domains\Common\Models\Image;
-
-class Service extends Model implements MediableInterface
+class Service extends Model
 {
-    use HasFactory;
-    use SoftDeletes;
-    use Mediable;
+    use HasFactory, SoftDeletes, Mediable;
 
     protected $table = 'services';
     protected $fillable = ['title', 'description', 'price', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'];

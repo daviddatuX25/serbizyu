@@ -10,17 +10,14 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use App\Domains\Common\Models\UserAddress;
 use Plank\Mediable\Mediable;
-use Plank\Mediable\MediableInterface;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-use App\Domains\Common\Models\Image;
-
-class User extends Authenticatable implements MustVerifyEmail, MediableInterface
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, Mediable;
+    use HasFactory, Notifiable, HasRoles, SoftDeletes;
 
-    protected $guard_name = 'web'; 
-    protected $softDeletes = true;
+    protected $guard_name = 'web';
 
     /**
      * The attributes that are mass assignable.
@@ -78,6 +75,11 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
     public function isAdmin(): bool
     {
         return $this->hasRole('admin');
+    }
+
+    public function verification()
+    {
+        return $this->hasOne(UserVerification::class);
     }
 
 }
