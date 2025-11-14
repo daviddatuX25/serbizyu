@@ -46,7 +46,7 @@ class ServiceController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreServiceRequest $request)
+    public function store(StoreServiceRequest $request, \Plank\Mediable\MediaUploader $uploader)
     {
         $validatedData = $request->validated();
         $validatedData['creator_id'] = Auth::id();
@@ -57,7 +57,7 @@ class ServiceController extends Controller
         $validatedData['is_active'] = $request->has('is_active');
 
         try {
-            $this->serviceService->createService($validatedData);
+            $this->serviceService->createService($validatedData, $uploader);
             return redirect()->route('creator.services.index')->with('success', 'Service created successfully.');
         } catch (\Exception $e) {
             return back()->withInput()->with('error', 'Failed to create service: ' . $e->getMessage());
@@ -90,7 +90,7 @@ class ServiceController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(StoreServiceRequest $request, Service $service)
+    public function update(StoreServiceRequest $request, Service $service, \Plank\Mediable\MediaUploader $uploader)
     {
         $this->authorize('update', $service);
 
@@ -102,7 +102,7 @@ class ServiceController extends Controller
         $validatedData['is_active'] = $request->has('is_active');
 
         try {
-            $this->serviceService->updateService($service, $validatedData);
+            $this->serviceService->updateService($service, $validatedData, $uploader);
             return redirect()->route('creator.services.index')->with('success', 'Service updated successfully.');
         } catch (\Exception $e) {
             return back()->withInput()->with('error', 'Failed to update service: ' . $e->getMessage());

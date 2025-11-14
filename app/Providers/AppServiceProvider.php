@@ -65,7 +65,6 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(CategoryService::class),
                 $app->make(WorkflowTemplateService::class),
                 $app->make(AddressService::class),
-                $app->make(ImageService::class)
             );
         });
 
