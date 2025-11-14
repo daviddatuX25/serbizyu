@@ -19,8 +19,7 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles, Mediable;
 
-    protected $guard_name = 'web'; 
-    protected $softDeletes = true;
+    protected $guard_name = 'web';
 
     /**
      * The attributes that are mass assignable.
@@ -78,6 +77,11 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
     public function isAdmin(): bool
     {
         return $this->hasRole('admin');
+    }
+
+    public function verification()
+    {
+        return $this->hasOne(UserVerification::class);
     }
 
 }

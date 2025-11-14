@@ -5,6 +5,7 @@ use App\Domains\Users\Http\Controllers\ProfileController;
 use App\Domains\Users\Http\Controllers\UserVerificationController;
 use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
 use App\Domains\Listings\Http\Controllers\CategoryController;
+use App\Domains\Common\Http\Controllers\MediaServeController;
 use App\Domains\Listings\Http\Controllers\ListingController;
 use App\Domains\Listings\Http\Controllers\WorkCatalogController;
 use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;

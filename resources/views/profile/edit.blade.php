@@ -15,6 +15,23 @@
         </div>
       </div>
 
+      {{-- User Verification --}}
+      <div class="mt-10">
+        <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+          <div class="max-w-xl">
+            <h2 class="text-lg font-medium text-gray-900">
+              {{ __('User Verification') }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-600">
+              {{ __('Submit your documents to get your account verified.') }}
+            </p>
+            <a href="{{ route('verification.status') }}" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-500 active:bg-blue-700 focus:outline-none focus:border-blue-700 focus:ring ring-blue-300 disabled:opacity-25 transition ease-in-out duration-150">
+              {{ __('Go to Verification') }}
+            </a>
+          </div>
+        </div>
+      </div>
+
       {{-- Address Management --}}
       <div class="mt-10">
         <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">

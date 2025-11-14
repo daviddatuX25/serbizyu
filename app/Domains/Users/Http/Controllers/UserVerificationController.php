@@ -4,8 +4,10 @@ namespace App\Domains\Users\Http\Controllers;
 
 use App\Domains\Users\Models\UserVerification;
 use App\Http\Controllers\Controller;
+use Barryvdh\Debugbar\Facades\Debugbar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Plank\Mediable\MediaUploader;
 
 class UserVerificationController extends Controller
 {
@@ -20,7 +22,7 @@ class UserVerificationController extends Controller
         return view('verification.submit');
     }
 
-    public function store(Request $request, \Plank\Mediable\MediaUploader $uploader)
+    public function store(Request $request, MediaUploader $uploader)
     {
         $request->validate([
             'id_type' => ['required', 'string', 'in:national_id,drivers_license,passport'],
@@ -36,23 +38,8 @@ class UserVerificationController extends Controller
              return redirect()->route('verification.status')->with('error', 'You already have a pending or approved verification request.');
         }
 
-        // Upload the front ID
-        if ($request->hasFile('id_front')) {
-            $media = $uploader->fromSource($request->file('id_front'))
-                ->toDestination('local', "verifications/{$user->id}") // Private disk
-                ->upload();
-            $user->syncMedia($media, 'verification-id-front');
-        }
-
-        // Upload the back ID
-        if ($request->hasFile('id_back')) {
-            $media = $uploader->fromSource($request->file('id_back'))
-                ->toDestination('local', "verifications/{$user->id}") // Private disk
-                ->upload();
-            $user->syncMedia($media, 'verification-id-back');
-        }
-
-        UserVerification::updateOrCreate(
+        // Create or update the verification record first
+        $verification = UserVerification::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'id_type' => $request->id_type,
@@ -63,6 +50,22 @@ class UserVerificationController extends Controller
             ]
         );
 
+        // Upload the front ID and attach to the verification record
+        if ($request->hasFile('id_front')) {
+            $media = $uploader->fromSource($request->file('id_front'))
+                ->toDestination('local', $user->id) // Use user ID as directory
+                ->upload();
+            $verification->attachMedia($media, 'verification-id-front');
+        }
+
+        // Upload the back ID and attach to the verification record
+        if ($request->hasFile('id_back')) {
+            $media = $uploader->fromSource($request->file('id_back'))
+                ->toDestination('local', $user->id) // Use user ID as directory
+                ->upload();
+            $verification->attachMedia($media, 'verification-id-back');
+        }
+
         return redirect()->route('verification.status')->with('success', 'Your verification documents have been submitted successfully.');
     }
 
@@ -70,8 +73,8 @@ class UserVerificationController extends Controller
     {
         $user = Auth::user();
         $verification = UserVerification::where('user_id', $user->id)->first();
-        $idFrontMedia = $user->getMedia('verification-id-front')->first();
-        $idBackMedia = $user->getMedia('verification-id-back')->first();
+        $idFrontMedia = $verification ? $verification->getMedia('verification-id-front')->first() : null;
+        $idBackMedia = $verification ? $verification->getMedia('verification-id-back')->first() : null;
 
         return view('verification.status', [
             'verification' => $verification,

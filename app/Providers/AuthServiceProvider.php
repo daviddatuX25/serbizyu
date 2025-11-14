@@ -9,6 +9,7 @@ use App\Domains\Listings\Policies\CategoryPolicy;
 use App\Domains\Listings\Policies\ServicePolicy;
 use App\Domains\Listings\Policies\WorkflowPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Plank\Mediable\Media;
 
 class AuthServiceProvider extends ServiceProvider
 {
