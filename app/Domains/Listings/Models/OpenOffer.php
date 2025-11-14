@@ -9,7 +9,7 @@ use App\Domains\Listings\Models\WorkflowTemplate;
 use App\Domains\Common\Models\Address;
 use Plank\Mediable\Mediable;
 use Plank\Mediable\MediableInterface;
-
+use Plank\Mediable\Media;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -29,6 +29,10 @@ class OpenOffer extends Model implements MediableInterface
     ];
 
 
+    public function thumbnail()
+    {
+        return $this->belongsTo(Media::class, 'thumbnail_id');
+    }
 
     public function category()
     {

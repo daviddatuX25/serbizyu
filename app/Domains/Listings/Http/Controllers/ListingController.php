@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Domains\Listings\Services\ServiceService;
 use App\Domains\Listings\Services\OpenOfferService;
 use App\Domains\Listings\Services\CategoryService;
-use Barryvdh\Debugbar\Facade as Debugbar;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ListingController extends Controller
 {
@@ -15,50 +15,60 @@ class ListingController extends Controller
         private readonly ServiceService $serviceService,
         private readonly OpenOfferService $openOfferService,
         private readonly CategoryService $categoryService
-    ) {
-    }
+    ) {}
 
-    /**
-     * Display a listing of all services and open offers.
-     */
     public function index(Request $request)
     {
         $filters = $request->all();
         $type = $request->input('type', 'all');
 
-        $services = collect();
-        $openOffers = collect();
-
-        if ($type === 'all' || $type === 'service') {
-            $services = $this->serviceService->getAllServicesFiltered($filters);
-        }
-        
-        if ($type === 'all' || $type === 'offer') {
-            $openOffers = $this->openOfferService->getAllOpenOffersFiltered($filters);
-        }
-
-        // Merge and sort the collections by creation date
-        $listings = $services->concat($openOffers)->sortByDesc('created_at');
-
-        // Manually paginate the merged collection
         $perPage = 10;
         $currentPage = $request->input('page', 1);
-        $currentPageItems = $listings->slice(($currentPage - 1) * $perPage, $perPage)->all();
 
-        
-        $paginatedListings = new \Illuminate\Pagination\LengthAwarePaginator(
-            $currentPageItems,
-            count($listings),
+        $services = collect();
+        $offers = collect();
+
+        // Get services only if applicable
+        if ($type === 'all' || $type === 'service') {
+            $services = $this->serviceService->getFilteredServices($filters)
+                ->map(fn($service) => $this->attachThumbnail($service));
+        }
+
+        // Get offers only if applicable
+        if ($type === 'all' || $type === 'offer') {
+            $offers = $this->openOfferService->getFilteredOffers($filters)
+                ->map(fn($offer) => $this->attachThumbnail($offer));
+        }
+
+        // Merge and sort by created_at descending
+        $merged = $services->concat($offers)
+            ->sortByDesc(fn($item) => $item->created_at)
+            ->values();
+
+        // Manual pagination
+        $paginated = new LengthAwarePaginator(
+            $merged->forPage($currentPage, $perPage),
+            $merged->count(),
             $perPage,
             $currentPage,
-            ['path' => $request->url(), 'query' => $request->query()]
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
         );
 
         $categories = $this->categoryService->listAllCategories();
 
         return view('browse', [
-            'listings' => $paginatedListings,
+            'listings' => $paginated,
             'categories' => $categories,
         ]);
+    }
+
+    // Attach first media thumbnail safely
+    private function attachThumbnail($model)
+    {
+        $model->thumbnail = $model->getMedia('thumbnail')->first();
+        return $model;
     }
 }

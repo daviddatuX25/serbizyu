@@ -11,6 +11,7 @@ use Spatie\Permission\Traits\HasRoles;
 use App\Domains\Common\Models\UserAddress;
 use Plank\Mediable\Mediable;
 use Plank\Mediable\MediableInterface;
+use Plank\Mediable\Media;
 
 use App\Domains\Common\Models\Image;
 
@@ -69,6 +70,15 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
         ];
     }
 
+    // Convenience method
+    /**
+     * Get the user's profile image (latest with tag 'profile_image')
+     */
+
+    public function getProfileImageUrlAttribute()
+    {
+        return $this->media->where('tag', 'profile_image')->first()?->getUrl();
+    }
     protected static function newFactory()
     {
         return \Database\Factories\UserFactory::new();

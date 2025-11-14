@@ -1,0 +1,60 @@
+[33mcdb589b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;32mfeature/image-service-refactor[m[33m)[m HEAD@{0}: checkout: moving from feature/milestone-1.3-1.5 to main
+[33m8e69f4c[m[33m ([m[1;31morigin/feature/milestone-1.3-1.5[m[33m, [m[1;32mfeature/milestone-1.3-1.5[m[33m)[m HEAD@{1}: reset: moving to HEAD
+[33m8e69f4c[m[33m ([m[1;31morigin/feature/milestone-1.3-1.5[m[33m, [m[1;32mfeature/milestone-1.3-1.5[m[33m)[m HEAD@{2}: checkout: moving from feature/milestone-1.3-1.5 to feature/milestone-1.3-1.5
+[33m8e69f4c[m[33m ([m[1;31morigin/feature/milestone-1.3-1.5[m[33m, [m[1;32mfeature/milestone-1.3-1.5[m[33m)[m HEAD@{3}: commit (merge): Merge branch 'feature/user-verification-updates' into 'feature/milestone-1.3-1.5'
+[33m3c3dd51[m[33m ([m[1;32mfeature/media-library-integration[m[33m)[m HEAD@{4}: merge feature/media-library-integration: Fast-forward
+[33mcdb589b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;32mfeature/image-service-refactor[m[33m)[m HEAD@{5}: checkout: moving from feature/user-verification-updates to feature/milestone-1.3-1.5
+[33m21afa66[m[33m ([m[1;32mfeature/user-verification-updates[m[33m)[m HEAD@{6}: cherry-pick: feat: Add user verification link to profile page
+[33m5631b89[m HEAD@{7}: commit: feat: Implement user verification updates
+[33mcdb589b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;32mfeature/image-service-refactor[m[33m)[m HEAD@{8}: reset: moving to cdb589b
+[33m35a429b[m HEAD@{9}: checkout: moving from feature/media-library-integration to feature/user-verification-updates
+[33m3c3dd51[m[33m ([m[1;32mfeature/media-library-integration[m[33m)[m HEAD@{10}: commit: feat: Implement media library
+[33ma6edb1b[m HEAD@{11}: cherry-pick: feat: Integrate laravel-mediable library
+[33mcdb589b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;32mfeature/image-service-refactor[m[33m)[m HEAD@{12}: reset: moving to cdb589b
+[33mcdb589b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;32mfeature/image-service-refactor[m[33m)[m HEAD@{13}: reset: moving to cdb589b
+[33m35a429b[m HEAD@{14}: checkout: moving from feature/user-verification-updates to feature/media-library-integration
+[33m35a429b[m HEAD@{15}: checkout: moving from feature/media-library-integration to feature/user-verification-updates
+[33m35a429b[m HEAD@{16}: commit: feat: Add user verification link to profile page
+[33md5813bc[m HEAD@{17}: checkout: moving from main to feature/media-library-integration
+[33mcdb589b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;32mfeature/image-service-refactor[m[33m)[m HEAD@{18}: checkout: moving from feature/media-library-integration to main
+[33md5813bc[m HEAD@{19}: commit: feat: Implement media serving with policy checks and move UserVerificationPolicy
+[33mc7fcc19[m[33m ([m[1;31morigin/feature/media-library-integration[m[33m)[m HEAD@{20}: commit: feat: Integrate laravel-mediable library
+[33mcdb589b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;32mfeature/image-service-refactor[m[33m)[m HEAD@{21}: checkout: moving from feature/image-service-refactor to feature/media-library-integration
+[33mcdb589b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;32mfeature/image-service-refactor[m[33m)[m HEAD@{22}: checkout: moving from feature/milestone-1.3-1.5 to feature/image-service-refactor
+[33mcdb589b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;32mfeature/image-service-refactor[m[33m)[m HEAD@{23}: checkout: moving from main to feature/milestone-1.3-1.5
+[33mcdb589b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;32mfeature/image-service-refactor[m[33m)[m HEAD@{24}: pull: Fast-forward
+[33m11b702a[m HEAD@{25}: checkout: moving from feature/milestone-1.3-1.5 to main
+[33mcdb589b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;32mfeature/image-service-refactor[m[33m)[m HEAD@{26}: pull origin main: Fast-forward
+[33mb7aee2d[m HEAD@{27}: commit: feat: Implement comprehensive filtering and pagination for browse page
+[33mb036995[m HEAD@{28}: commit: feat(listings): Implement dynamic browse page and refactor image service
+[33m11b702a[m HEAD@{29}: merge main: Fast-forward
+[33ma40093a[m HEAD@{30}: checkout: moving from main to feature/milestone-1.3-1.5
+[33m11b702a[m HEAD@{31}: checkout: moving from main to main
+[33m11b702a[m HEAD@{32}: pull origin main: Fast-forward
+[33ma40093a[m HEAD@{33}: checkout: moving from feature/milestone-1.3-1.5 to main
+[33ma40093a[m HEAD@{34}: merge main: Fast-forward
+[33m1c594f4[m HEAD@{35}: checkout: moving from main to feature/milestone-1.3-1.5
+[33ma40093a[m HEAD@{36}: checkout: moving from progress/backend to main
+[33m7d1cf46[m[33m ([m[1;32mprogress/backend[m[33m)[m HEAD@{37}: checkout: moving from main to progress/backend
+[33ma40093a[m HEAD@{38}: pull origin main: Fast-forward
+[33m1c594f4[m HEAD@{39}: checkout: moving from feature/milestone-1.3-1.5 to main
+[33m1c594f4[m HEAD@{40}: merge main: Fast-forward
+[33m1743d81[m HEAD@{41}: checkout: moving from main to feature/milestone-1.3-1.5
+[33m1c594f4[m HEAD@{42}: pull origin main: Fast-forward
+[33m1743d81[m HEAD@{43}: checkout: moving from feature/milestone-1.3-1.5 to main
+[33m1743d81[m HEAD@{44}: checkout: moving from main to feature/milestone-1.3-1.5
+[33m1743d81[m HEAD@{45}: pull: Fast-forward
+[33m39d53f0[m HEAD@{46}: reset: moving to HEAD
+[33m39d53f0[m HEAD@{47}: reset: moving to HEAD
+[33m39d53f0[m HEAD@{48}: commit: added unfinished services basic controller, and edited gemini.md
+[33mcb5007a[m HEAD@{49}: commit: Added codemapper
+[33ma77bff9[m HEAD@{50}: pull: Fast-forward
+[33m2e11661[m HEAD@{51}: commit: feat: Add detailed guide and update project plan
+[33m0757fe1[m HEAD@{52}: commit: feat: Implement server-side rendered category management
+[33m7d65265[m HEAD@{53}: merge progress/backend: Merge made by the 'ort' strategy.
+[33macee8eb[m HEAD@{54}: checkout: moving from progress/backend to main
+[33m7d1cf46[m[33m ([m[1;32mprogress/backend[m[33m)[m HEAD@{55}: commit: feat: Implement Category API and configure testing environment
+[33mc281d0c[m[33m ([m[1;31morigin/progress/backend[m[33m)[m HEAD@{56}: commit: Progress more
+[33m778421b[m HEAD@{57}: checkout: moving from main to progress/backend
+[33macee8eb[m HEAD@{58}: pull: Fast-forward
+[33ma48753a[m HEAD@{59}: clone: from https://github.com/daviddatuX25/serbizyu.git

@@ -113,37 +113,33 @@ class ServiceService
         return $services;
     }
 
-    public function getPaginatedServices(array $filters = [])
+    public function getFilteredServices(array $filters = [])
     {
-        $query = Service::withMedia();
+        $query = Service::with(['creator.media', 'address', 'media']);
 
-        // Apply search filter
         if (!empty($filters['search'])) {
-            $searchTerm = $filters['search'];
-            $query->where(function ($q) use ($searchTerm) {
-                $q->where('title', 'like', "%{$searchTerm}%")
-                  ->orWhere('description', 'like', "%{$searchTerm}%");
-            });
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
         }
 
-        // Apply category filter
         if (!empty($filters['category'])) {
             $query->where('category_id', $filters['category']);
         }
 
-        // Apply sorting
+        $sortable = ['created_at', 'price', 'title'];
         $sortBy = $filters['sort_by'] ?? 'created_at';
-        $sortDirection = $filters['sort_direction'] ?? 'desc';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
 
-        // Validate sort_by to prevent arbitrary column sorting
-        $sortableColumns = ['created_at', 'price', 'title'];
-        if (in_array($sortBy, $sortableColumns)) {
-            $query->orderBy($sortBy, $sortDirection);
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
         }
 
-        $perPage = $filters['per_page'] ?? 15;
-        return $query->paginate($perPage)->withQueryString();
+        return $query->get(); // return collection, pagination handled in controller
     }
+
 
     public function updateService(Service $service, array $data, \Plank\Mediable\MediaUploader $uploader): Service
     {

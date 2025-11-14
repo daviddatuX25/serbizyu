@@ -74,6 +74,7 @@ class UserVerificationController extends Controller
         $user = Auth::user();
         $verification = UserVerification::where('user_id', $user->id)->first();
         $idFrontMedia = $verification ? $verification->getMedia('verification-id-front')->first() : null;
+        // debugger
         $idBackMedia = $verification ? $verification->getMedia('verification-id-back')->first() : null;
 
         return view('verification.status', [

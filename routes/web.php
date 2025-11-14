@@ -55,6 +55,7 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     Route::resource('workflows', WorkflowTemplateController::class);
     Route::resource('workflows.steps', WorkTemplateController::class)->except(['index', 'show', 'create', 'edit']);
 });
+
 // User Verification
 Route::middleware(['auth'])->prefix('verification')->name('verification.')->group(function () {
     Route::get('/submit', [UserVerificationController::class, 'create'])->name('create');
@@ -81,5 +82,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
     Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
     Route::get('/verifications/image/{path}', [AdminUserVerificationController::class, 'serveImage'])->name('verifications.image')->where('path', '.*');
-    Route::get('/media/serve/{encryptedPath}', \App\Http\Controllers\MediaServeController::class)->name('media.serve');
 });
+
+Route::get('/media/serve/{encryptedPath}', MediaServeController::class)
+    ->name('media.serve');
