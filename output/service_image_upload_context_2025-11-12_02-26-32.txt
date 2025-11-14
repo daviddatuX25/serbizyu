@@ -1,0 +1,480 @@
+MAP: Generated 2025-11-12 02:28:09
+--app/Domains/Listings/Http/Controllers/ServiceController.php
+<?php
+
+namespace App\Domains\Listings\Http\Controllers;
+
+use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Services\CategoryService;
+use App\Domains\Listings\Services\ServiceService;
+use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Http\Controllers\Controller;
+use App\Domains\Listings\Http\Requests\StoreServiceRequest;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class ServiceController extends Controller
+{
+    use AuthorizesRequests;
+
+    public function __construct(
+        private readonly ServiceService $serviceService,
+        private readonly CategoryService $categoryService,
+        private readonly WorkflowTemplateService $workflowTemplateService
+    ) {
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
+    {
+        $services = $this->serviceService->getPaginatedServices($request->all());
+        return view('creator.services.index', compact('services'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        $categories = $this->categoryService->listAllCategories();
+        $workflowTemplates = $this->workflowTemplateService->getWorkflowTemplatesByCreator(Auth::id());
+
+        return view('creator.services.create', compact('categories', 'workflowTemplates'));
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StoreServiceRequest $request, \Plank\Mediable\MediaUploader $uploader)
+    {
+        $validatedData = $request->validated();
+        $validatedData['creator_id'] = Auth::id();
+        
+        // Add image data from the request for the service layer to handle
+        $validatedData['images'] = $request->file('newImages');
+        $validatedData['images_to_remove'] = $request->input('images_to_remove', []);
+        $validatedData['is_active'] = $request->has('is_active');
+
+        try {
+            $this->serviceService->createService($validatedData, $uploader);
+            return redirect()->route('creator.services.index')->with('success', 'Service created successfully.');
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'Failed to create service: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Service $service)
+    {
+        // The getService method eager loads all necessary relationships
+        $service = $this->serviceService->getService($service->id);
+        return view('listings.show', compact('service'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Service $service)
+    {
+        $this->authorize('update', $service);
+
+        $categories = $this->categoryService->listAllCategories();
+        $workflowTemplates = $this->workflowTemplateService->getWorkflowTemplatesByCreator(Auth::id());
+
+        return view('creator.services.edit', compact('service', 'categories', 'workflowTemplates'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(StoreServiceRequest $request, Service $service, \Plank\Mediable\MediaUploader $uploader)
+    {
+        $this->authorize('update', $service);
+
+        $validatedData = $request->validated();
+
+        // Add image data from the request for the service layer to handle
+        $validatedData['images'] = $request->file('newImages');
+        $validatedData['images_to_remove'] = $request->input('images_to_remove', []);
+        $validatedData['is_active'] = $request->has('is_active');
+
+        try {
+            $this->serviceService->updateService($service, $validatedData, $uploader);
+            return redirect()->route('creator.services.index')->with('success', 'Service updated successfully.');
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'Failed to update service: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Service $service)
+    {
+        $this->authorize('delete', $service);
+
+        try {
+            $this->serviceService->deleteService($service);
+            return redirect()->route('creator.services.index')->with('success', 'Service deleted successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to delete service: ' . $e->getMessage());
+        }
+    }
+}
+----
+--app/Domains/Listings/Models/Service.php
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Domains\Users\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domains\Common\Models\Address;
+use Plank\Mediable\Mediable;
+use Plank\Mediable\MediableInterface;
+
+use App\Domains\Common\Models\Image;
+
+class Service extends Model implements MediableInterface
+{
+    use HasFactory;
+    use SoftDeletes;
+    use Mediable;
+
+    protected $table = 'services';
+    protected $fillable = ['title', 'description', 'price', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
+    protected $casts = [
+        'pay_first' => 'boolean',
+    ];
+
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function workflowTemplate()
+    {
+        return $this->belongsTo(WorkflowTemplate::class);
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
+    }
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\ServiceFactory::new();
+    }
+}
+----
+--app/Domains/Listings/Services/ServiceService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\Service;    
+use App\Exceptions\BusinessRuleException;
+use App\Exceptions\AuthorizationException;
+use App\Exceptions\ResourceNotFoundException;
+use Illuminate\Database\Eloquent\Collection;
+use App\Domains\Users\Services\UserService;
+use App\Domains\Listings\Services\CategoryService;
+use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Domains\Common\Services\AddressService;
+
+use Illuminate\Support\Facades\Log;
+
+class ServiceService
+{
+
+    public function __construct(
+        private UserService $userService,
+        private CategoryService $categoryService,
+        private WorkflowTemplateService $workflowTemplateService,
+        private AddressService $addressService
+        ){}
+        
+    public function createService($data, \Plank\Mediable\MediaUploader $uploader): Service
+    {
+        Log::info('Creating service with data: ', $data);
+        try {
+            if ($data['price'] <= 0) {
+                throw new BusinessRuleException('Price must be greater than 0.');
+            }
+
+            $category = $this->categoryService->getCategory($data['category_id']);
+
+            $workflow = $this->workflowTemplateService->getWorkflowTemplate($data['workflow_template_id']);
+            if (!$workflow->is_public && $workflow->creator() != $data['creator_id']) 
+            {
+                throw new AuthorizationException('Workflow does not belong to creator.');
+            }
+
+            $creator = $this->userService->getUser($data['creator_id']);
+            if ($creator == null) {
+                throw new ResourceNotFoundException('Creator does not exist.');
+            }
+            
+            if ($creator->trashed()) {
+                throw new ResourceNotFoundException('Creator has been deleted.');
+            }
+
+            // address
+            if ($data['address_id']) {
+                $address = $this->addressService->getAddress($data['address_id']);
+                if ($address == null) {
+                    throw new ResourceNotFoundException('Address does not exist.');
+                }
+            } else {
+                $address = $creator->addresses()->where('is_primary', true)->first();
+                if ($address == null) {
+                    throw new ResourceNotFoundException('Creator does not have a primary address.');
+                }
+                $data['address_id'] = $address->id;
+            }
+
+            // Step 1: Create the service record first
+            $service = Service::create(collect($data)->except(['images', 'images_to_remove'])->toArray());
+
+            // Step 2: Sync images
+            if (isset($data['images'])) {
+                foreach ($data['images'] as $image) {
+                    $media = $uploader->fromSource($image)
+                        ->toDestination('public', 'services')
+                        ->upload();
+                    $service->attachMedia($media, 'gallery');
+                }
+            }
+
+            return $service->loadMedia('gallery');
+        } catch (\Exception $e) {
+            Log::error('Error creating service: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+
+    public function getService($id): Service
+    {
+        // get a servce
+        // include images loaded  
+        $service = Service::withMedia()->find($id);
+        if ($service == null) {
+            throw new ResourceNotFoundException('Service does not exist.');
+        }
+        if ($service->trashed()) {
+            throw new ResourceNotFoundException('Service has been deleted.');
+        }
+        return $service;
+    }
+
+    public function getAllServices(): Collection
+    {
+        $services = Service::withMedia()->get();
+
+        if ($services->isEmpty()) {
+            throw new ResourceNotFoundException('No services found.');
+        }
+
+        if ($services->every->trashed()) {
+            throw new ResourceNotFoundException('Services have all been deleted.');
+        }
+        
+        return $services;
+    }
+
+    public function getPaginatedServices(array $filters = [])
+    {
+        $query = Service::withMedia();
+
+        // Apply search filter
+        if (!empty($filters['search'])) {
+            $searchTerm = $filters['search'];
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                  ->orWhere('description', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Apply category filter
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        // Apply sorting
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDirection = $filters['sort_direction'] ?? 'desc';
+
+        // Validate sort_by to prevent arbitrary column sorting
+        $sortableColumns = ['created_at', 'price', 'title'];
+        if (in_array($sortBy, $sortableColumns)) {
+            $query->orderBy($sortBy, $sortDirection);
+        }
+
+        $perPage = $filters['per_page'] ?? 15;
+        return $query->paginate($perPage)->withQueryString();
+    }
+
+    public function updateService(Service $service, array $data, \Plank\Mediable\MediaUploader $uploader): Service
+    {
+        // Step 1: Update the main service record
+        $service->update(collect($data)->except(['images', 'images_to_remove'])->toArray());
+
+        // Step 2: Sync images
+        if (isset($data['images_to_remove'])) {
+            $service->detachMedia($data['images_to_remove']);
+        }
+
+        if (isset($data['images'])) {
+            foreach ($data['images'] as $image) {
+                $media = $uploader->fromSource($image)
+                    ->toDestination('public', 'services')
+                    ->upload();
+                $service->attachMedia($media, 'gallery');
+            }
+        }
+
+        return $service->loadMedia('gallery');
+    }
+
+    public function deleteService(Service $service): bool
+    {
+        return $service->delete();
+    }
+}
+----
+--routes/web.php
+<?php
+use Illuminate\Support\Facades\Route;
+use App\Domains\Listings\Http\Controllers\ServiceController;
+use App\Domains\Users\Http\Controllers\ProfileController;
+use App\Domains\Users\Http\Controllers\UserVerificationController;
+use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
+use App\Domains\Listings\Http\Controllers\CategoryController;
+
+use App\Domains\Listings\Http\Controllers\ListingController;
+
+// Authentication routes
+require __DIR__.'/auth.php';
+
+// Home and static pages
+    Route::get('/', function () {
+        return view('home');
+    })->name('home');
+
+    Route::get('browse', [ListingController::class, 'index'])->name('browse');
+
+    Route::get('create', function () {
+        return view('create');
+    })->name('create');
+
+    Route::get('about', function () {
+        return view('about');
+    })->name('about');
+
+    Route::get('faq', function () {
+        return view('faq');
+    })->name('faq');
+
+// Public-facing service page
+Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
+
+// Creator space
+    Route::prefix('creator')->name('creator.')->group(function () {
+       Route::get('/', function () {
+           return view('home');
+       })->name('dashboard');
+       Route::resource('services', ServiceController::class);
+   });
+// User Verification
+Route::middleware(['auth'])->prefix('verification')->name('verification.')->group(function () {
+    Route::get('/submit', [UserVerificationController::class, 'create'])->name('create');
+    Route::post('/', [UserVerificationController::class, 'store'])->name('store');
+    Route::get('/status', [UserVerificationController::class, 'status'])->name('status');
+});
+
+// Profile editor
+   Route::middleware(['auth'])->prefix('profile')->group(function () {
+    Route::get('/', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
+
+    Route::patch('/', [ProfileController::class, 'update'])
+        ->name('profile.update');
+
+    Route::delete('/', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
+});
+
+// Admin Routes
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/verifications', [AdminUserVerificationController::class, 'index'])->name('verifications.index');
+    Route::get('/verifications/{verification}', [AdminUserVerificationController::class, 'show'])->name('verifications.show');
+    Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
+    Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
+    Route::get('/verifications/image/{path}', [AdminUserVerificationController::class, 'serveImage'])->name('verifications.image')->where('path', '.*');
+    Route::get('/media/serve/{encryptedPath}', \App\Http\Controllers\MediaServeController::class)->name('media.serve');
+});
+----
+--tests/Feature/ServiceImageUploadTest.php
+<?php
+
+namespace Tests\Feature;
+
+use App\Domains\Users\Models\User;
+use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Models\Category;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class ServiceImageUploadTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_user_can_create_service_with_images()
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        $user = User::factory()->create();
+        $category = Category::factory()->create();
+        $workflowTemplate = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+        Storage::fake('public');
+
+        $response = $this->actingAs($user)->post(route('creator.services.store'), [
+            'title' => 'Test Service',
+            'description' => 'Test Description',
+            'price' => 100,
+            'category_id' => $category->id,
+            'workflow_template_id' => $workflowTemplate->id,
+            'address_id' => null,
+            'newImages' => [
+                UploadedFile::fake()->image('image1.jpg'),
+                UploadedFile::fake()->image('image2.jpg'),
+            ],
+        ]);
+
+        $response->assertRedirect(route('creator.services.index'));
+        $response->assertSessionHas('success');
+
+        $service = Service::first();
+        $this->assertCount(2, $service->getMedia('gallery'));
+    }
+}
+----
+--SUMMARY
+Text:5 Binary:0 Skipped:470

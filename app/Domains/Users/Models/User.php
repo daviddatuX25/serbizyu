@@ -9,13 +9,15 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use App\Domains\Common\Models\UserAddress;
+use Plank\Mediable\Mediable;
+use Plank\Mediable\MediableInterface;
 
 use App\Domains\Common\Models\Image;
 
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable implements MustVerifyEmail, MediableInterface
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable, HasRoles, Mediable;
 
     protected $guard_name = 'web'; 
     protected $softDeletes = true;
@@ -53,12 +55,6 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(Address::class, 'user_addresses')
                     ->withPivot('is_primary')
                     ->withTimestamps();
-    }
-
-    // Profile Image
-    public function profileImage()
-    {
-        return $this->morphOne(Image::class, 'imageable')->where('collection_name', 'profile');
     }
 
     /**

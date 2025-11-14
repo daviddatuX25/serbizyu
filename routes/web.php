@@ -43,7 +43,7 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     })->name('dashboard');
 
     // Service Management (excluding public show route)
-    Route::resource('services', ServiceController::class)->except(['show']);
+    Route::resource('services', ServiceController::class);
 
     // Category Management
     Route::resource('categories', CategoryController::class);
@@ -80,4 +80,5 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
     Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
     Route::get('/verifications/image/{path}', [AdminUserVerificationController::class, 'serveImage'])->name('verifications.image')->where('path', '.*');
+    Route::get('/media/serve/{encryptedPath}', \App\Http\Controllers\MediaServeController::class)->name('media.serve');
 });

@@ -20,7 +20,7 @@ class UserVerificationController extends Controller
         return view('verification.submit');
     }
 
-    public function store(Request $request)
+    public function store(Request $request, \Plank\Mediable\MediaUploader $uploader)
     {
         $request->validate([
             'id_type' => ['required', 'string', 'in:national_id,drivers_license,passport'],
@@ -36,15 +36,26 @@ class UserVerificationController extends Controller
              return redirect()->route('verification.status')->with('error', 'You already have a pending or approved verification request.');
         }
 
-        $path_front = $request->file('id_front')->store("private/verifications/{$user->id}");
-        $path_back = $request->file('id_back')->store("private/verifications/{$user->id}");
+        // Upload the front ID
+        if ($request->hasFile('id_front')) {
+            $media = $uploader->fromSource($request->file('id_front'))
+                ->toDestination('local', "verifications/{$user->id}") // Private disk
+                ->upload();
+            $user->syncMedia($media, 'verification-id-front');
+        }
+
+        // Upload the back ID
+        if ($request->hasFile('id_back')) {
+            $media = $uploader->fromSource($request->file('id_back'))
+                ->toDestination('local', "verifications/{$user->id}") // Private disk
+                ->upload();
+            $user->syncMedia($media, 'verification-id-back');
+        }
 
         UserVerification::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'id_type' => $request->id_type,
-                'id_front_path' => $path_front,
-                'id_back_path' => $path_back,
                 'status' => 'pending',
                 'rejection_reason' => null,
                 'reviewed_at' => null,
@@ -57,8 +68,15 @@ class UserVerificationController extends Controller
 
     public function status()
     {
-        $verification = UserVerification::where('user_id', Auth::id())->first();
+        $user = Auth::user();
+        $verification = UserVerification::where('user_id', $user->id)->first();
+        $idFrontMedia = $user->getMedia('verification-id-front')->first();
+        $idBackMedia = $user->getMedia('verification-id-back')->first();
 
-        return view('verification.status', ['verification' => $verification]);
+        return view('verification.status', [
+            'verification' => $verification,
+            'idFrontMedia' => $idFrontMedia,
+            'idBackMedia' => $idBackMedia,
+        ]);
     }
 }
