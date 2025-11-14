@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Domains\Listings\Services\ServiceService;
 use App\Domains\Listings\Services\OpenOfferService;
 use App\Domains\Listings\Services\CategoryService;
+use Barryvdh\Debugbar\Facade as Debugbar;
 use Illuminate\Http\Request;
 
 class ListingController extends Controller
@@ -25,18 +26,15 @@ class ListingController extends Controller
         $filters = $request->all();
         $type = $request->input('type', 'all');
 
-        // Use a large per_page value to fetch all filtered results from the services.
-        $filters['per_page'] = 9999; 
-
         $services = collect();
         $openOffers = collect();
 
         if ($type === 'all' || $type === 'service') {
-            $services = $this->serviceService->getPaginatedServices($filters);
+            $services = $this->serviceService->getAllServicesFiltered($filters);
         }
         
         if ($type === 'all' || $type === 'offer') {
-            $openOffers = $this->openOfferService->getPaginatedOpenOffers($filters);
+            $openOffers = $this->openOfferService->getAllOpenOffersFiltered($filters);
         }
 
         // Merge and sort the collections by creation date
@@ -46,6 +44,7 @@ class ListingController extends Controller
         $perPage = 10;
         $currentPage = $request->input('page', 1);
         $currentPageItems = $listings->slice(($currentPage - 1) * $perPage, $perPage)->all();
+
         
         $paginatedListings = new \Illuminate\Pagination\LengthAwarePaginator(
             $currentPageItems,

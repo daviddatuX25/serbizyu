@@ -2,6 +2,7 @@
 
 namespace App\Domains\Listings\Models;
 
+use Database\Factories\WorkTemplateFactory; // Import the factory
 use Illuminate\Database\Eloquent\Model;
 use App\Domains\Listings\Models\WorkflowTemplate;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,12 +11,23 @@ use App\Domains\Listings\Models\WorkCatalog;
 class WorkTemplate extends Model
 {
     use HasFactory;
+
+    /**
+     * Create a new factory instance for the model.
+     */
+    protected static function newFactory(): WorkTemplateFactory
+    {
+        return WorkTemplateFactory::new();
+    }
+
     protected $fillable = [
             'workflow_template_id',
             'work_catalog_id',
-            'order_index',
-            'custom_label',
-            'custom_config',
+            'name',
+            'description',
+            'price',
+            'duration_minutes',
+            'order',
         ];
 
     protected $casts = [

@@ -8,14 +8,12 @@ use App\Domains\Listings\Models\WorkCatalog;
 use App\Exceptions\ResourceNotFoundException;
 use App\Exceptions\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class WorkTemplateService
 {
-
-//    get, getAll, create
-    public function getWorkTemplate($id): WorkTemplate
+    public function getWorkTemplate(int $id): WorkTemplate
     {
-        // get a work template
         $workTemplate = WorkTemplate::find($id);
         if ($workTemplate == null) {
             throw new ResourceNotFoundException('Work template does not exist.');
@@ -25,26 +23,48 @@ class WorkTemplateService
 
     public function getAllWorkTemplates(): Collection
     {
-        $workTemplates = WorkTemplate::all();
-
-        if ($workTemplates->isEmpty()) {
-            throw new ResourceNotFoundException('No work templates found.');
-        }
-        
-        return $workTemplates;
+        return WorkTemplate::all();
     }
 
     public function createWorkTemplate(array $data): WorkTemplate
     {
-        // check if work catalog exists
-        $workCatalog = WorkCatalog::find($data['work_catalog_id']);
-        if ($workCatalog == null) {
-            throw new ResourceNotFoundException('Work catalog does not exist.');
-        }
-
         return WorkTemplate::create($data);
     }
 
-   
-}
+    public function createWorkTemplateFromCatalog(WorkflowTemplate $workflow, WorkCatalog $catalogItem): WorkTemplate
+    {
+        $lastStep = $workflow->workTemplates()->orderBy('order', 'desc')->first();
 
+        return WorkTemplate::create([
+            'workflow_template_id' => $workflow->id,
+            'work_catalog_id' => $catalogItem->id,
+            'name' => $catalogItem->name,
+            'description' => $catalogItem->description,
+            'price' => $catalogItem->price,
+            'duration_minutes' => $catalogItem->duration_minutes,
+            'order' => $lastStep ? $lastStep->order + 1 : 0,
+        ]);
+    }
+
+    public function updateWorkTemplate(WorkTemplate $workTemplate, array $data): WorkTemplate
+    {
+        $workTemplate->update($data);
+        return $workTemplate;
+    }
+
+    public function deleteWorkTemplate(WorkTemplate $workTemplate): void
+    {
+        $workTemplate->delete();
+    }
+
+    public function reorderWorkTemplates(WorkflowTemplate $workflow, array $steps): void
+    {
+        DB::transaction(function () use ($workflow, $steps) {
+            foreach ($steps as $step) {
+                $workflow->workTemplates()
+                    ->where('id', $step['id'])
+                    ->update(['order' => $step['order']]);
+            }
+        });
+    }
+}

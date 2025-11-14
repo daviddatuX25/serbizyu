@@ -11,7 +11,7 @@ class WorkflowTemplate extends Model
 {
     use hasFactory, SoftDeletes;
 
-    protected $fillable = ['title', 'description, creator_id', 'is_public'];
+    protected $fillable = ['name', 'description', 'creator_id', 'is_public'];
 
     // casts
     protected $casts = [

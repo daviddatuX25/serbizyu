@@ -29,7 +29,7 @@
                             <p class="mt-2">Your documents are currently under review. We will notify you once the process is complete.</p>
                         @elseif ($verification->status == 'approved')
                             <p class="mt-2 text-green-600">Congratulations! Your identity has been verified.</p>
-                        @elseif ($verification->status == 'rejected')
+                        @if ($verification->status == 'rejected')
                             <p class="mt-2 text-red-600">Your verification request was rejected.</p>
                             @if ($verification->rejection_reason)
                                 <p class="mt-1"><strong>Reason:</strong> {{ $verification->rejection_reason }}</p>
@@ -43,13 +43,13 @@
                             @if ($idFrontMedia)
                                 <div>
                                     <h4 class="font-semibold text-lg mb-2">ID Front:</h4>
-                                    <img src="{{ route('media.serve', ['payload' => Crypt::encryptString(json_encode(['media_id' => $idFrontMedia->id]))]) }}" alt="ID Front" class="max-w-full h-auto rounded-lg shadow-md">
+                                    <img src="{{ route('media.serve', ['encryptedPath' => Crypt::encryptString($idFrontMedia->getDiskPath())]) }}" alt="ID Front" class="max-w-full h-auto rounded-lg shadow-md">
                                 </div>
                             @endif
                             @if ($idBackMedia)
                                 <div>
                                     <h4 class="font-semibold text-lg mb-2">ID Back:</h4>
-                                    <img src="{{ route('media.serve', ['payload' => Crypt::encryptString(json_encode(['media_id' => $idBackMedia->id]))]) }}" alt="ID Back" class="max-w-full h-auto rounded-lg shadow-md">
+                                    <img src="{{ route('media.serve', ['encryptedPath' => Crypt::encryptString($idBackMedia->getDiskPath())]) }}" alt="ID Back" class="max-w-full h-auto rounded-lg shadow-md">
                                 </div>
                             @endif
                         </div>

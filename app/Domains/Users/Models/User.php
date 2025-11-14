@@ -10,12 +10,14 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use App\Domains\Common\Models\UserAddress;
 use Plank\Mediable\Mediable;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Plank\Mediable\MediableInterface;
 
-class User extends Authenticatable implements MustVerifyEmail
+use App\Domains\Common\Models\Image;
+
+class User extends Authenticatable implements MustVerifyEmail, MediableInterface
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, SoftDeletes;
+    use HasFactory, Notifiable, HasRoles, Mediable;
 
     protected $guard_name = 'web';
 
