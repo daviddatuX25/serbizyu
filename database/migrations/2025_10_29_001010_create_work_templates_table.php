@@ -16,16 +16,13 @@ return new class extends Migration
             $table->foreignId('workflow_template_id')
                 ->constrained()
                 ->onDelete('cascade');
-
-            $table->foreignId('work_catalog_id')
-                ->constrained()
-                ->onDelete('cascade');
-
-            $table->unsignedInteger('order_index')->default(0);
-            $table->string('custom_label')->nullable();
-            $table->json('custom_config')->nullable();
-
-        $table->timestamps();
+            $table->foreignId('work_catalog_id')->nullable()->constrained()->onDelete('set null');
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->decimal('price', 8, 2)->nullable();
+            $table->unsignedInteger('duration_minutes')->nullable();
+            $table->unsignedInteger('order')->default(0);
+            $table->timestamps();
         });
     }
 

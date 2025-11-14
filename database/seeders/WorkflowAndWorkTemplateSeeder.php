@@ -13,11 +13,19 @@ class WorkflowAndWorkTemplateSeeder extends Seeder
     public function run(): void
     {
         $users = User::all();
+        if ($users->isEmpty()) {
+            $users = User::factory(5)->create();
+        }
+        
         $workCatalogs = WorkCatalog::all();
+        if ($workCatalogs->isEmpty()) {
+            $this->call(WorkCatalogSeeder::class);
+            $workCatalogs = WorkCatalog::all();
+        }
 
         // Plumbing Workflow
         $plumbingWorkflow = WorkflowTemplate::create([
-            'title' => 'Basic Plumbing Service',
+            'name' => 'Basic Plumbing Service',
             'description' => 'Standard workflow for plumbing repairs and installations',
             'creator_id' => $users->random()->id,
             'is_public' => true,
@@ -35,7 +43,7 @@ class WorkflowAndWorkTemplateSeeder extends Seeder
 
         // House Painting Workflow
         $paintingWorkflow = WorkflowTemplate::create([
-            'title' => 'House Painting Service',
+            'name' => 'House Painting Service',
             'description' => 'Complete house painting workflow from prep to finish',
             'creator_id' => $users->random()->id,
             'is_public' => true,
@@ -55,7 +63,7 @@ class WorkflowAndWorkTemplateSeeder extends Seeder
 
         // Catering Workflow
         $cateringWorkflow = WorkflowTemplate::create([
-            'title' => 'Event Catering Service',
+            'name' => 'Event Catering Service',
             'description' => 'Full-service catering workflow for events',
             'creator_id' => $users->random()->id,
             'is_public' => true,
@@ -72,7 +80,7 @@ class WorkflowAndWorkTemplateSeeder extends Seeder
 
         // Construction Workflow
         $constructionWorkflow = WorkflowTemplate::create([
-            'title' => 'Small Construction Project',
+            'name' => 'Small Construction Project',
             'description' => 'Workflow for minor construction and renovation work',
             'creator_id' => $users->random()->id,
             'is_public' => true,
@@ -93,7 +101,7 @@ class WorkflowAndWorkTemplateSeeder extends Seeder
 
         // Electrical Repair Workflow
         $electricalWorkflow = WorkflowTemplate::create([
-            'title' => 'Electrical Repair Service',
+            'name' => 'Electrical Repair Service',
             'description' => 'Standard workflow for electrical repairs and installations',
             'creator_id' => $users->random()->id,
             'is_public' => true,
@@ -111,7 +119,7 @@ class WorkflowAndWorkTemplateSeeder extends Seeder
 
         // Event Decoration Workflow
         $decorationWorkflow = WorkflowTemplate::create([
-            'title' => 'Event Decoration Service',
+            'name' => 'Event Decoration Service',
             'description' => 'Complete event decoration setup workflow',
             'creator_id' => $users->random()->id,
             'is_public' => true,
@@ -130,7 +138,7 @@ class WorkflowAndWorkTemplateSeeder extends Seeder
 
         // Create some private workflows
         $privateWorkflow = WorkflowTemplate::create([
-            'title' => 'Custom Client Workflow',
+            'name' => 'Custom Client Workflow',
             'description' => 'Private workflow for specific client requirements',
             'creator_id' => $users->random()->id,
             'is_public' => false,
@@ -152,9 +160,9 @@ class WorkflowAndWorkTemplateSeeder extends Seeder
                 WorkTemplate::create([
                     'workflow_template_id' => $workflow->id,
                     'work_catalog_id' => $catalog->id,
-                    'order_index' => $index,
-                    'custom_label' => null,
-                    'custom_config' => null,
+                    'name' => $catalog->name,
+                    'description' => $catalog->description,
+                    'order' => $index,
                 ]);
             }
         }

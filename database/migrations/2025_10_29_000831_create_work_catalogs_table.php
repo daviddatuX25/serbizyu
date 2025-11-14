@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->json('default_config')->nullable(); // for defaults like time limits, role, etc.
+            $table->json('config')->nullable();
             $table->timestamps();
         });
     }

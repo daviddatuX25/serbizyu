@@ -1686,7 +1686,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('creator.dashboard', absolute: false));
     }
 
     /**
@@ -1742,7 +1742,7 @@ class ConfirmablePasswordController extends Controller
 
         $request->session()->put('auth.password_confirmed_at', time());
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('creator.dashboard', absolute: false));
     }
 }
 ----
@@ -1763,7 +1763,7 @@ class EmailVerificationNotificationController extends Controller
     public function store(Request $request): RedirectResponse
     {
         if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(route('dashboard', absolute: false));
+            return redirect()->intended(route('creator.dashboard', absolute: false));
         }
 
         $request->user()->sendEmailVerificationNotification();
@@ -1790,7 +1790,7 @@ class EmailVerificationPromptController extends Controller
     public function __invoke(Request $request): RedirectResponse|View
     {
         return $request->user()->hasVerifiedEmail()
-                    ? redirect()->intended(route('dashboard', absolute: false))
+                    ? redirect()->intended(route('creator.dashboard', absolute: false))
                     : view('auth.verify-email');
     }
 }
@@ -1986,7 +1986,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect(route('creator.dashboard', absolute: false));
     }
 }
 ----
@@ -2008,14 +2008,14 @@ class VerifyEmailController extends Controller
     public function __invoke(EmailVerificationRequest $request): RedirectResponse
     {
         if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
+            return redirect()->intended(route('creator.dashboard', absolute: false).'?verified=1');
         }
 
         if ($request->user()->markEmailAsVerified()) {
             event(new Verified($request->user()));
         }
 
-        return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
+        return redirect()->intended(route('creator.dashboard', absolute: false).'?verified=1');
     }
 }
 ----
@@ -7176,7 +7176,7 @@ document.addEventListener("DOMContentLoaded", () => {
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Dashboard') }}
+            {{ __('creator.dashboard') }}
         </h2>
     </x-slot>
 
@@ -8336,7 +8336,7 @@ $maxWidth = [
       </div>
 
       <a href="{{ route('profile.edit') }}" class="navbar-profile-item">Profile</a>
-      <a href="{{ route('dashboard') }}" class="navbar-profile-item">Creator Space</a>
+      <a href="{{ route('creator.dashboard') }}" class="navbar-profile-item">Creator Space</a>
 
       <form method="POST" action="{{ route('logout') }}">
         @csrf
@@ -8361,7 +8361,7 @@ $maxWidth = [
 
     
 
-      <a href="{{ route('dashboard') }}" class="w-full">
+      <a href="{{ route('creator.dashboard') }}" class="w-full">
         <button class="navbar-creator-btn w-full">Creator Space</button>
       </a>
 
@@ -9485,7 +9485,7 @@ require __DIR__.'/auth.php';
     Route::prefix('creator')->group(function () {
        Route::get('/', function () {
            return view('home');
-       })->name('dashboard');
+       })->name('creator.dashboard');
    })->middleware(['auth']);
    
 // Profile editor

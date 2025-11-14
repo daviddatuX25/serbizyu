@@ -120,11 +120,65 @@ class OpenOfferService
 
     public function getPaginatedOpenOffers(array $filters = [])
     {
-        // TODO: Implement filtering logic similar to ServiceService
+        $query = OpenOffer::with('creator', 'category', 'address', 'thumbnail');
+
+        // Apply search filter
+        if (!empty($filters['search'])) {
+            $searchTerm = $filters['search'];
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                    ->orWhere('description', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Apply category filter
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        // Apply sorting
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDirection = $filters['sort_direction'] ?? 'desc';
+
+        // Validate sort_by to prevent arbitrary column sorting
+        $sortableColumns = ['created_at', 'price', 'title'];
+        if (in_array($sortBy, $sortableColumns)) {
+            $query->orderBy($sortBy, $sortDirection);
+        }
+
         $perPage = $filters['per_page'] ?? 10;
-        return OpenOffer::with('creator', 'category', 'address')
-            ->latest()
-            ->paginate($perPage);
+        return $query->paginate($perPage)->withQueryString();
+    }
+
+    public function getAllOpenOffersFiltered(array $filters = [])
+    {
+        $query = OpenOffer::with('creator', 'category', 'address', 'thumbnail');
+
+        // Apply search filter
+        if (!empty($filters['search'])) {
+            $searchTerm = $filters['search'];
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                    ->orWhere('description', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Apply category filter
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        // Apply sorting
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDirection = $filters['sort_direction'] ?? 'desc';
+
+        // Validate sort_by to prevent arbitrary column sorting
+        $sortableColumns = ['created_at', 'price', 'title'];
+        if (in_array($sortBy, $sortableColumns)) {
+            $query->orderBy($sortBy, $sortDirection);
+        }
+
+        return $query->get();
     }
 
     /**

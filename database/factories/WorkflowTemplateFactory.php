@@ -24,9 +24,9 @@ class WorkflowTemplateFactory extends Factory
     public function definition(): array
     {
         return [
-            'title' => $this->faker->randomElement(['Basic Approval Flow', 'Advanced Approval Flow', 'Intermediate Approval Flow']),  // e.g. "Basic Approval Flow"
+            'name' => $this->faker->randomElement(['Basic Approval Flow', 'Advanced Approval Flow', 'Intermediate Approval Flow']),  // e.g. "Basic Approval Flow"
             'description' => $this->faker->paragraph(),
-            'creator_id' =>  User::inRandomOrder()->first()->id, // links to users
+            'creator_id' =>  User::factory(), // links to users
             'is_public' => $this->faker->boolean(30), // 30% chance public
         ];
     }

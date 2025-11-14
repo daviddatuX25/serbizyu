@@ -458,37 +458,31 @@ Frontend:
 
 ---
 
-### Milestone 1.7: Workflow Management Web UI [0/15]
+### Milestone 1.7: Workflow Management Web UI [18/18]
 
-#### Backend Tasks
-- [ ] Create `WorkflowTemplateController` in the `Listings` domain.
-- [ ] Create `WorkTemplateController` in the `Listings` domain.
-- [ ] Create `WorkCatalogController` in the `Listings` domain.
-- [ ] Add step reordering endpoint.
-- [ ] Handle public/private workflows.
-- [ ] Add workflow duplication feature.
+**Goal:** Create a web UI for creators to build, manage, and reuse workflow templates for their services.
 
-#### Frontend Tasks
-- [ ] Create `resources/views/workflows/index.blade.php`.
-- [ ] Create `resources/views/workflows/builder.blade.php` to host the Livewire component.
-- [ ] Create a `WorkflowBuilder` Livewire component for drag-drop functionality.
-- [ ] Create a step editor component (can be part of the main builder).
-- [ ] Add a workflow selector for services/offers.
+**Summary:** A comprehensive workflow builder has been implemented using Livewire. Creators can now create, update, and delete workflow templates. The builder interface allows for adding steps from scratch or from a reusable catalog, editing step details, and reordering steps via drag-and-drop. The entire feature is protected by authorization policies to ensure users can only manage their own workflows.
 
-#### Files:
-```
-Backend:
-├── app/Domains/Listings/Http/Controllers/WorkflowTemplateController.php
-├── app/Domains/Listings/Http/Controllers/WorkTemplateController.php
-├── app/Domains/Listings/Http/Controllers/WorkCatalogController.php
+**Key Features:**
+-   **Backend:** Controllers, services, and policies for `WorkflowTemplate`, `WorkTemplate`, and `WorkCatalog`.
+-   **Frontend:** A full-featured, interactive workflow builder powered by a `WorkflowBuilder` Livewire component.
+-   **Functionality:** Create, read, update, delete (CRUD) for workflows and their steps, drag-and-drop reordering, and the ability to add steps from a catalog.
 
-Frontend:
-├── resources/views/workflows/index.blade.php
-├── resources/views/workflows/builder.blade.php
-└── app/Http/Livewire/WorkflowBuilder.php
-```
-
-**Estimated Time:** 10 hours
+**Files Created/Modified:**
+-   `app/Domains/Listings/Http/Controllers/WorkflowTemplateController.php`
+-   `app/Domains/Listings/Http/Controllers/WorkTemplateController.php`
+-   `app/Domains/Listings/Http/Controllers/WorkCatalogController.php`
+-   `app/Domains/Listings/Policies/WorkflowPolicy.php`
+-   `app/Domains/Listings/Services/WorkflowTemplateService.php`
+-   `app/Domains/Listings/Services/WorkTemplateService.php`
+-   `app/Livewire/WorkflowBuilder.php`
+-   `resources/views/creator/workflows/index.blade.php`
+-   `resources/views/creator/workflows/builder.blade.php`
+-   `resources/views/livewire/workflow-builder.blade.php`
+-   `routes/web.php` (updated)
+-   `app/Providers/AuthServiceProvider.php` (updated)
+-   `tests/Feature/WorkflowManagementTest.php`
 
 ---
 
