@@ -31,47 +31,47 @@ class OpenOfferService
          * @throws AuthorizationException If the workflow does not belong to the creator or the user is not a creator.
          * @throws ResourceNotFoundException If the category or workflow template does not exist or has been deleted.
          */
-    public function createOpenOffer($data): OpenOffer
-    {
-        if ($data['price'] <= 0) {
-            throw new BusinessRuleException('Price must be greater than 0.');
-        }
+    // public function createOpenOffer($data): OpenOffer
+    // {
+    //     if ($data['price'] <= 0) {
+    //         throw new BusinessRuleException('Price must be greater than 0.');
+    //     }
 
-        $this->categoryService->getCategory($data['category_id']);
+    //     $this->categoryService->getCategory($data['category_id']);
         
-        if (!empty($data['workflow_template_id'])) {
-            $workflow = $this->workflowTemplateService->getWorkflowTemplate($data['workflow_template_id']);            
+    //     if (!empty($data['workflow_template_id'])) {
+    //         $workflow = $this->workflowTemplateService->getWorkflowTemplate($data['workflow_template_id']);            
 
-            if (!$workflow->is_public && $workflow->creator_id != $data['creator_id']) 
-            {
-                throw new AuthorizationException('Workflow does not belong to creator.');
-            }
-        }
+    //         if (!$workflow->is_public && $workflow->creator_id != $data['creator_id']) 
+    //         {
+    //             throw new AuthorizationException('Workflow does not belong to creator.');
+    //         }
+    //     }
 
-        // set address if not set then get fro mthe address of the user
-        $creator = $this->userService->getUser($data['creator_id']);
-        if ($creator == null) {
-            throw new ResourceNotFoundException('Creator does not exist.');
-        }
-        if ($creator->trashed()) {
-            throw new ResourceNotFoundException('Creator has been deleted.');
-        }
+    //     // set address if not set then get fro mthe address of the user
+    //     $creator = $this->userService->getUser($data['creator_id']);
+    //     if ($creator == null) {
+    //         throw new ResourceNotFoundException('Creator does not exist.');
+    //     }
+    //     if ($creator->trashed()) {
+    //         throw new ResourceNotFoundException('Creator has been deleted.');
+    //     }
 
-        if ($data['address_id']) {
-            $address = app(AddressService::class)->getAddress($data['address_id']);
-            if ($address == null) {
-                throw new ResourceNotFoundException('Address does not exist.');
-            }
-        } else {
-            $address = $creator->addresses()->where('is_primary', true)->first();
-            if ($address == null) {
-                throw new ResourceNotFoundException('Creator does not have a primary address.');
-            }
-            $data['address_id'] = $address->id;
-        }
+    //     if ($data['address_id']) {
+    //         $address = app(AddressService::class)->getAddress($data['address_id']);
+    //         if ($address == null) {
+    //             throw new ResourceNotFoundException('Address does not exist.');
+    //         }
+    //     } else {
+    //         $address = $creator->addresses()->where('is_primary', true)->first();
+    //         if ($address == null) {
+    //             throw new ResourceNotFoundException('Creator does not have a primary address.');
+    //         }
+    //         $data['address_id'] = $address->id;
+    //     }
 
-        return OpenOffer::create($data);
-    }
+    //     return OpenOffer::create($data);
+    // }
 
     /**
      * Retrieves an OpenOffer by its ID.
@@ -183,33 +183,89 @@ class OpenOfferService
         return $query->get();
     }
 
-    /**
-     * Close an open offer by updating its is_closed field to true.
-     *
-     * @throws ResourceNotFoundException if the open offer does not exist.
-     * @throws ResourceNotFoundException if the open offer has been deleted.
-     * @throws BusinessRuleException if the open offer is already closed.
-     *
-     * @param int $id The id of the open offer to close.
-     * @return OpenOffer The closed open offer.
-     */
-
-    public function closeOpenOffer($id): OpenOffer
+    public function createOpenOffer(array $data, MediaUploader $uploader): OpenOffer
     {
-        $openOffer = OpenOffer::find($id);
-        if ($openOffer == null) {
-            throw new ResourceNotFoundException('Open offer does not exist.');
-        }
-        
-        if ($openOffer->trashed()) {
-            throw new ResourceNotFoundException('Open offer has been deleted.');
-        }
-        if ($openOffer->is_closed == true) {
-            throw new BusinessRuleException('Open offer is already closed.');
-        }
+        return DB::transaction(function () use ($data, $uploader) {
 
-        $openOffer->update(['is_closed' => true]);
-        return $openOffer;
+            // Step 1 — Create the offer record
+            $offer = OpenOffer::create([
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'budget' => $data['budget'],
+                'category_id' => $data['category_id'],
+                'workflow_template_id' => $data['workflow_template_id'] ?? null,
+                'pay_first' => $data['pay_first'] ?? false,
+                'address_id' => $data['address_id'] ?? null,
+                'creator_id' => $data['creator_id'],
+            ]);
+
+            // Step 2 — Handle newly uploaded images from FormWithMedia
+            if (!empty($data['newFiles'])) {
+                $this->attachMedia($offer, $data['newFiles'], $uploader);
+            }
+
+            return $offer;
+        });
+    }
+
+    public function updateOpenOffer(OpenOffer $offer, array $data, MediaUploader $uploader): OpenOffer
+    {
+        return DB::transaction(function () use ($offer, $data, $uploader) {
+
+            // Step 1 — Update attributes
+            $offer->update([
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'budget' => $data['budget'],
+                'category_id' => $data['category_id'],
+                'workflow_template_id' => $data['workflow_template_id'] ?? null,
+                'pay_first' => $data['pay_first'] ?? false,
+                'address_id' => $data['address_id'] ?? null,
+            ]);
+
+            // Step 2 — Remove any existing images the user marked
+            if (!empty($data['images_to_remove'])) {
+                $this->detachMedia($offer, $data['images_to_remove']);
+            }
+
+            // Step 3 — Add new uploaded images
+            if (!empty($data['newFiles'])) {
+                $this->attachMedia($offer, $data['newFiles'], $uploader);
+            }
+
+            return $offer;
+        });
+    }
+
+    private function attachMedia(OpenOffer $offer, array $filePaths, MediaUploader $uploader): void
+    {
+        foreach ($filePaths as $path) {
+            try {
+                $media = 
+                    $uploader->fromSource(storage_path('app/' . $path))
+                             ->toDirectory('offers/gallery')
+                             ->upload();
+
+                $offer->attachMedia($media, 'gallery');
+
+            } catch (\Throwable $e) {
+                Log::error("OpenOfferService attachMedia failed: " . $e->getMessage());
+            }
+        }
+    }
+
+    private function detachMedia(OpenOffer $offer, array $mediaIds): void
+    {
+        foreach ($mediaIds as $id) {
+            try {
+                $media = $offer->media()->where('id', $id)->first();
+                if ($media) {
+                    $offer->detachMedia($media);
+                }
+            } catch (\Throwable $e) {
+                Log::error("OpenOfferService detachMedia failed: " . $e->getMessage());
+            }
+        }
     }
     
 }

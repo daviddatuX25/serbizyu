@@ -41,9 +41,6 @@ class AppServiceProvider extends ServiceProvider
         // Register AddressService
         $this->app->singleton(AddressService::class);
 
-        // Register ImageService
-        $this->app->singleton(ImageService::class);
-
         // Register WorkflowTemplateService
         $this->app->singleton(WorkflowTemplateService::class);
 

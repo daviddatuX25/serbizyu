@@ -10,32 +10,32 @@ use App\Domains\Listings\Http\Controllers\ListingController;
 use App\Domains\Listings\Http\Controllers\WorkCatalogController;
 use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
 use App\Domains\Listings\Http\Controllers\WorkTemplateController;
+use App\Domains\Listings\Http\Controllers\OpenOfferController;
 
 // Authentication routes
 require __DIR__.'/auth.php';
 
 // Home and static pages
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+    Route::get('/', function () {
+        return view('home');
+    })->name('home');
 
-Route::get('browse', [ListingController::class, 'index'])->name('browse');
+    Route::get('browse', [ListingController::class, 'index'])->name('browse');
 
-Route::get('create', function () {
-    return view('create');
-})->name('create');
+    Route::get('create', function () {
+        return view('create');
+    })->name('create');
 
-Route::get('about', function () {
-    return view('about');
-})->name('about');
+    Route::get('about', function () {
+        return view('about');
+    })->name('about');
 
-Route::get('faq', function () {
-    return view('faq');
-})->name('faq');
+    Route::get('faq', function () {
+        return view('faq');
+    })->name('faq');
 
-// Public-facing pages
+// Public-facing service page
 Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
-Route::get('/work-catalogs', [WorkCatalogController::class, 'index'])->name('work-catalogs.index');
 
 // Creator space
 Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
@@ -43,8 +43,11 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
         return view('dashboard');
     })->name('dashboard');
 
-    // Service Management (excluding public show route)
+    // Service Management
     Route::resource('services', ServiceController::class);
+
+    // Open Offer Management
+     Route::resource('offers', OpenOfferController::class);
 
     // Category Management
     Route::resource('categories', CategoryController::class);
@@ -81,8 +84,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/verifications/{verification}', [AdminUserVerificationController::class, 'show'])->name('verifications.show');
     Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
     Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
-    Route::get('/verifications/image/{path}', [AdminUserVerificationController::class, 'serveImage'])->name('verifications.image')->where('path', '.*');
 });
 
-Route::get('/media/serve/{encryptedPath}', MediaServeController::class)
+Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
+    ->middleware('auth')
     ->name('media.serve');

@@ -12,6 +12,7 @@
                 <livewire:service-form 
                     :service="$service"
                     :categories="$categories"
+                    :addresses="$addresses"
                     :workflowTemplates="$workflowTemplates"
                 />
 
