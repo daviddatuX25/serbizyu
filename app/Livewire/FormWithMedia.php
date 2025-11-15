@@ -13,6 +13,7 @@ abstract class FormWithMedia extends Component
     public array $newFiles = [];
     public array $imagesToRemove = [];
     public array $existingImages = [];
+    public array $selectedImages = [];
 
     /**
      * Update new files from input
@@ -47,6 +48,40 @@ abstract class FormWithMedia extends Component
             array_filter($this->existingImages, fn($img) => $img['id'] !== $id)
         );
     }
+
+    /**
+     * Select all images for batch operations.
+     */
+    public function selectAllImages()
+    {
+        $this->selectedImages = array_merge(
+            collect($this->existingImages)->pluck('id')->all(),
+            array_keys($this->newFiles)
+        );
+        // In a real UI, you would bind checkboxes to this array.
+        // For now, this method simulates selecting all.
+        session()->flash('info', 'All images selected. (Backend only)');
+    }
+
+    /**
+     * Delete all selected images.
+     */
+    public function deleteSelected()
+    {
+        if (empty($this->selectedImages)) {
+            session()->flash('error', 'No images selected to delete.');
+            return;
+        }
+
+        // This is a placeholder implementation.
+        // A real implementation would require checkboxes in the UI
+        // bound to the $selectedImages property.
+        session()->flash('info', 'Delete selected functionality not fully implemented.');
+
+        // Reset selection
+        $this->selectedImages = [];
+    }
+
 
     /**
      * Return TemporaryUploadedFiles for processing

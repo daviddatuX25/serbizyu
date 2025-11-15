@@ -304,3 +304,7 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+[x-cloak] {
+    display: none !important;
+}

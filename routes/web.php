@@ -46,9 +46,6 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     // Service Management
     Route::resource('services', ServiceController::class);
 
-    // Open Offer Management
-     Route::resource('offers', OpenOfferController::class);
-
     // Category Management
     Route::resource('categories', CategoryController::class);
 
@@ -70,6 +67,9 @@ Route::middleware(['auth'])->prefix('verification')->name('verification.')->grou
    Route::middleware(['auth'])->prefix('profile')->group(function () {
     Route::get('/', [ProfileController::class, 'edit'])
         ->name('profile.edit');
+
+    Route::get('/addresses', [ProfileController::class, 'addresses'])
+        ->name('profile.addresses');
 
     Route::patch('/', [ProfileController::class, 'update'])
         ->name('profile.update');

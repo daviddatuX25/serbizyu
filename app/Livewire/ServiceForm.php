@@ -129,6 +129,11 @@ class ServiceForm extends FormWithMedia
         return redirect()->route('creator.services.index');
     }
 
+    public function openWorkflowSelector()
+    {
+        $this->dispatch('openWorkflowSelector');
+    }
+
     public function render()
     {
         return view('livewire.service-form');

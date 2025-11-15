@@ -1,4 +1,3 @@
-import './app';
 import Swiper from 'swiper';
 import { Navigation, Pagination, Autoplay, Keyboard } from 'swiper/modules';
 
