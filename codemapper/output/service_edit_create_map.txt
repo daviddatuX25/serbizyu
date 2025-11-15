@@ -1,0 +1,1153 @@
+MAP: Generated 2025-11-15 17:18:28
+--app/Domains/Listings/Http/Controllers/ServiceController.php
+<?php
+
+namespace App\Domains\Listings\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Services\ServiceService;
+use App\Domains\Listings\Services\CategoryService;
+use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Domains\Listings\Http\Requests\StoreServiceRequest;
+use Plank\Mediable\MediaUploader;
+use Illuminate\Http\Request;
+
+class ServiceController extends Controller
+{
+    public function __construct(
+        private ServiceService $serviceService,
+        private CategoryService $categoryService,
+        private WorkflowTemplateService $workflowTemplateService
+    ) {}
+
+    public function index()
+    {
+        $services = $this->serviceService->getServicesForCreator(
+            auth()->id(),
+            request()->only(['search', 'category', 'sort_by', 'sort_direction'])
+        );
+
+        return view('creator.services.index', compact('services'));
+    }
+
+    public function create()
+    {
+        $categories = $this->categoryService->listAllCategories();
+        $workflowTemplates = $this->workflowTemplateService->getWorkflowTemplatesByCreator(auth()->id());
+
+        return view('creator.services.create', compact('categories', 'workflowTemplates'));
+    }
+
+    public function store(StoreServiceRequest $request, MediaUploader $uploader)
+    {
+        $data = $request->validated();
+        $data['creator_id'] = auth()->id();
+        $data['address_id'] = $request->input('address_id', null);
+
+        $service = $this->serviceService->createService($data, $uploader);
+
+        return redirect()->route('creator.services.index')
+            ->with('success', 'Service created successfully!');
+    }
+
+    public function show(Service $service)
+    {
+        $this->authorize('view', $service);
+        
+        $service = $this->serviceService->getService($service->id);
+        
+        return view('creator.services.show', compact('service'));
+    }
+
+    public function edit(Service $service)
+    {
+        $this->authorize('update', $service);
+
+        $service = $this->serviceService->getService($service->id)->loadMedia('gallery');
+        $categories = $this->categoryService->listAllCategories();
+        $workflowTemplates = $this->workflowTemplateService->getWorkflowTemplatesByCreator(auth()->id());
+
+        return view('creator.services.edit', compact('service', 'categories', 'workflowTemplates'));
+    }
+
+    public function update(StoreServiceRequest $request, Service $service, MediaUploader $uploader)
+    {
+        $this->authorize('update', $service);
+
+        $data = $request->validated();
+        
+        $this->serviceService->updateService($service, $data, $uploader);
+
+        return redirect()->route('creator.services.index')
+            ->with('success', 'Service updated successfully!');
+    }
+
+    public function destroy(Service $service)
+    {
+        $this->authorize('delete', $service);
+
+        $this->serviceService->deleteService($service);
+
+        return redirect()->route('creator.services.index')
+            ->with('success', 'Service deleted successfully!');
+    }
+}
+----
+--app/Domains/Listings/Http/Requests/StoreServiceRequest.php
+<?php
+
+namespace App\Domains\Listings\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreServiceRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'category_id' => 'required|integer|exists:categories,id',
+            'workflow_template_id' => 'required|integer|exists:workflow_templates,id',
+            'new_images' => 'nullable|array',
+            'new_images.*' => 'string',
+            'images_to_remove' => 'nullable|array',
+            'images_to_remove.*' => 'integer',
+            'is_active' => 'nullable|boolean',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'new_images.*.string' => 'Invalid image data provided.',
+            'images_to_remove.*.integer' => 'Invalid image ID provided.',
+        ];
+    }
+}
+----
+--app/Domains/Listings/Models/Service.php
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Domains\Users\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domains\Common\Models\Address;
+use App\Domains\Listings\Models\ListingReview;
+use Plank\Mediable\Mediable;
+use Plank\Mediable\MediableInterface;
+
+use App\Domains\Common\Models\Image;
+
+class Service extends Model implements MediableInterface
+{
+    use HasFactory;
+    use SoftDeletes;
+    use Mediable;
+
+    protected $table = 'services';
+    protected $fillable = ['title', 'description', 'price', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
+    protected $casts = [
+        'pay_first' => 'boolean',
+    ];
+
+    public function getGalleryImagesAttribute()
+    {
+        // Returns a Collection of Media objects tagged 'gallery'
+        return $this->getMedia('gallery');
+    }
+
+    public function getThumbnailAttribute()
+    {
+        // Returns the first media tagged 'gallery'
+        return $this->getMedia('gallery')->first();
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function workflowTemplate()
+    {
+        return $this->belongsTo(WorkflowTemplate::class);
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
+    }
+
+    public function reviews()
+    {
+        return $this->morphMany(ListingReview::class, 'listing');
+    }
+
+    public function getThumbnailUrlAttribute()
+    {
+        return $this->getFirstMediaUrl('gallery');
+    }
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\ServiceFactory::new();
+    }
+}
+----
+--app/Domains/Listings/Services/ServiceService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\Service;
+use App\Exceptions\ResourceNotFoundException;
+use App\Domains\Users\Services\UserService;
+use App\Domains\Listings\Services\CategoryService;
+use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Domains\Common\Services\AddressService;
+use Barryvdh\Debugbar\Facades\Debugbar;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Http\UploadedFile;
+use Plank\Mediable\MediaUploader;
+use Illuminate\Database\Eloquent\Collection;
+use Livewire\TemporaryUploadedFile;
+use Symfony\Component\ErrorHandler\Debug;
+
+class ServiceService
+{
+    public function __construct(
+        private UserService $userService,
+        private CategoryService $categoryService,
+        private WorkflowTemplateService $workflowTemplateService,
+        private AddressService $addressService
+    ) {}
+
+    /**
+     * Create a new service with optional images
+     */
+   /**
+     * Create a new service with optional uploaded images
+     */
+    public function createService(array $data, array $uploadedFiles = []): Service
+    {
+        Log::info('Creating service', ['data_keys' => array_keys($data)]);
+
+        // Remove any image removal keys
+        $serviceData = collect($data)->except(['images_to_remove'])->toArray();
+
+        // Create service
+        $service = Service::create($serviceData);
+
+        // Handle uploads
+        $this->handleUploadedFiles($service, $uploadedFiles);
+
+        return $service->loadMedia('gallery');
+    }
+
+    /**
+     * Update an existing service and manage images
+     */
+    public function updateService(Service $service, array $data, array $uploadedFiles = []): Service
+    {
+        // Update service info
+        $service->update(collect($data)->except(['images_to_remove'])->toArray());
+
+        // Remove images if requested
+        if (!empty($data['images_to_remove'])) {
+            foreach ($data['images_to_remove'] as $mediaId) {
+                try {
+                    $service->detachMedia($mediaId);
+                    Log::info("Detached media ID: $mediaId");
+                } catch (\Exception $e) {
+                    Log::warning('Failed to detach media: ' . $e->getMessage());
+                }
+            }
+        }
+
+        // Handle newly uploaded files
+        $this->handleUploadedFiles($service, $uploadedFiles);
+
+        return $service->loadMedia('gallery');
+    }
+
+    protected function handleUploadedFiles(Service $service, array $files): void
+    {
+        Debugbar::info('handleUploadedFiles called', ['files_count' => count($files)]);
+
+        $uploader = app(MediaUploader::class);
+
+        foreach ($files as $file) {
+            Debugbar::info('Processing file', ['file' => $file]);
+
+            if ($file instanceof TemporaryUploadedFile) {
+                try {
+                    $storedPath = $file->store('temp_uploads');
+                    $fullPath = storage_path('app/' . $storedPath);
+
+                    Debugbar::info('Stored temp file', ['path' => $fullPath, 'exists' => file_exists($fullPath)]);
+
+                    $media = $uploader->fromSource($fullPath)
+                        ->toDestination('media', 'services')
+                        ->upload();
+
+                    $service->attachMedia($media, 'gallery');
+
+                    Debugbar::info('Attached media', ['media_id' => $media->id, 'original_name' => $file->getClientOriginalName()]);
+
+                    unlink($fullPath);
+                } catch (\Exception $e) {
+                    Debugbar::error('Failed to upload media: ' . $e->getMessage());
+                }
+            } else {
+                Debugbar::warning('Skipped invalid file', ['file' => $file]);
+            }
+        }
+    }
+
+    /**
+     * Delete a service
+     */
+    public function deleteService(Service $service): bool
+    {
+        return $service->delete();
+    }
+
+    /**
+     * Retrieve a single service
+     */
+    public function getService($id): Service
+    {
+        $service = Service::with(['creator', 'category', 'workflowTemplate', 'address', 'media'])->find($id);
+
+        if (!$service) {
+            throw new ResourceNotFoundException('Service does not exist.');
+        }
+
+        if ($service->trashed()) {
+            throw new ResourceNotFoundException('Service has been deleted.');
+        }
+
+        return $service;
+    }
+
+    /**
+     * Retrieve all services
+     */
+    public function getAllServices(): Collection
+    {
+        $services = Service::withMedia()->get();
+
+        if ($services->isEmpty()) {
+            throw new ResourceNotFoundException('No services found.');
+        }
+
+        if ($services->every->trashed()) {
+            throw new ResourceNotFoundException('Services have all been deleted.');
+        }
+
+        return $services;
+    }
+
+    /**
+     * Paginated services with filters
+     */
+    public function getPaginatedServices(array $filters = [])
+    {
+        $query = Service::with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * Get services by creator
+     */
+    public function getServicesForCreator(int $creatorId, array $filters = [])
+    {
+        $query = Service::where('creator_id', $creatorId)
+            ->with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * Get filtered services (collection)
+     */
+    public function getFilteredServices(array $filters = [])
+    {
+        $query = Service::with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Helper: upload a single file to the service gallery
+     */
+    private function handleFileUpload(Service $service, $file): void
+    {
+        if ($file instanceof UploadedFile && $file->isValid()) {
+            try {
+                $uploader = app(MediaUploader::class); 
+                $media = $uploader->fromSource($file->getRealPath())
+                    ->toDestination('media', 'services')
+                    ->upload();
+
+                $service->attachMedia($media, 'gallery');
+                Log::info('Attached media: ' . $file->getClientOriginalName());
+            } catch (\Exception $e) {
+                Log::error('Failed to upload media: ' . $e->getMessage());
+            }
+        } else {
+            Log::warning('Invalid file skipped', ['file' => $file]);
+        }
+    }
+}
+----
+--app/Livewire/FormWithMedia.php
+<?php
+
+namespace App\Livewire;
+
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use Livewire\TemporaryUploadedFile;
+
+abstract class FormWithMedia extends Component
+{
+    use WithFileUploads;
+
+    public array $newFiles = [];
+    public array $imagesToRemove = [];
+    public array $existingImages = [];
+
+    /**
+     * Update new files from input
+     */
+    public function updatedNewFiles()
+    {
+        $this->validate([
+            'newFiles.*' => 'image|max:2048', // max 2MB
+        ]);
+    }
+
+    /**
+     * Remove a newly added file
+     */
+    public function removeNewFile(int $index)
+    {
+        if (isset($this->newFiles[$index])) {
+            array_splice($this->newFiles, $index, 1);
+        }
+    }
+
+    /**
+     * Remove an existing image
+     */
+    public function removeExistingImage(int $id)
+    {
+        if (!in_array($id, $this->imagesToRemove)) {
+            $this->imagesToRemove[] = $id;
+        }
+
+        $this->existingImages = array_values(
+            array_filter($this->existingImages, fn($img) => $img['id'] !== $id)
+        );
+    }
+
+    /**
+     * Return TemporaryUploadedFiles for processing
+     */
+    protected function getUploadedFiles(): array
+    {
+        return array_filter($this->newFiles, fn($file) => $file instanceof TemporaryUploadedFile);
+    }
+
+    /**
+     * Render media upload section (Blade)
+     */
+    protected function mediaUploadView()
+    {
+        return view('livewire.partials.media-upload', [
+            'newFiles' => $this->newFiles,
+            'existingImages' => $this->existingImages,
+        ]);
+    }
+}
+----
+--app/Livewire/ImageUploader.php
+<?php
+namespace App\Livewire;
+
+use Livewire\Component;
+use Livewire\WithFileUploads;
+
+class ImageUploader extends Component
+{
+    use WithFileUploads;
+
+    public $newFiles = [];
+    public $imagesToRemove = [];
+    public $existingImages = [];
+
+    public function mount(array $existingImages = [])
+    {
+        $this->existingImages = $existingImages;
+    }
+
+    public function removeNewFile($index)
+    {
+        array_splice($this->newFiles, $index, 1);
+    }
+
+    public function removeExistingImage($id)
+    {
+        $this->imagesToRemove[] = $id;
+        $this->existingImages = array_values(
+            array_filter($this->existingImages, fn($img) => $img['id'] !== $id)
+        );
+    }
+
+    public function render()
+    {
+        return view('livewire.image-uploader');
+    }
+}
+----
+--app/Livewire/ServiceForm.php
+<?php
+
+namespace App\Livewire;
+
+use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Services\ServiceService;
+use Barryvdh\Debugbar\Facades\Debugbar;
+
+class ServiceForm extends FormWithMedia
+{
+    public ?Service $service = null;
+
+    public string $title = '';
+    public string $description = '';
+    public float|string $price = '';
+    public int|string $category_id = '';
+    public int|string $workflow_template_id = '';
+    public bool $is_active = false;
+
+    public $categories;
+    public $workflowTemplates;
+
+    protected $rules = [
+        'title' => 'required|string|min:3|max:255',
+        'description' => 'nullable|string|min:10',
+        'price' => 'required|numeric|min:0.01',
+        'category_id' => 'required|exists:categories,id',
+        'workflow_template_id' => 'required|exists:workflow_templates,id',
+        'is_active' => 'boolean',
+    ];
+
+    public function mount(?Service $service = null, $categories = [], $workflowTemplates = [])
+    {
+        $this->service = $service;
+        $this->categories = collect($categories);
+        $this->workflowTemplates = collect($workflowTemplates);
+
+        if ($service) {
+            $this->title = $service->title;
+            $this->description = $service->description;
+            $this->price = $service->price;
+            $this->category_id = $service->category_id;
+            $this->workflow_template_id = $service->workflow_template_id;
+            $this->is_active = $service->is_active ?? false;
+
+            $this->existingImages = $service->media->map(fn($m) => [
+                'id' => $m->id,
+                'url' => $m->getUrl()
+            ])->toArray();
+        }
+    }
+
+    public function save(ServiceService $serviceService)
+    {
+        $this->validate();
+
+        $uploadedFiles = $this->getUploadedFiles();
+        
+        Debugbar::info('Save triggered');
+        Debugbar::info('Uploaded files count', ['count' => count($uploadedFiles)]);
+        Debugbar::info('Uploaded files', $uploadedFiles);
+
+        $data = [
+            'title' => $this->title,
+            'description' => $this->description,
+            'price' => $this->price,
+            'category_id' => $this->category_id,
+            'workflow_template_id' => $this->workflow_template_id,
+            'is_active' => $this->is_active,
+            'creator_id' => auth()->id(),
+            'images_to_remove' => $this->imagesToRemove,
+        ];
+
+        Debugbar::info('Data to save', $data);
+
+        if ($this->service) {
+            $serviceService->updateService($this->service, $data, $uploadedFiles);
+        } else {
+            $serviceService->createService($data, $uploadedFiles);
+        }
+
+        session()->flash('success', 'Service saved successfully!');
+        return redirect()->route('creator.services.index');
+    }
+
+    public function render()
+    {
+        return view('livewire.service-form', [
+            'mediaUploadView' => $this->mediaUploadView(),
+        ]);
+    }
+}
+----
+--app/Providers/AppServiceProvider.php
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\View;
+use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+
+// Listings Domain Services
+use App\Domains\Listings\Services\ServiceService;
+use App\Domains\Listings\Services\CategoryService;
+use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Domains\Common\Services\ImageService;
+use App\Domains\Listings\Services\OpenOfferService;
+use App\Domains\Listings\Services\OpenOfferBidService;
+use App\Domains\Listings\Services\WorkCatalogService;
+use App\Domains\Listings\Services\WorkTemplateService;
+
+// Users Domain Services
+use App\Domains\Users\Services\UserService;
+
+// Common Domain Services
+use App\Domains\Common\Services\AddressService;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        // Register CategoryService
+        $this->app->singleton(CategoryService::class);
+
+        // Register UserService
+        $this->app->singleton(UserService::class);
+
+        // Register AddressService
+        $this->app->singleton(AddressService::class);
+
+        // Register ImageService
+        $this->app->singleton(ImageService::class);
+
+        // Register WorkflowTemplateService
+        $this->app->singleton(WorkflowTemplateService::class);
+
+        // Register WorkCatalogService with dependencies
+        $this->app->bind(WorkCatalogService::class, function ($app) {
+            return new WorkCatalogService(
+                $app->make(CategoryService::class),
+                $app->make(WorkflowTemplateService::class)
+            );
+        });
+
+        // Register WorkTemplateService
+        $this->app->singleton(WorkTemplateService::class);
+
+        // Register ServiceService with all dependencies
+        $this->app->bind(ServiceService::class, function ($app) {
+            return new ServiceService(
+                $app->make(UserService::class),
+                $app->make(CategoryService::class),
+                $app->make(WorkflowTemplateService::class),
+                $app->make(AddressService::class),
+            );
+        });
+
+        // Register OpenOfferService with dependencies
+        $this->app->bind(OpenOfferService::class, function ($app) {
+            return new OpenOfferService(
+                $app->make(UserService::class),
+                $app->make(CategoryService::class),
+                $app->make(WorkflowTemplateService::class)
+            );
+        });
+
+        // Register OpenOfferBidService with dependencies
+        $this->app->bind(OpenOfferBidService::class, function ($app) {
+            return new OpenOfferBidService(
+                $app->make(UserService::class),
+                $app->make(OpenOfferService::class),
+                $app->make(ServiceService::class)
+            );
+        });
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        // Set custom unauthenticated redirect globally
+        Authenticate::redirectUsing(function ($request) {
+            return route('auth.signin');
+        });
+
+        // Share authenticat    ion data with navbar across all views
+        View::composer('layouts.navbar', function ($view) {
+            $authProfileData = [
+                'greeting' => null,
+                'email' => null,
+                'img_path' => null,
+            ];
+
+            if (auth()->check()) {
+                $user = auth()->user();
+                $authProfileData = [
+                    'greeting' => 'Hi, ' . ($user->firstname ?? 'User') . '!',
+                    'email' => $user->email,
+                    'img_path' => $user->profileImage?->path ?? null, // Use the new relationship
+                ];
+            }
+
+            $view->with('authProfileData', $authProfileData);
+        });
+
+        // Optional: Share common data with all views
+        View::composer('*', function ($view) {
+            // You can share global data here if needed
+            // For example, site settings, notifications count, etc.
+        });
+
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+    }
+}
+----
+--resources/views/creator/services/create.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800">
+            Create Service
+        </h2>
+    </x-slot>
+
+    <div class="py-6">
+        <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white p-6 rounded shadow">
+                
+                <livewire:service-form 
+                    :categories="$categories"
+                    :workflowTemplates="$workflowTemplates"
+                />
+
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/creator/services/edit.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800">
+            Edit Service
+        </h2>
+    </x-slot>
+
+    <div class="py-6">
+        <div class="max-w-6xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white p-6 rounded shadow">
+
+                <livewire:service-form 
+                    :service="$service"
+                    :categories="$categories"
+                    :workflowTemplates="$workflowTemplates"
+                />
+
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/livewire/image-uploader.blade.php
+<div>
+    {{-- Upload Section --}}
+    <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700">Service Images</label>
+
+        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+            <div class="space-y-1 text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+
+                <div class="flex text-sm text-gray-600 justify-center">
+                    <label for="newFiles" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500">
+                        <span>Upload files</span>
+                        <input id="newFiles" type="file" class="sr-only" wire:model="newFiles" multiple>
+                    </label>
+                    <p class="pl-1">or drag and drop</p>
+                </div>
+
+                <p class="text-xs text-gray-500">PNG, JPG, GIF up to 2MB</p>
+
+                @error('newFiles.*')
+                    <span class="text-red-500 text-sm">{{ $message }}</span>
+                @enderror
+            </div>
+        </div>
+    </div>
+
+    {{-- Existing Images --}}
+    @if(!empty($existingImages))
+        <div class="mb-4">
+            <h4 class="text-sm font-medium text-gray-700 mb-2">Current Images</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                @foreach ($existingImages as $img)
+                    <div class="relative group">
+                        <img src="{{ $img['url'] }}" class="w-full h-32 object-cover rounded border border-gray-200">
+                        <button type="button"
+                                wire:click="removeExistingImage({{ $img['id'] }})"
+                                class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-xs rounded shadow-md">
+                            ✕
+                        </button>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    {{-- New Files Preview --}}
+    @if(!empty($newFiles))
+        <div class="mb-4">
+            <h4 class="text-sm font-medium text-gray-700 mb-2">New Images (Not Yet Saved)</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                @foreach ($newFiles as $i => $file)
+                    <div class="relative group">
+                        <img src="{{ $file->temporaryUrl() }}" class="w-full h-32 object-cover rounded border border-green-200">
+                        <button type="button"
+                                wire:click="removeNewFile({{ $i }})"
+                                class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-xs rounded shadow-md">
+                            ✕
+                        </button>
+                        <span class="absolute bottom-1 left-1 bg-green-600 text-white px-2 py-0.5 text-xs rounded">New</span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+</div>
+----
+--resources/views/livewire/service-form.blade.php
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ $service ? 'Edit Service' : 'Create Service' }}
+        </h2>
+    </x-slot>
+
+    <div class="py-6 max-w-4xl mx-auto sm:px-6 lg:px-8">
+        <form wire:submit.prevent="save" class="space-y-6">
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Title</label>
+                <input type="text" wire:model.defer="title"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                @error('title') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea wire:model.defer="description"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"></textarea>
+                @error('description') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Price</label>
+                    <input type="number" wire:model.defer="price" step="0.01"
+                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                    @error('price') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Category</label>
+                    <select wire:model.defer="category_id"
+                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        <option value="">--Select--</option>
+                        @foreach ($categories as $cat)
+                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('category_id') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Workflow Template</label>
+                <select wire:model.defer="workflow_template_id"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                    <option value="">--Select--</option>
+                    @foreach ($workflowTemplates as $template)
+                        <option value="{{ $template->id }}">{{ $template->name }}</option>
+                    @endforeach
+                </select>
+                @error('workflow_template_id') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+            </div>
+
+            {{-- Media Upload Section from base class --}}
+            {!! $mediaUploadView !!}
+
+            <div class="flex items-center space-x-4">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" wire:model.defer="is_active" class="form-checkbox">
+                    <span class="ml-2">Active</span>
+                </label>
+            </div>
+
+            <div>
+                <button type="submit"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow">
+                    {{ $service ? 'Update' : 'Create' }} Service
+                </button>
+            </div>
+
+        </form>
+    </div>
+----
+--resources/views/livewire/partials/media-upload.blade.php
+<div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700">Service Images</label>
+
+    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+        <div class="space-y-1 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+
+            <div class="flex text-sm text-gray-600">
+                <label class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500">
+                    <span>Upload files</span>
+                    <input type="file" wire:model="newFiles" multiple class="sr-only">
+                </label>
+                <p class="pl-1">or drag and drop</p>
+            </div>
+
+            <p class="text-xs text-gray-500">PNG, JPG, GIF up to 2MB</p>
+        </div>
+    </div>
+
+    {{-- Existing Images --}}
+    @if(count($existingImages) > 0)
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+            @foreach($existingImages as $img)
+                <div class="relative">
+                    <img src="{{ $img['url'] }}" class="w-full h-32 object-cover rounded border border-gray-200">
+                    <button type="button" wire:click="removeExistingImage({{ $img['id'] }})"
+                        class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-xs rounded shadow-md">
+                        ✕
+                    </button>
+                </div>
+            @endforeach
+        </div>
+    @endif
+
+    {{-- New Files Preview --}}
+    @if(count($newFiles) > 0)
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+            @foreach($newFiles as $i => $file)
+                <div class="relative">
+                    <img src="{{ $file->temporaryUrl() }}" class="w-full h-32 object-cover rounded border border-green-200">
+                    <button type="button" wire:click="removeNewFile({{ $i }})"
+                        class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-xs rounded shadow-md">
+                        ✕
+                    </button>
+                    <span class="absolute bottom-1 left-1 bg-green-600 text-white px-2 py-0.5 text-xs rounded">
+                        New
+                    </span>
+                </div>
+            @endforeach
+        </div>
+    @endif
+</div>
+----
+--routes/web.php
+<?php
+use Illuminate\Support\Facades\Route;
+use App\Domains\Listings\Http\Controllers\ServiceController;
+use App\Domains\Users\Http\Controllers\ProfileController;
+use App\Domains\Users\Http\Controllers\UserVerificationController;
+use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
+use App\Domains\Listings\Http\Controllers\CategoryController;
+use App\Domains\Common\Http\Controllers\MediaServeController;
+use App\Domains\Listings\Http\Controllers\ListingController;
+use App\Domains\Listings\Http\Controllers\WorkCatalogController;
+use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
+use App\Domains\Listings\Http\Controllers\WorkTemplateController;
+
+// Authentication routes
+require __DIR__.'/auth.php';
+
+// Home and static pages
+Route::get('/', function () {
+    return view('home');
+})->name('home');
+
+Route::get('browse', [ListingController::class, 'index'])->name('browse');
+
+Route::get('create', function () {
+    return view('create');
+})->name('create');
+
+Route::get('about', function () {
+    return view('about');
+})->name('about');
+
+Route::get('faq', function () {
+    return view('faq');
+})->name('faq');
+
+// Public-facing pages
+Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
+Route::get('/work-catalogs', [WorkCatalogController::class, 'index'])->name('work-catalogs.index');
+
+// Creator space
+Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
+    Route::get('/', function () {
+        return view('dashboard');
+    })->name('dashboard');
+
+    // Service Management (excluding public show route)
+    Route::resource('services', ServiceController::class);
+
+    // Category Management
+    Route::resource('categories', CategoryController::class);
+
+    // Workflow Management
+    Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
+    Route::post('workflows/{workflow}/steps/reorder', [WorkTemplateController::class, 'reorder'])->name('workflows.steps.reorder');
+    Route::resource('workflows', WorkflowTemplateController::class);
+    Route::resource('workflows.steps', WorkTemplateController::class)->except(['index', 'show', 'create', 'edit']);
+});
+
+// User Verification
+Route::middleware(['auth'])->prefix('verification')->name('verification.')->group(function () {
+    Route::get('/submit', [UserVerificationController::class, 'create'])->name('create');
+    Route::post('/', [UserVerificationController::class, 'store'])->name('store');
+    Route::get('/status', [UserVerificationController::class, 'status'])->name('status');
+});
+
+// Profile editor
+   Route::middleware(['auth'])->prefix('profile')->group(function () {
+    Route::get('/', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
+
+    Route::patch('/', [ProfileController::class, 'update'])
+        ->name('profile.update');
+
+    Route::delete('/', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
+});
+
+// Admin Routes
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/verifications', [AdminUserVerificationController::class, 'index'])->name('verifications.index');
+    Route::get('/verifications/{verification}', [AdminUserVerificationController::class, 'show'])->name('verifications.show');
+    Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
+    Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
+    Route::get('/verifications/image/{path}', [AdminUserVerificationController::class, 'serveImage'])->name('verifications.image')->where('path', '.*');
+});
+
+Route::get('/media/serve/{encryptedPath}', MediaServeController::class)
+    ->name('media.serve');
+----
+--SUMMARY
+Text:14 Binary:0 Skipped:1897

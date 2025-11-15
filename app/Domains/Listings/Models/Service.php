@@ -7,6 +7,7 @@ use App\Domains\Users\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Domains\Common\Models\Address;
+use App\Domains\Listings\Models\ListingReview;
 use Plank\Mediable\Mediable;
 use Plank\Mediable\MediableInterface;
 
@@ -24,6 +25,17 @@ class Service extends Model implements MediableInterface
         'pay_first' => 'boolean',
     ];
 
+    public function getGalleryImagesAttribute()
+    {
+        // Returns a Collection of Media objects tagged 'gallery'
+        return $this->getMedia('gallery');
+    }
+
+    public function getThumbnailAttribute()
+    {
+        // Returns the first media tagged 'gallery'
+        return $this->getMedia('gallery')->first();
+    }
 
     public function category()
     {
@@ -47,7 +59,12 @@ class Service extends Model implements MediableInterface
 
     public function reviews()
     {
-        return $this->morphMany(\App\Domains\Listings\Models\ListingReview::class, 'listing');
+        return $this->morphMany(ListingReview::class, 'listing');
+    }
+
+    public function getThumbnailUrlAttribute()
+    {
+        return $this->getFirstMediaUrl('gallery');
     }
 
     protected static function newFactory()

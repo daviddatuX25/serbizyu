@@ -30,7 +30,7 @@
         <span class="text-xs text-text-secondary">Posted {{ $offer->created_at->diffForHumans() }}</span>
 
         <div class="card-avatar w-8 h-8 rounded-full overflow-hidden">
-            <img src="{{ $offer->creator?->profile_image_url ?? 'fallback.png' }}"
+            <img src="{{ $offer->creator?->profile_image?->getUrl() ?? 'fallback.png' }}"
                 alt="{{ $offer->creator?->name ?? 'User' }}"
                 class="w-full h-full object-cover">
         </div>

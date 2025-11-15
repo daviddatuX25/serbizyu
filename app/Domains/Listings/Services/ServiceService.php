@@ -2,102 +2,143 @@
 
 namespace App\Domains\Listings\Services;
 
-use App\Domains\Listings\Models\Service;    
-use App\Exceptions\BusinessRuleException;
-use App\Exceptions\AuthorizationException;
+use App\Domains\Listings\Models\Service;
 use App\Exceptions\ResourceNotFoundException;
-use Illuminate\Database\Eloquent\Collection;
 use App\Domains\Users\Services\UserService;
 use App\Domains\Listings\Services\CategoryService;
 use App\Domains\Listings\Services\WorkflowTemplateService;
 use App\Domains\Common\Services\AddressService;
-
+use Barryvdh\Debugbar\Facades\Debugbar;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\UploadedFile;
+use Plank\Mediable\MediaUploader;
+use Illuminate\Database\Eloquent\Collection;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Symfony\Component\ErrorHandler\Debug;
 
 class ServiceService
 {
-
     public function __construct(
         private UserService $userService,
         private CategoryService $categoryService,
         private WorkflowTemplateService $workflowTemplateService,
         private AddressService $addressService
-        ){}
-        
-    public function createService($data, \Plank\Mediable\MediaUploader $uploader): Service
+    ) {}
+
+    /**
+     * Create a new service with optional images
+     */
+   /**
+     * Create a new service with optional uploaded images
+     */
+    public function createService(array $data, array $uploadedFiles = []): Service
     {
-        Log::info('Creating service with data: ', $data);
-        try {
-            if ($data['price'] <= 0) {
-                throw new BusinessRuleException('Price must be greater than 0.');
-            }
+        Log::info('Creating service', ['data_keys' => array_keys($data)]);
 
-            $category = $this->categoryService->getCategory($data['category_id']);
+        // Remove any image removal keys
+        $serviceData = collect($data)->except(['images_to_remove'])->toArray();
 
-            $workflow = $this->workflowTemplateService->getWorkflowTemplate($data['workflow_template_id']);
-            if (!$workflow->is_public && $workflow->creator() != $data['creator_id']) 
-            {
-                throw new AuthorizationException('Workflow does not belong to creator.');
-            }
+        // Create service
+        $service = Service::create($serviceData);
 
-            $creator = $this->userService->getUser($data['creator_id']);
-            if ($creator == null) {
-                throw new ResourceNotFoundException('Creator does not exist.');
-            }
-            
-            if ($creator->trashed()) {
-                throw new ResourceNotFoundException('Creator has been deleted.');
-            }
+        // Handle uploads
+        $this->handleUploadedFiles($service, $uploadedFiles);
 
-            // address
-            if ($data['address_id']) {
-                $address = $this->addressService->getAddress($data['address_id']);
-                if ($address == null) {
-                    throw new ResourceNotFoundException('Address does not exist.');
-                }
-            } else {
-                $address = $creator->addresses()->where('is_primary', true)->first();
-                if ($address == null) {
-                    throw new ResourceNotFoundException('Creator does not have a primary address.');
-                }
-                $data['address_id'] = $address->id;
-            }
-
-            // Step 1: Create the service record first
-            $service = Service::create(collect($data)->except(['images', 'images_to_remove'])->toArray());
-
-            // Step 2: Sync images
-            if (isset($data['images'])) {
-                foreach ($data['images'] as $image) {
-                    $media = $uploader->fromSource($image)
-                        ->toDestination('public', 'services')
-                        ->upload();
-                    $service->attachMedia($media, 'gallery');
-                }
-            }
-
-            return $service->loadMedia('gallery');
-        } catch (\Exception $e) {
-            Log::error('Error creating service: ' . $e->getMessage());
-            throw $e;
-        }
+        return $service->loadMedia('gallery');
     }
 
+    /**
+     * Update an existing service and manage images
+     */
+    public function updateService(Service $service, array $data, array $uploadedFiles = []): Service
+    {
+        // Update service info
+        $service->update(collect($data)->except(['images_to_remove'])->toArray());
 
+        // Remove images if requested
+        if (!empty($data['images_to_remove'])) {
+            foreach ($data['images_to_remove'] as $mediaId) {
+                try {
+                    $service->detachMedia($mediaId);
+                    Log::info("Detached media ID: $mediaId");
+                } catch (\Exception $e) {
+                    Log::warning('Failed to detach media: ' . $e->getMessage());
+                }
+            }
+        }
+
+        // Handle newly uploaded files
+        $this->handleUploadedFiles($service, $uploadedFiles);
+
+        return $service->loadMedia('gallery');
+    }
+
+    protected function handleUploadedFiles(Service $service, array $files): void
+    {
+        Debugbar::info('handleUploadedFiles called', ['files_count' => count($files)]);
+
+        $uploader = app(MediaUploader::class);
+
+        foreach ($files as $file) {
+            Debugbar::info('Processing file', ['file' => $file]);
+
+            if ($file instanceof TemporaryUploadedFile) {
+                try {
+                    // Use getRealPath() directly - it's already stored by Livewire
+                    $sourcePath = $file->getRealPath();
+                    
+                    Debugbar::info('Source path', ['path' => $sourcePath, 'exists' => file_exists($sourcePath)]);
+
+                    $media = $uploader->fromSource($sourcePath)
+                        ->toDestination('public', 'services')
+                        ->upload();
+
+                    $service->attachMedia($media, 'gallery');
+
+                    Debugbar::info('Attached media', ['media_id' => $media->id]);
+
+                } catch (\Exception $e) {
+                    Debugbar::error('Failed to upload media: ' . $e->getMessage());
+                    Log::error('Media upload failed', [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
+            } else {
+                Debugbar::warning('Skipped invalid file', ['file' => $file]);
+            }
+        }
+}
+
+    /**
+     * Delete a service
+     */
+    public function deleteService(Service $service): bool
+    {
+        return $service->delete();
+    }
+
+    /**
+     * Retrieve a single service
+     */
     public function getService($id): Service
     {
-        // get a servce
-        // include images loaded  
-        $service = Service::withMedia()->find($id);
-        if ($service == null) {
+        $service = Service::with(['creator', 'category', 'workflowTemplate', 'address', 'media'])->find($id);
+
+        if (!$service) {
             throw new ResourceNotFoundException('Service does not exist.');
         }
+
         if ($service->trashed()) {
             throw new ResourceNotFoundException('Service has been deleted.');
         }
+
         return $service;
     }
 
+    /**
+     * Retrieve all services
+     */
     public function getAllServices(): Collection
     {
         $services = Service::withMedia()->get();
@@ -109,10 +150,74 @@ class ServiceService
         if ($services->every->trashed()) {
             throw new ResourceNotFoundException('Services have all been deleted.');
         }
-        
+
         return $services;
     }
 
+    /**
+     * Paginated services with filters
+     */
+    public function getPaginatedServices(array $filters = [])
+    {
+        $query = Service::with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * Get services by creator
+     */
+    public function getServicesForCreator(int $creatorId, array $filters = [])
+    {
+        $query = Service::where('creator_id', $creatorId)
+            ->with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * Get filtered services (collection)
+     */
     public function getFilteredServices(array $filters = [])
     {
         $query = Service::with(['creator.media', 'address', 'media']);
@@ -137,34 +242,28 @@ class ServiceService
             $query->orderBy($sortBy, $sortDir);
         }
 
-        return $query->get(); // return collection, pagination handled in controller
+        return $query->get();
     }
 
-
-    public function updateService(Service $service, array $data, \Plank\Mediable\MediaUploader $uploader): Service
+    /**
+     * Helper: upload a single file to the service gallery
+     */
+    private function handleFileUpload(Service $service, $file): void
     {
-        // Step 1: Update the main service record
-        $service->update(collect($data)->except(['images', 'images_to_remove'])->toArray());
-
-        // Step 2: Sync images
-        if (isset($data['images_to_remove'])) {
-            $service->detachMedia($data['images_to_remove']);
-        }
-
-        if (isset($data['images'])) {
-            foreach ($data['images'] as $image) {
-                $media = $uploader->fromSource($image)
-                    ->toDestination('public', 'services')
+        if ($file instanceof UploadedFile && $file->isValid()) {
+            try {
+                $uploader = app(MediaUploader::class); 
+                $media = $uploader->fromSource($file->getRealPath())
+                    ->toDestination('media', 'services')
                     ->upload();
+
                 $service->attachMedia($media, 'gallery');
+                Log::info('Attached media: ' . $file->getClientOriginalName());
+            } catch (\Exception $e) {
+                Log::error('Failed to upload media: ' . $e->getMessage());
             }
+        } else {
+            Log::warning('Invalid file skipped', ['file' => $file]);
         }
-
-        return $service->loadMedia('gallery');
-    }
-
-    public function deleteService(Service $service): bool
-    {
-        return $service->delete();
     }
 }

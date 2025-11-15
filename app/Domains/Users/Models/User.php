@@ -75,9 +75,9 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
      * Get the user's profile image (latest with tag 'profile_image')
      */
 
-    public function getProfileImageUrlAttribute()
+    public function getProfileImageAttribute()
     {
-        return $this->media->where('tag', 'profile_image')->first()?->getUrl();
+        return $this->media->where('tag', 'profile_image')->first();
     }
     protected static function newFactory()
     {

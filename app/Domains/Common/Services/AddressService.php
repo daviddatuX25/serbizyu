@@ -4,9 +4,11 @@ namespace App\Domains\Common\Services;
 
 use App\Domains\Common\Models\Address;
 use App\Domains\Users\Models\User;
+use App\Domains\Listings\Models\Service;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Collection;
+
 
 class AddressService
 {
@@ -20,6 +22,11 @@ class AddressService
         /** @var \App\Domains\Users\Models\User $user */
         $user = Auth::user();
         return $user->addresses()->withPivot('is_primary')->get();
+    }
+
+    public function getAddress(int $addressId): ?Address
+    {
+        return Address::find($addressId);
     }
 
     /**
@@ -68,39 +75,46 @@ class AddressService
      * @return Address
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
-    public function updateUserAddress(int $addressId, array $data): Address
+    public function updateService(Service $service, array $data, \Plank\Mediable\MediaUploader $uploader): Service
     {
-        /** @var User $user */
-        $user = Auth::user();
-        
-        // Verify the address belongs to the user
-        $address = $user->addresses()->findOrFail($addressId);
+        $service->update(collect($data)->except(['new_images', 'images_to_remove'])->toArray());
 
-        // Extract is_primary from data
-        $isPrimary = isset($data['is_primary']) ? (bool) $data['is_primary'] : false;
-        
-        // Remove is_primary and id from address data since they're not address fields
-        $addressData = collect($data)
-            ->except(['is_primary', 'id', 'addressId'])
-            ->filter(fn($value) => $value !== null && $value !== '')
-            ->toArray();
-
-        return DB::transaction(function () use ($user, $address, $addressId, $addressData, $isPrimary) {
-            // If the address is being set as primary, unset others
-            if ($isPrimary) {
-                $this->unsetAllPrimaryAddresses($user);
+        // Remove images
+        if (!empty($data['images_to_remove'])) {
+            foreach ($data['images_to_remove'] as $mediaId) {
+                $service->detachMedia($mediaId);
             }
+        }
 
-            // Update the address attributes
-            $address->update($addressData);
+        \Debugbar::info('Images to remove: ', $data['images_to_remove'] ?? []);
+        \Debugbar::info('New images: ', $data['new_images'] ?? []);
+        
+        // Attach new images from temp storage (Livewire uploaded)
+        if (!empty($data['new_images']) && is_array($data['new_images'])) {
+            foreach ($data['new_images'] as $tempPath) {
+                try {
+                    // Get full path to temp file
+                    $fullPath = \Storage::disk('local')->path($tempPath);
+                    
+                    if (file_exists($fullPath)) {
+                        // Upload to Mediable
+                        $media = $uploader->fromSource($tempPath)
+                            ->toDestination('public', 'services')
+                            ->upload();
+                        
+                        $service->attachMedia($media, 'gallery');
+                        
+                        // Clean up temp file
+                        \Storage::disk('local')->delete($tempPath);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to process temp image: ' . $e->getMessage());
+                    // Continue with other images
+                }
+            }
+        }
 
-            // Update the pivot table
-            $user->addresses()->updateExistingPivot($addressId, [
-                'is_primary' => $isPrimary,
-            ]);
-
-            return $address->fresh();
-        });
+        return $service->loadMedia('gallery');
     }
 
     /**

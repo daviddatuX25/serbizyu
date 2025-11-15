@@ -32,7 +32,7 @@
         <span class="text-xs text-text-secondary">Verified Servicer</span>
 
         <div class="card-avatar w-8 h-8 rounded-full overflow-hidden">
-            <img src="{{ $service->creator?->profile_image_url ?? 'fallback.png' }}"
+            <img src="{{ $service->creator?->profile_image?->getUrl() ?? 'fallback.png' }}"
                 alt="{{ $service->creator?->name ?? 'User' }}"
                 class="w-full h-full object-cover">
         </div>

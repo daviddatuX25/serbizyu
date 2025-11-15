@@ -14,10 +14,6 @@ We have successfully integrated the `plank/laravel-mediable` library to handle a
 *   **Secure Media Serving:** A new controller and route have been created to securely serve private media files, such as user verification documents.
 *   **Cleaned up old code:** The old `ImageService` and `Image` model have been deleted.
 
-### Current Roadblock: Failing Tests
-
-We are currently facing an issue with the feature tests failing with a `419 TokenMismatchException`. This is preventing us from writing new tests for the media upload features and ensuring the stability of the application.
-
 **Debugging Steps Taken:**
 
 *   Disabled the `VerifyCsrfToken` middleware in `TestCase.php` and directly in the tests.
@@ -36,40 +32,7 @@ This is a Laravel project that appears to be a service marketplace application. 
 
 ## Project Progress
 
-### Milestone 5.1: User Verification System - COMPLETED
 
-We have successfully implemented the full web-based feature for user identity verification. This includes the user-facing forms to submit documents, a status page, and a complete admin panel for reviewing, approving, and rejecting submissions. The feature is now manually tested and confirmed to be working.
-
-**Key changes:**
-*   **Functionality:** Users can submit ID documents, see their verification status (pending, approved, rejected), and receive a "Verified" badge on their dashboard. Admins can process the queue of pending verifications.
-*   **Architecture:** Created new controllers under the `Users` domain, adhering to the project's DDD structure. This involved correcting controller paths and namespaces to match the established conventions.
-*   **Database:** Added the `user_verifications` table and updated the `users` table to support the feature.
-*   **Next Step:** The immediate next step is to write the automated feature tests for this system to ensure its stability and prevent regressions.
-
-### Completed Tasks:
-
-**System Architecture Analysis - Already Implemented:**
-*   User authentication (Laravel Breeze)
-*   Domain structure (Users, Common, Listings)
-*   Service layer architecture
-*   Exception handling (Custom domain exceptions)
-*   Models: User, Address, UserAddress, Service, OpenOffer, OpenOfferBid
-*   Models: Category, WorkflowTemplate, WorkTemplate, WorkCatalog, ListingImage
-*   Services: UserService, AddressService, CategoryService, ServiceService
-*   Services: OpenOfferService, OpenOfferBidService, WorkflowTemplateService
-*   Services: WorkTemplateService, WorkCatalogService, ListingImageService
-*   Seeders: All core data seeded
-*   Views: Home, Browse, Auth pages (Blade)
-*   Components: Navbar, Form components, Modal
-*   CSS: Tailwind with custom components
-*   Alpine.js: Interactive components
-
-**Phase 1: Foundation & Core API - Milestone 1.2: Categories API [5/6]:**
-*   Create `CategoryController` API (and moved to `app/Domains/Listings/Http/Controllers/Api`)
-*   Add routes: GET, POST, PUT, DELETE `/api/categories`
-*   Add filtering/search query parameters
-*   Create `CategoryResource` and `CategoryCollection` (and moved to `app/Domains/Listings/Http/Resources`)
-*   Add authorization (admin only for write) with `CategoryPolicy` (and moved to `app/Domains/Listings/Policies`)
 
 ### Our Approach & Key Learnings
 
@@ -83,33 +46,6 @@ A significant portion of our recent efforts has been dedicated to configuring th
 
 Through persistent problem-solving, we've explored various solutions, including modifying `phpunit.xml`, `.env.testing`, `config/database.php`, and `config/cache.php`. The key takeaway is the importance of a robust and explicit configuration for the testing environment, especially in a complex setup like Laravel Sail on Windows. We also learned the importance of clearing the configuration cache (`php artisan config:clear`) after making changes to configuration files to ensure that the changes are applied.
 
-### Next Steps
-
-1.  **Run `CategoryApiTest.php`:** With the recent fixes to the configuration files, the next immediate step is to run the `CategoryApiTest.php` and ensure all tests pass. The tests that need to pass are:
-    *   `test_guest_cannot_create_category`
-    *   `test_regular_user_cannot_create_category`
-    *   `test_admin_can_create_category`
-    *   `test_categories_can_be_listed`
-    *   `test_categories_can_be_listed_with_search_filter`
-    *   `test_specific_category_can_be_retrieved`
-    *   `test_guest_cannot_update_category`
-    *   `test_regular_user_cannot_update_category`
-    *   `test_admin_can_update_category`
-    *   `test_guest_cannot_delete_category`
-    *   `test_regular_user_cannot_delete_category`
-    *   `test_admin_can_delete_category`
-
-2.  **Complete Milestone 1.2:** Once the tests are passing, we will have completed the backend development for the Categories API. The final step for this milestone will be to mark it as complete in this `GEMINI.md` file.
-
-3.  **Proceed to Milestone 1.3: Services API & UI Enhancement:** After completing Milestone 1.2, we will move on to the next milestone, which includes:
-    *   Creating the `ServiceController` API.
-    *   Adding routes for services CRUD.
-    *   Implementing image uploads for services.
-    *   Creating the `ServiceResource`.
-
-This detailed plan will allow us to pick up where we left off and continue making progress efficiently in our next session.
-
-## Building and Running
 
 ### Prerequisites
 
@@ -137,6 +73,17 @@ composer run-script dev
 
 This will start the Laravel development server on `http://127.0.0.1:8000` and the Vite development server on `http://localhost:5173`.
 
+Or natively without laravel sail, we go:
+
+```bash
+php artisan serve;
+
+```
+
+```bash
+npm run dev;
+```
+
 ### Testing
 
 To run the test suite, use the following command:
@@ -152,6 +99,7 @@ composer test
 *   **Blade Components:** The front-end uses Blade components for reusable UI elements.
 *   **Tailwind CSS:** The application uses Tailwind CSS for styling.
 *   **Alpine.js:** Alpine.js is used for front-end interactivity.
+*   **Livewire:** Used for dynamic/real time components spa-like feel.
 
 ## Development Guidelines
 
@@ -172,47 +120,11 @@ composer test
 
 **Tech Stack Confirmed:**
 - **Backend:** Laravel 12 with Domain-Driven Design
-- **Frontend:** Blade + Alpine.js + Tailwind CSS (existing setup)
+- **Frontend:** Blade + Alpine.js + Livewire + Tailwind CSS (existing setup)
 - **Real-time:** Laravel Broadcasting + Laravel Echo
 - **Payments:** Xendit/PayMongo with manual disbursement
 - **Current Structure:** Services already built, need API + UI completion
 
----
-
-## 🏗️ System Architecture Analysis
-
-### ✅ Already Implemented (From Code Map)
-```
-✓ User authentication (Laravel Breeze)
-✓ Domain structure (Users, Common, Listings)
-✓ Service layer architecture
-✓ Exception handling (Custom domain exceptions)
-✓ Models: User, Address, UserAddress, Service, OpenOffer, OpenOfferBid
-✓ Models: Category, WorkflowTemplate, WorkTemplate, WorkCatalog, ListingImage
-✓ Services: UserService, AddressService, CategoryService, ServiceService
-✓ Services: OpenOfferService, OpenOfferBidService, WorkflowTemplateService
-✓ Services: WorkTemplateService, WorkCatalogService, ListingImageService
-✓ Seeders: All core data seeded
-✓ Views: Home, Browse, Auth pages (Blade)
-✓ Components: Navbar, Form components, Modal
-✓ CSS: Tailwind with custom components
-✓ Alpine.js: Interactive components
-```
-
-### 🚧 Needs Implementation
-```
-✗ API endpoints (controllers + routes)
-✗ Order system
-✗ Work instance execution
-✗ Payment integration
-✗ Messaging system
-✗ Real-time notifications
-✗ Review system
-✗ Quick deals
-✗ Admin panel
-✗ User verification
-✗ Dispute resolution
-```
 
 ---
 
@@ -248,7 +160,7 @@ Execute sequentially per feature/subfeature. Document in a tracker; re-engage us
 
 ---
 
-## 📦 PHASE 1: Foundation & Core API (Week 1-2)
+## 📦 PHASE 1: Foundation & Firsts (Week 1-2)
 
 ### Milestone 1.2: Categories Web CRUD [6/6]
 **Goal:** Complete Web CRUD for categories (foundation for listings)
@@ -289,7 +201,7 @@ resources/views/creator/categories/
 #### Backend Tasks
 - [x] Create `ServiceController` for Web CRUD in the `Listings` domain.
 - [x] Add resource routes for services CRUD under `/creator/services`.
-- [ ] Add image upload handling in the `ServiceService`.
+- [x] Add image upload handling in the `ServiceService`.
 - [x] Implement `ServicePolicy` for authorization (create, update, delete).
 - [ ] Handle soft deletes in all service queries.
 - [x] Add filtering and sorting logic to the `index` method.
@@ -300,7 +212,7 @@ resources/views/creator/categories/
 - [x] Create `resources/views/creator/services/create.blade.php`.
 - [x] Create `resources/views/creator/services/edit.blade.php`.
 - [x] Create public-facing `resources/views/listings/show.blade.php`.
-- [ ] Create a Livewire component for image uploads to provide a better UX.
+- [x] Create a Livewire component for image uploads to provide a better UX.
 
 #### Files:
 ```
