@@ -51,10 +51,12 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     Route::resource('categories', CategoryController::class);
 
     // Workflow Management
+    Route::get('workflows', [WorkflowTemplateController::class, 'index'])->name('workflows.index');
+    Route::get('workflows/create', [WorkflowTemplateController::class, 'create'])->name('workflows.create');
+    Route::get('workflows/{workflow}/edit', [WorkflowTemplateController::class, 'edit'])->name('workflows.edit');
+    Route::patch('workflows/{workflow}', [WorkflowTemplateController::class, 'update'])->name('workflows.update');
+    Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
     Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
-    Route::post('workflows/{workflow}/steps/reorder', [WorkTemplateController::class, 'reorder'])->name('workflows.steps.reorder');
-    Route::resource('workflows', WorkflowTemplateController::class);
-    Route::resource('workflows.steps', WorkTemplateController::class)->except(['index', 'show', 'create', 'edit']);
 });
 
 // User Verification
@@ -87,3 +89,4 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
     ->middleware('auth')
     ->name('media.serve');
+

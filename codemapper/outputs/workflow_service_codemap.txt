@@ -1,0 +1,1727 @@
+MAP: Generated 2025-11-16 11:50:36
+--app/Domains/Listings/Http/Controllers/ServiceController.php
+<?php
+
+namespace App\Domains\Listings\Http\Controllers;
+
+use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Services\CategoryService;
+use App\Domains\Common\Services\AddressService;
+use App\Domains\Listings\Services\ServiceService;
+use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Http\Controllers\Controller;
+use App\Domains\Listings\Http\Requests\StoreServiceRequest;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class ServiceController extends Controller
+{
+    use AuthorizesRequests;
+
+
+    public function __construct(
+        private ServiceService $serviceService,
+        private CategoryService $categoryService,
+        private WorkflowTemplateService $workflowTemplateService,
+        private AddressService $addressService
+    ) {}
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
+    {
+        $services = $this->serviceService->getPaginatedServices($request->all());
+        return view('creator.services.index', compact('services'));
+    }   
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        $categories = $this->categoryService->listAllCategories();
+        $workflowTemplates = $this->workflowTemplateService->getWorkflowTemplatesByCreator(auth()->id());
+        $addresses = $this->addressService->getAddressesForUser();
+        
+        return view('creator.services.create', compact('categories', 'workflowTemplates', 'addresses'));
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Service $service)
+    {
+        $this->authorize('view', $service);
+        return view('listings.services.show', compact('service'));
+    }
+
+
+    public function manage(Service $service) {
+        $this->authorize('update', $service);
+        // Placeholder data as per the guide
+            $analytics = [
+                'total_revenue' => 0,
+                'today_clicks' => 0,
+                'wishlist_count' => 0,
+            ];
+            $orders = [];
+            $reviews = [];
+        return view('creator.services.show', compact('service', 'analytics', 'orders', 'reviews'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Service $service)
+    {
+        $this->authorize('update', $service);
+
+        $categories = $this->categoryService->listAllCategories();
+        $workflowTemplates = $this->workflowTemplateService->getWorkflowTemplatesByCreator(auth()->id());
+        $addresses = $this->addressService->getAddressesForUser();
+
+        return view('creator.services.edit', compact('service', 'categories', 'workflowTemplates', 'addresses'));
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Service $service)
+    {
+        $this->authorize('delete', $service);
+
+        try {
+            $this->serviceService->deleteService($service);
+            return redirect()->route('creator.services.index')->with('success', 'Service deleted successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to delete service: ' . $e->getMessage());
+        }
+    }
+}
+----
+--app/Domains/Listings/Http/Controllers/WorkflowTemplateController.php
+<?php
+
+namespace App\Domains\Listings\Http\Controllers;
+
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class WorkflowTemplateController extends Controller
+{
+    public function __construct(private readonly WorkflowTemplateService $workflowTemplateService)
+    {
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $workflowTemplates = $this->workflowTemplateService->getWorkflowTemplatesByCreator(Auth::id());
+        return view('creator.workflows.index', compact('workflowTemplates'));
+    }
+
+    /**
+     * Show the form for creating a new workflow.
+     * Creates an unsaved model instance.
+     */
+    public function create()
+    {
+        // Create a NEW unsaved model instance
+        $workflowTemplate = new WorkflowTemplate([
+            'name' => 'Untitled Workflow',
+            'description' => '',
+            'creator_id' => Auth::id(),
+            'is_public' => false,
+        ]);
+
+        // IMPORTANT: Model exists in memory but NOT in database
+        // $workflowTemplate->exists === false
+        
+        return view('creator.workflows.builder', ['workflowTemplate' => $workflowTemplate]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(WorkflowTemplate $workflow)
+    {
+        $this->authorize('update', $workflow);   
+        return view('creator.workflows.builder', ['workflowTemplate' => $workflow]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, WorkflowTemplate $workflow)
+    {
+        $this->authorize('update', $workflow);
+        $this->workflowTemplateService->updateWorkflowTemplate($workflow, $request->all());
+        return redirect()->route('creator.workflows.index')->with('success', 'Workflow updated successfully.');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(WorkflowTemplate $workflow)
+    {
+        $this->authorize('delete', $workflow);
+        $this->workflowTemplateService->deleteWorkflowTemplate($workflow);
+        return redirect()->route('creator.workflows.index')->with('success', 'Workflow deleted successfully.');
+    }
+
+    /**
+     * Duplicate the specified resource.
+     */
+    public function duplicate(WorkflowTemplate $workflow)
+    {
+        $this->authorize('duplicate', $workflow);
+        $newWorkflow = $this->workflowTemplateService->duplicateWorkflowTemplate($workflow);
+        return redirect()->route('creator.workflows.edit', $newWorkflow)->with('success', 'Workflow duplicated successfully.');
+    }
+}
+----
+--app/Domains/Listings/Models/Service.php
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Domains\Users\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domains\Common\Models\Address;
+use App\Domains\Listings\Models\ListingReview;
+use Plank\Mediable\Mediable;
+use Plank\Mediable\MediableInterface;
+
+use App\Domains\Common\Models\Image;
+
+class Service extends Model implements MediableInterface
+{
+    use HasFactory;
+    use SoftDeletes;
+    use Mediable;
+
+    protected $table = 'services';
+    protected $fillable = ['title', 'description', 'price', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
+    protected $casts = [
+        'pay_first' => 'boolean',
+    ];
+
+    public function getGalleryImagesAttribute()
+    {
+        // Returns a Collection of Media objects tagged 'gallery'
+        return $this->getMedia('gallery');
+    }
+
+    public function getThumbnailAttribute()
+    {
+        // Returns the first media tagged 'gallery'
+        return $this->getMedia('gallery')->first();
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function workflowTemplate()
+    {
+        return $this->belongsTo(WorkflowTemplate::class);
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
+    }
+
+    public function reviews()
+    {
+        return $this->morphMany(ListingReview::class, 'listing');
+    }
+
+    public function getThumbnailUrlAttribute()
+    {
+        return $this->getFirstMediaUrl('gallery');
+    }
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\ServiceFactory::new();
+    }
+}
+----
+--app/Domains/Listings/Models/WorkTemplate.php
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Database\Factories\WorkTemplateFactory; // Import the factory
+use Illuminate\Database\Eloquent\Model;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Domains\Listings\Models\WorkCatalog;
+
+class WorkTemplate extends Model
+{
+    use HasFactory;
+
+    /**
+     * Create a new factory instance for the model.
+     */
+    protected static function newFactory(): WorkTemplateFactory
+    {
+        return WorkTemplateFactory::new();
+    }
+
+    protected $fillable = [
+            'workflow_template_id',
+            'work_catalog_id',
+            'name',
+            'description',
+            'price',
+            'duration_minutes',
+            'order',
+        ];
+
+    protected $casts = [
+        'custom_config' => 'array',
+    ];
+
+    public function workflowTemplate()
+    {
+        return $this->belongsTo(WorkflowTemplate::class);
+    }
+    public function workCatalog()
+    {
+        return $this->belongsTo(WorkCatalog::class);
+    }
+}
+----
+--app/Domains/Listings/Models/WorkflowTemplate.php
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domains\Users\Models\User;
+
+class WorkflowTemplate extends Model
+{
+    use hasFactory, SoftDeletes;
+
+    protected $fillable = ['name', 'description', 'creator_id', 'is_public'];
+
+    // casts
+    protected $casts = [
+        'is_public' => 'boolean',
+    ];
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+
+    public function services()
+    {
+        return $this->belongsToMany(Service::class);
+    }
+
+    public function workTemplates()
+    {
+        return $this->hasMany(WorkTemplate::class);
+    }
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\WorkflowTemplateFactory::new();
+    }
+
+}
+----
+--app/Domains/Listings/Policies/ServicePolicy.php
+<?php
+
+namespace App\Domains\Listings\Policies;
+
+use App\Domains\Listings\Models\Service;
+use App\Domains\Users\Models\User;
+use Illuminate\Auth\Access\Response;
+
+class ServicePolicy
+{
+    /**
+     * Determine whether the user can view any models.
+     */
+    public function viewAny(User $user): bool
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user can view the model.
+     */
+    public function view(User $user, Service $service): bool
+    {
+        return true;
+    }
+
+    /**
+     * Determine whether the user can create models.
+     */
+    public function create(User $user): bool
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user can update the model.
+     */
+    public function update(User $user, Service $service): bool
+    {
+        return $user->id === $service->creator_id;
+    }
+
+    /**
+     * Determine whether the user can delete the model.
+     */
+    public function delete(User $user, Service $service): bool
+    {
+        return $user->id === $service->creator_id;
+    }
+
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, Service $service): bool
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, Service $service): bool
+    {
+        return false;
+    }
+}
+----
+--app/Domains/Listings/Policies/WorkflowPolicy.php
+<?php
+
+namespace App\Domains\Listings\Policies;
+
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Users\Models\User;
+use Illuminate\Auth\Access\Response;
+
+class WorkflowPolicy
+{
+    /**
+     * Determine whether the user can view any models.
+     */
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    /**
+     * Determine whether the user can view the model.
+     */
+    public function view(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return $user->id === $workflowTemplate->creator_id;
+    }
+
+    /**
+     * Determine whether the user can create models.
+     */
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    /**
+     * Determine whether the user can update the model.
+     */
+    public function update(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return $user->id === $workflowTemplate->creator_id;
+    }
+
+    /**
+     * Determine whether the user can delete the model.
+     */
+    public function delete(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return $user->id === $workflowTemplate->creator_id;
+    }
+
+    /**
+     * Determine whether the user can duplicate the model.
+     */
+    public function duplicate(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return $user->id === $workflowTemplate->creator_id;
+    }
+
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return false;
+    }
+}
+----
+--app/Domains/Listings/Services/ServiceService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\Service;
+use App\Exceptions\ResourceNotFoundException;
+use App\Domains\Users\Services\UserService;
+use App\Domains\Listings\Services\CategoryService;
+use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Domains\Common\Services\AddressService;
+use Barryvdh\Debugbar\Facades\Debugbar;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Http\UploadedFile;
+use Plank\Mediable\MediaUploader;
+use Illuminate\Database\Eloquent\Collection;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Symfony\Component\ErrorHandler\Debug;
+
+class ServiceService
+{
+    public function __construct(
+        private UserService $userService,
+        private CategoryService $categoryService,
+        private WorkflowTemplateService $workflowTemplateService,
+        private AddressService $addressService
+    ) {}
+
+    /**
+     * Create a new service with optional images
+     */
+   /**
+     * Create a new service with optional uploaded images
+     */
+    public function createService(array $data, array $uploadedFiles = []): Service
+    {
+        Log::info('Creating service', ['data_keys' => array_keys($data)]);
+
+        // Remove any image removal keys
+        $serviceData = collect($data)->except(['images_to_remove'])->toArray();
+
+        // Create service
+        $service = Service::create($serviceData);
+
+        // Handle uploads
+        $this->handleUploadedFiles($service, $uploadedFiles);
+
+        return $service->loadMedia('gallery');
+    }
+
+    /**
+     * Update an existing service and manage images
+     */
+    public function updateService(Service $service, array $data, array $uploadedFiles = []): Service
+    {
+        // Update service info
+        $service->update(collect($data)->except(['images_to_remove'])->toArray());
+
+        // Remove images if requested
+        if (!empty($data['images_to_remove'])) {
+            foreach ($data['images_to_remove'] as $mediaId) {
+                try {
+                    $service->detachMedia($mediaId);
+                    Log::info("Detached media ID: $mediaId");
+                } catch (\Exception $e) {
+                    Log::warning('Failed to detach media: ' . $e->getMessage());
+                }
+            }
+        }
+
+        // Handle newly uploaded files
+        $this->handleUploadedFiles($service, $uploadedFiles);
+
+        return $service->loadMedia('gallery');
+    }
+
+    protected function handleUploadedFiles(Service $service, array $files): void
+    {
+        Debugbar::info('handleUploadedFiles called', ['files_count' => count($files)]);
+
+        $uploader = app(MediaUploader::class);
+
+        foreach ($files as $file) {
+            Debugbar::info('Processing file', ['file' => $file]);
+
+            if ($file instanceof TemporaryUploadedFile) {
+                try {
+                    // Use getRealPath() directly - it's already stored by Livewire
+                    $sourcePath = $file->getRealPath();
+                    
+                    Debugbar::info('Source path', ['path' => $sourcePath, 'exists' => file_exists($sourcePath)]);
+
+                    $media = $uploader->fromSource($sourcePath)
+                        ->toDestination('public', 'services')
+                        ->upload();
+
+                    $service->attachMedia($media, 'gallery');
+
+                    Debugbar::info('Attached media', ['media_id' => $media->id]);
+
+                } catch (\Exception $e) {
+                    Debugbar::error('Failed to upload media: ' . $e->getMessage());
+                    Log::error('Media upload failed', [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
+            } else {
+                Debugbar::warning('Skipped invalid file', ['file' => $file]);
+            }
+        }
+}
+
+    /**
+     * Delete a service
+     */
+    public function deleteService(Service $service): bool
+    {
+        return $service->delete();
+    }
+
+    /**
+     * Retrieve a single service
+     */
+    public function getService($id): Service
+    {
+        $service = Service::with(['creator', 'category', 'workflowTemplate', 'address', 'media'])->find($id);
+
+        if (!$service) {
+            throw new ResourceNotFoundException('Service does not exist.');
+        }
+
+        if ($service->trashed()) {
+            throw new ResourceNotFoundException('Service has been deleted.');
+        }
+
+        return $service;
+    }
+
+    /**
+     * Retrieve all services
+     */
+    public function getAllServices(): Collection
+    {
+        $services = Service::withMedia()->get();
+
+        if ($services->isEmpty()) {
+            throw new ResourceNotFoundException('No services found.');
+        }
+
+        if ($services->every->trashed()) {
+            throw new ResourceNotFoundException('Services have all been deleted.');
+        }
+
+        return $services;
+    }
+
+    /**
+     * Paginated services with filters
+     */
+    public function getPaginatedServices(array $filters = [])
+    {
+        $query = Service::with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * Get services by creator
+     */
+    public function getServicesForCreator(int $creatorId, array $filters = [])
+    {
+        $query = Service::where('creator_id', $creatorId)
+            ->with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * Get filtered services (collection)
+     */
+    public function getFilteredServices(array $filters = [])
+    {
+        $query = Service::with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Helper: upload a single file to the service gallery
+     */
+    private function handleFileUpload(Service $service, $file): void
+    {
+        if ($file instanceof UploadedFile && $file->isValid()) {
+            try {
+                $uploader = app(MediaUploader::class); 
+                $media = $uploader->fromSource($file->getRealPath())
+                    ->toDestination('media', 'services')
+                    ->upload();
+
+                $service->attachMedia($media, 'gallery');
+                Log::info('Attached media: ' . $file->getClientOriginalName());
+            } catch (\Exception $e) {
+                Log::error('Failed to upload media: ' . $e->getMessage());
+            }
+        } else {
+            Log::warning('Invalid file skipped', ['file' => $file]);
+        }
+    }
+}
+----
+--app/Domains/Listings/Services/WorkflowTemplateService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Exceptions\ResourceNotFoundException;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class WorkflowTemplateService
+{
+    public function getWorkflowTemplate(int $id): WorkflowTemplate
+    {
+        $workflowTemplate = WorkflowTemplate::with('workTemplates')->find($id);
+        if ($workflowTemplate == null) {
+            throw new ResourceNotFoundException('Workflow template does not exist.');
+        }
+        return $workflowTemplate;
+    }
+
+    public function getWorkflowTemplatesByCreator(int $creatorId, array $filters = []): Collection
+    {
+        $query = WorkflowTemplate::where('creator_id', $creatorId)
+            ->orWhere('is_public', true)
+            ->orderBy('name');
+
+        if (isset($filters['search'])) {
+            $query->where('name', 'like', '%' . $filters['search'] . '%');
+        }
+
+        return $query->get();
+    }
+
+    public function createWorkflowTemplate(array $data): WorkflowTemplate
+    {
+        return WorkflowTemplate::create($data);
+    }
+
+    public function updateWorkflowTemplate(WorkflowTemplate $workflowTemplate, array $data): WorkflowTemplate
+    {
+        $workflowTemplate->update($data);
+        return $workflowTemplate;
+    }
+
+    public function deleteWorkflowTemplate(WorkflowTemplate $workflowTemplate): void
+    {
+        DB::transaction(function () use ($workflowTemplate) {
+            $workflowTemplate->workTemplates()->delete();
+            $workflowTemplate->delete();
+        });
+    }
+
+    public function duplicateWorkflowTemplate(WorkflowTemplate $workflowTemplate): WorkflowTemplate
+    {
+        return DB::transaction(function () use ($workflowTemplate) {
+            $newWorkflowTemplate = $workflowTemplate->replicate([
+                'name' // You might want to adjust the name of the duplicate
+            ]);
+            $newWorkflowTemplate->name = $workflowTemplate->name . ' (Copy)';
+            $newWorkflowTemplate->save();
+
+            foreach ($workflowTemplate->workTemplates as $workTemplate) {
+                $newWorkTemplate = $workTemplate->replicate();
+                $newWorkflowTemplate->workTemplates()->save($newWorkTemplate);
+            }
+
+            return $newWorkflowTemplate;
+        });
+    }
+}
+----
+--resources/views/creator/services/create.blade.php
+<x-app-layout>
+    <div class="py-6">
+        <div class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">
+            <livewire:service-form 
+                :categories="$categories"
+                :workflowTemplates="$workflowTemplates"
+                :addresses="$addresses"
+                :key="'service-form-create'"
+            />
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/creator/services/edit.blade.php
+<x-app-layout>
+    <div class="py-6">
+        <div class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">
+            <livewire:service-form 
+                :service="$service"
+                :categories="$categories"
+                :workflowTemplates="$workflowTemplates"
+                :addresses="$addresses"
+                :key="'service-form-'.$service->id"
+            />
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/creator/services/index.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('My Services') }}
+            </h2>
+            <a href="{{ route('creator.services.create') }}" 
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Add New Service</span>
+            </a>
+        </div>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <!-- Session Messages -->
+            @if (session('success'))
+                <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative" role="alert">
+                    <span class="block sm:inline">{{ session('success') }}</span>
+                </div>
+            @endif
+            @if (session('error'))
+                <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative" role="alert">
+                    <span class="block sm:inline">{{ session('error') }}</span>
+                </div>
+            @endif
+
+            @if ($services->isNotEmpty())
+                <!-- Card Grid Layout (Mobile First) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @foreach($services as $service)
+                        <div class="bg-white rounded-2xl border border-gray-300 shadow-md overflow-hidden hover:shadow-xl transition-shadow">
+                            <!-- Service Image -->
+                            <div class="relative h-48 bg-gray-200">
+                                @if($service->media->isNotEmpty())
+                                    <img src="{{ $service->media->first()->getUrl() }}" 
+                                        alt="{{ $service->title }}" 
+                                        class="w-full h-full object-cover">
+                                @else
+                                    <div class="flex items-center justify-center h-full">
+                                        <svg class="h-16 w-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                @endif
+
+                                <!-- Status Badge -->
+                                <div class="absolute top-2 right-2">
+                                    <span class="px-3 py-1 text-xs font-semibold rounded-full shadow {{ $service->is_active ? 'bg-green-500 text-white' : 'bg-gray-500 text-white' }}">
+                                        {{ $service->is_active ? 'Active' : 'Inactive' }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Service Details -->
+                            <div class="p-4 space-y-3">
+                                <h3 class="text-lg font-bold text-gray-800 line-clamp-2">{{ $service->title }}</h3>
+                                
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-600">{{ $service->category->name ?? 'N/A' }}</span>
+                                    <span class="font-bold text-gray-800">${{ number_format($service->price, 2) }}</span>
+                                </div>
+
+                                <!-- Quick Stats -->
+                                <div class="grid grid-cols-3 gap-2 pt-2 border-t text-center">
+                                    <div>
+                                        <p class="text-xs text-gray-500">Orders</p>
+                                        <p class="text-lg font-semibold">0</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-gray-500">Views</p>
+                                        <p class="text-lg font-semibold">0</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-gray-500">Rating</p>
+                                        <p class="text-lg font-semibold">-</p>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="flex space-x-2 pt-3 border-t">
+                                    <a href="{{ route('creator.services.manage', $service) }}" 
+                                        class="flex-1 bg-gray-100 hover:bg-gray-200 text-center py-2 rounded-lg text-sm font-medium transition">
+                                        Manage
+                                    </a>
+                                    <a href="{{ route('creator.services.edit', $service) }}" 
+                                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 rounded-lg text-sm font-medium transition">
+                                        Edit
+                                    </a>
+                                    <form action="{{ route('creator.services.destroy', $service) }}" method="POST" class="flex-1" 
+                                        onsubmit="return confirm('Are you sure you want to delete this service?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" 
+                                            class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-sm font-medium transition">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="bg-white rounded-2xl border border-gray-300 shadow-md p-12 text-center">
+                    <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    <p class="text-gray-500 text-lg mb-4">No services found.</p>
+                    <a href="{{ route('creator.services.create') }}" 
+                        class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md">
+                        <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Create your first service
+                    </a>
+                </div>
+            @endif
+
+            <!-- Pagination -->
+            @if($services->hasPages())
+                <div class="mt-8">
+                    {{ $services->links() }}
+                </div>
+            @endif
+        </div>
+    </div>
+</x-app-layout>
+
+----
+--resources/views/creator/workflows/builder.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Workflow Builder') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <livewire:workflow-builder :workflowTemplate="$workflowTemplate" />
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/creator/workflows/index.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('My Workflows') }}
+            </h2>
+            <a href="{{ route('creator.workflows.create') }}" 
+               class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Create New Workflow
+            </a>
+        </div>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <!-- Session Messages -->
+            @if (session('success'))
+                <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+                    <span class="block sm:inline">{{ session('success') }}</span>
+                </div>
+            @endif
+            @if (session('error'))
+                <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    <span class="block sm:inline">{{ session('error') }}</span>
+                </div>
+            @endif
+
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 bg-white border-b border-gray-200">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Name
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Description
+                                    </th>
+                                    <th scope="col" class="relative px-6 py-3">
+                                        <span class="sr-only">Actions</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @forelse ($workflowTemplates as $workflow)
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-medium text-gray-900">{{ $workflow->name }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900">{{ $workflow->description }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <a href="{{ route('creator.workflows.edit', $workflow) }}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                                            <form action="{{ route('creator.workflows.duplicate', $workflow) }}" method="POST" class="inline-block ml-4">
+                                                @csrf
+                                                <button type="submit" class="text-blue-600 hover:text-blue-900">Duplicate</button>
+                                            </form>
+                                            <form action="{{ route('creator.workflows.destroy', $workflow) }}" method="POST" class="inline-block ml-4" onsubmit="return confirm('Are you sure you want to delete this workflow?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                                            No workflows found.
+                                            <a href="{{ route('creator.workflows.create') }}" class="text-indigo-600 hover:text-indigo-900 underline">Create one now</a>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/livewire/service-form.blade.php
+<div class="max-w-lg mx-auto w-full bg-white rounded-2xl border border-gray-300 shadow-md overflow-hidden">
+    <header class="flex justify-between items-center p-4 border-b">
+        <h1 class="text-lg font-semibold">{{ $service->exists ? 'Edit Service' : 'Create a Service' }}</h1>
+    </header>
+
+    <form wire:submit.prevent="save" class="p-4 space-y-4">
+        <!-- Title -->
+        <div>
+            <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+            <input type="text" wire:model.defer="title" id="title" 
+                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            @error('title') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+        </div>
+
+        <!-- Price and Pay First -->
+        <div class="flex space-x-4">
+            <div class="w-1/2">
+                <label for="price" class="block text-sm font-medium text-gray-700">Price</label>
+                <input type="number" wire:model.defer="price" id="price" step="0.01"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @error('price') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+            </div>
+            <div class="w-1/2">
+                <label for="pay-first" class="block text-sm font-medium text-gray-700">Pay First</label>
+                <select wire:model.defer="pay_first" id="pay-first" 
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="0">No</option>
+                    <option value="1">Yes</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Category and Address -->
+        <div class="flex space-x-4">
+            <div class="w-1/2">
+                <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                <select wire:model.defer="category_id" id="category"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Select...</option>
+                    @foreach ($categories as $cat)
+                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                    @endforeach
+                </select>
+                @error('category_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+            </div>
+            <div class="w-1/2">
+                <label for="address" class="block text-sm font-medium text-gray-700">Address</label>
+                <select wire:model="address_id" id="address"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Select...</option>
+                    @foreach($addresses as $address)
+                        <option value="{{ $address->id }}">
+                            {{ $address->street }}, {{ $address->city }}
+                            @if($address->is_primary) (Primary) @endif
+                        </option>
+                    @endforeach
+                </select>
+                @error('address_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                <a href="{{ route('profile.edit') }}" class="text-xs text-blue-600 hover:text-blue-700 mt-1 inline-block">+ Add new address</a>
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+            <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+            <textarea wire:model.defer="description" id="description" rows="4" 
+                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+            @error('description') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+        </div>
+
+        <!-- Workflow Section -->
+        @if($workflow_template_id && $service->exists)
+            <!-- Filled State: Show selected workflow -->
+            <div class="border rounded-lg p-4 space-y-3" x-data="{ expanded: false }">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-semibold text-sm">Workflow Steps</h3>
+                    <button type="button" wire:click="$set('workflow_template_id', '')" class="text-red-600 text-sm hover:text-red-700">
+                        Change
+                    </button>
+                </div>
+                
+                <!-- Compact View -->
+                <div class="text-sm text-gray-600" x-show="!expanded">
+                    @php
+                        $template = $workflowTemplates->firstWhere('id', $workflow_template_id);
+                    @endphp
+                    @if($template)
+                        {{ $template->workTemplates->pluck('name')->implode(' > ') }}
+                    @endif
+                </div>
+                
+                <!-- Expanded List View -->
+                <div class="space-y-2" x-show="expanded" x-cloak>
+                    @if($template)
+                        @foreach($template->workTemplates as $step)
+                            <p class="block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
+                                {{ $step->name }}
+                            </p>
+                        @endforeach
+                    @endif
+                </div>
+                
+                <button type="button" @click="expanded = !expanded" class="text-xs text-blue-600 hover:text-blue-700">
+                    <span x-show="!expanded">Show as list</span>
+                    <span x-show="expanded" x-cloak>Show compact</span>
+                </button>
+            </div>
+        @else
+            <!-- Empty State: Selection buttons -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Workflow</label>
+                <div class="flex space-x-2">
+                    <button type="button" wire:click="$dispatch('openWorkflowSelector')"
+                        class="flex-1 bg-gray-100 border border-gray-300 rounded-md p-2 text-sm hover:bg-gray-200 transition">
+                        Select existing
+                    </button>
+                    <a href="{{ route('creator.workflows.create') }}" 
+                        class="flex-1 bg-gray-800 text-white text-center rounded-md p-2 text-sm hover:bg-gray-900 transition">
+                        Create new workflow
+                    </a>
+                </div>
+                @error('workflow_template_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+            </div>
+        @endif
+
+        @include('livewire.partials.media-uploader')
+
+        <!-- Action Buttons -->
+        <div class="flex justify-end space-x-3 pt-4 border-t mt-6">
+            <a href="{{ route('creator.services.index') }}" 
+                class="bg-gray-100 border border-gray-300 rounded-md px-4 py-2 text-sm hover:bg-gray-200 transition">
+                Cancel
+            </a>
+            <button type="submit" 
+                class="bg-blue-600 text-white rounded-md px-4 py-2 text-sm hover:bg-blue-700 transition">
+                {{ $service->exists ? 'Update' : 'Publish' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+@push('scripts')
+<script>
+    // Workflow selector modal listener
+    document.addEventListener('livewire:initialized', () => {
+        Livewire.on('openWorkflowSelector', () => {
+            // Open modal with workflow templates list
+            // Implementation depends on your modal system
+            console.log('Open workflow selector');
+        });
+    });
+</script>
+@endpush
+
+----
+--resources/views/livewire/workflow-builder.blade.php
+<div>
+    <!-- Workflow Details Section -->
+    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+        <div class="p-6 bg-white border-b border-gray-200">
+            <h3 class="text-lg font-semibold mb-4">Workflow Details</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="workflow_name" class="block text-sm font-medium text-gray-700">Workflow Name</label>
+                    <input
+                        type="text"
+                        id="workflow_name"
+                        wire:model.defer="name"
+                        wire:change="$set('hasSavedChanges', false)"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+
+                <div>
+                    <label for="workflow_description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea
+                        id="workflow_description"
+                        wire:model.defer="description"
+                        wire:change="$set('hasSavedChanges', false)"
+                        rows="3"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="is_public" class="flex items-center">
+                        <input 
+                            id="is_public" 
+                            type="checkbox" 
+                            wire:model.defer="is_public"
+                            wire:change="$set('hasSavedChanges', false)"
+                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <span class="ml-2 text-sm text-gray-600">Make Public</span>
+                    </label>
+                    <button
+                        wire:click="save"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        Save Workflow
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflow Steps Section -->
+    <div class="mt-8 bg-white overflow-hidden shadow-sm sm:rounded-lg">
+        <div class="p-6 bg-white border-b border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Workflow Steps</h3>
+                <div>
+                    <button
+                        wire:click="addStep"
+                        class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                        Add New Step
+                    </button>
+                    <button
+                        wire:click="openCatalog"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 ml-2">
+                        Add From Catalog
+                    </button>
+                </div>
+            </div>
+
+            <!-- SORTABLE LIST - Corrected for Livewire 4 -->
+            <ul wire:sortable="updateStepOrder" class="space-y-4">
+                @forelse ($workTemplates as $workTemplate)
+                    <li
+                        wire:sortable.item="{{ $workTemplate['id'] }}"
+                        wire:key="step-{{ $workTemplate['id'] }}"
+                        class="p-4 bg-gray-50 rounded-lg shadow-sm flex justify-between items-center hover:shadow-md transition-shadow">
+                        <div class="flex items-center flex-1">
+                            <span wire:sortable.handle class="cursor-grab active:cursor-grabbing text-gray-400 mr-4 text-lg font-bold">
+                                ⋮⋮
+                            </span>
+                            <div>
+                                <p class="font-semibold">{{ $workTemplate['name'] }}</p>
+                                <p class="text-sm text-gray-600">{{ $workTemplate['description'] }}</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-4">
+                            <button
+                                wire:click="editStep({{ $workTemplate['id'] }})"
+                                class="text-indigo-600 hover:text-indigo-900 font-medium">
+                                Edit
+                            </button>
+                            <button
+                                wire:click="deleteStep({{ $workTemplate['id'] }})"
+                                class="text-red-600 hover:text-red-900 font-medium">
+                                Delete
+                            </button>
+                        </div>
+                    </li>
+                @empty
+                    <li class="text-center text-gray-500 py-8">
+                        No steps yet. Add one to get started.
+                    </li>
+                @endforelse
+            </ul>
+        </div>
+    </div>
+
+    <!-- Work Catalog Modal -->
+    @if($showCatalogModal)
+        <div class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+                <div class="p-6 border-b">
+                    <h3 class="text-lg font-semibold">Add Step From Catalog</h3>
+                </div>
+                <div class="p-6 max-h-96 overflow-y-auto">
+                    <ul class="space-y-4">
+                        @forelse ($workCatalogs as $catalog)
+                            <li class="p-4 bg-gray-50 rounded-lg shadow-sm flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold">{{ $catalog->name }}</p>
+                                    <p class="text-sm text-gray-600">{{ $catalog->description }}</p>
+                                </div>
+                                <div>
+                                    <button
+                                        wire:click="addStepFromCatalog({{ $catalog->id }})"
+                                        class="px-3 py-1 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
+                                        Add
+                                    </button>
+                                </div>
+                            </li>
+                        @empty
+                            <li class="text-center text-gray-500 py-4">
+                                No items in catalog.
+                            </li>
+                        @endforelse
+                    </ul>
+                </div>
+                <div class="p-4 bg-gray-50 border-t flex justify-end">
+                    <button
+                        wire:click="closeCatalog"
+                        class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Edit Step Modal -->
+    @if($showEditStepModal)
+        <div class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+                <div class="p-6 border-b">
+                    <h3 class="text-lg font-semibold">Edit Step</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label for="editing_step_name" class="block text-sm font-medium text-gray-700">Name</label>
+                        <input
+                            type="text"
+                            id="editing_step_name"
+                            wire:model.defer="editingStep.name"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label for="editing_step_description" class="block text-sm font-medium text-gray-700">Description</label>
+                        <textarea
+                            id="editing_step_description"
+                            wire:model.defer="editingStep.description"
+                            rows="3"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-50 border-t flex justify-end space-x-2">
+                    <button
+                        wire:click="closeEditStepModal"
+                        class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                        Cancel
+                    </button>
+                    <button
+                        wire:click="updateStep"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Navigation Guard Script -->
+    <script>
+        let hasUnsavedChanges = !@json($hasSavedChanges);
+
+        // Listen for changes to reset saved state
+        document.addEventListener('livewire:init', () => {
+            Livewire.on('workflowSaved', () => {
+                hasUnsavedChanges = false;
+            });
+        });
+
+        // Track form changes
+        document.addEventListener('input', (e) => {
+            if (e.target.matches('input, textarea, select')) {
+                hasUnsavedChanges = true;
+            }
+        });
+
+        // Prevent navigation if there are unsaved changes
+        window.addEventListener('beforeunload', (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = ''; // Chrome requires returnValue to be set
+                return 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        });
+
+        // Handle in-app navigation (for SPAs or Livewire navigation)
+        document.addEventListener('livewire:navigating', (e) => {
+            if (hasUnsavedChanges) {
+                if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+
+        // Handle regular link clicks
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (link && hasUnsavedChanges && !link.getAttribute('href').startsWith('#')) {
+                if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    </script>
+</div>
+----
+--routes/web.php
+<?php
+use Illuminate\Support\Facades\Route;
+use App\Domains\Listings\Http\Controllers\ServiceController;
+use App\Domains\Users\Http\Controllers\ProfileController;
+use App\Domains\Users\Http\Controllers\UserVerificationController;
+use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
+use App\Domains\Listings\Http\Controllers\CategoryController;
+use App\Domains\Common\Http\Controllers\MediaServeController;
+use App\Domains\Listings\Http\Controllers\ListingController;
+use App\Domains\Listings\Http\Controllers\WorkCatalogController;
+use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
+use App\Domains\Listings\Http\Controllers\WorkTemplateController;
+use App\Domains\Listings\Http\Controllers\OpenOfferController;
+
+// Authentication routes
+require __DIR__.'/auth.php';
+
+// Home and static pages
+    Route::get('/', function () {
+        return view('home');
+    })->name('home');
+
+    Route::get('browse', [ListingController::class, 'index'])->name('browse');
+
+    Route::get('create', function () {
+        return view('create');
+    })->name('create');
+
+    Route::get('about', function () {
+        return view('about');
+    })->name('about');
+
+    Route::get('faq', function () {
+        return view('faq');
+    })->name('faq');
+
+// Public-facing service page
+Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
+
+// Creator space
+Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
+    Route::get('/', function () {
+        return view('dashboard');
+    })->name('dashboard');
+
+    // Service Management
+    Route::resource('services', ServiceController::class);
+    Route::get('services/{service}/manage', [ServiceController::class, 'manage'])->name('services.manage');
+
+    // Category Management
+    Route::resource('categories', CategoryController::class);
+
+    // Workflow Management
+    Route::get('workflows', [WorkflowTemplateController::class, 'index'])->name('workflows.index');
+    Route::get('workflows/create', [WorkflowTemplateController::class, 'create'])->name('workflows.create');
+    Route::get('workflows/{workflow}/edit', [WorkflowTemplateController::class, 'edit'])->name('workflows.edit');
+    Route::patch('workflows/{workflow}', [WorkflowTemplateController::class, 'update'])->name('workflows.update');
+    Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
+    Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
+});
+
+// User Verification
+Route::middleware(['auth'])->prefix('verification')->name('verification.')->group(function () {
+    Route::get('/submit', [UserVerificationController::class, 'create'])->name('create');
+    Route::post('/', [UserVerificationController::class, 'store'])->name('store');
+    Route::get('/status', [UserVerificationController::class, 'status'])->name('status');
+});
+
+// Profile editor
+   Route::middleware(['auth'])->prefix('profile')->group(function () {
+        Route::get('/', [ProfileController::class, 'edit'])
+            ->name('profile.edit');
+
+        Route::patch('/', [ProfileController::class, 'update'])
+            ->name('profile.update');
+
+        Route::delete('/', [ProfileController::class, 'destroy'])
+            ->name('profile.destroy');
+});
+
+// Admin Routes
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/verifications', [AdminUserVerificationController::class, 'index'])->name('verifications.index');
+    Route::get('/verifications/{verification}', [AdminUserVerificationController::class, 'show'])->name('verifications.show');
+    Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
+    Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
+});
+
+Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
+    ->middleware('auth')
+    ->name('media.serve');
+
+----
+--tests/Feature/WorkflowManagementTest.php
+<?php
+
+namespace Tests\Feature;
+
+use App\Domains\Listings\Models\WorkCatalog;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Listings\Models\WorkTemplate;
+use App\Domains\Users\Models\User;
+use App\Livewire\WorkflowBuilder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+use Tests\TestCase;
+
+class WorkflowManagementTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_component_can_render()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->assertStatus(200);
+    }
+
+    public function test_it_displays_existing_steps()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+        WorkTemplate::factory()->create(['workflow_template_id' => $workflow->id, 'name' => 'First Step']);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->assertSee('First Step');
+    }
+
+    public function test_can_save_workflow_details()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id, 'name' => 'Old Name']);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->set('name', 'New Name')
+            ->call('save');
+
+        $this->assertDatabaseHas('workflow_templates', ['id' => $workflow->id, 'name' => 'New Name']);
+    }
+
+    public function test_can_add_a_new_step()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->call('addStep');
+
+        $this->assertDatabaseHas('work_templates', [
+            'workflow_template_id' => $workflow->id,
+            'name' => 'New Step',
+        ]);
+    }
+
+    public function test_can_delete_a_step()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+        $step = WorkTemplate::factory()->create(['workflow_template_id' => $workflow->id]);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->call('deleteStep', $step->id);
+
+        $this->assertDatabaseMissing('work_templates', ['id' => $step->id]);
+    }
+
+    public function test_can_add_step_from_catalog()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+        $catalogItem = WorkCatalog::factory()->create();
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->call('addStepFromCatalog', $catalogItem->id);
+
+        $this->assertDatabaseHas('work_templates', [
+            'workflow_template_id' => $workflow->id,
+            'work_catalog_id' => $catalogItem->id,
+        ]);
+    }
+
+    public function test_can_reorder_steps()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+        $step1 = WorkTemplate::factory()->create(['workflow_template_id' => $workflow->id, 'order' => 0]);
+        $step2 = WorkTemplate::factory()->create(['workflow_template_id' => $workflow->id, 'order' => 1]);
+
+        $newOrder = [
+            ['value' => $step2->id, 'order' => 1],
+            ['value' => $step1->id, 'order' => 2],
+        ];
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->call('updateStepOrder', $newOrder);
+
+        $this->assertDatabaseHas('work_templates', ['id' => $step1->id, 'order' => 2]);
+        $this->assertDatabaseHas('work_templates', ['id' => $step2->id, 'order' => 1]);
+    }
+    
+    public function test_can_update_a_step()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+        $step = WorkTemplate::factory()->create(['workflow_template_id' => $workflow->id, 'name' => 'Old Step Name']);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->call('editStep', $step->id)
+            ->set('editingStep.name', 'New Step Name')
+            ->call('updateStep');
+
+        $this->assertDatabaseHas('work_templates', ['id' => $step->id, 'name' => 'New Step Name']);
+    }
+}
+----
+--SUMMARY
+Text:18 Binary:0 Skipped:2034

@@ -24,16 +24,23 @@ class WorkflowTemplateController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Show the form for creating a new workflow.
+     * Creates an unsaved model instance.
      */
-    public function store(Request $request)
+    public function create()
     {
-        $workflow = $this->workflowTemplateService->createWorkflowTemplate([
+        // Create a NEW unsaved model instance
+        $workflowTemplate = new WorkflowTemplate([
             'name' => 'Untitled Workflow',
+            'description' => '',
             'creator_id' => Auth::id(),
+            'is_public' => false,
         ]);
 
-        return redirect()->route('creator.workflows.edit', $workflow);
+        // IMPORTANT: Model exists in memory but NOT in database
+        // $workflowTemplate->exists === false
+        
+        return view('creator.workflows.builder', ['workflowTemplate' => $workflowTemplate]);
     }
 
     /**
@@ -41,7 +48,6 @@ class WorkflowTemplateController extends Controller
      */
     public function edit(WorkflowTemplate $workflow)
     {
-
         $this->authorize('update', $workflow);   
         return view('creator.workflows.builder', ['workflowTemplate' => $workflow]);
     }
@@ -72,7 +78,7 @@ class WorkflowTemplateController extends Controller
     public function duplicate(WorkflowTemplate $workflow)
     {
         $this->authorize('duplicate', $workflow);
-        $this->workflowTemplateService->duplicateWorkflowTemplate($workflow);
-        return redirect()->route('creator.workflows.index')->with('success', 'Workflow duplicated successfully.');
+        $newWorkflow = $this->workflowTemplateService->duplicateWorkflowTemplate($workflow);
+        return redirect()->route('creator.workflows.edit', $newWorkflow)->with('success', 'Workflow duplicated successfully.');
     }
 }
