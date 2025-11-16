@@ -45,6 +45,7 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
 
     // Service Management
     Route::resource('services', ServiceController::class);
+    Route::get('services/{service}/manage', [ServiceController::class, 'manage'])->name('services.manage');
 
     // Category Management
     Route::resource('categories', CategoryController::class);
@@ -65,17 +66,14 @@ Route::middleware(['auth'])->prefix('verification')->name('verification.')->grou
 
 // Profile editor
    Route::middleware(['auth'])->prefix('profile')->group(function () {
-    Route::get('/', [ProfileController::class, 'edit'])
-        ->name('profile.edit');
+        Route::get('/', [ProfileController::class, 'edit'])
+            ->name('profile.edit');
 
-    Route::get('/addresses', [ProfileController::class, 'addresses'])
-        ->name('profile.addresses');
+        Route::patch('/', [ProfileController::class, 'update'])
+            ->name('profile.update');
 
-    Route::patch('/', [ProfileController::class, 'update'])
-        ->name('profile.update');
-
-    Route::delete('/', [ProfileController::class, 'destroy'])
-        ->name('profile.destroy');
+        Route::delete('/', [ProfileController::class, 'destroy'])
+            ->name('profile.destroy');
 });
 
 // Admin Routes

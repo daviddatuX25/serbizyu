@@ -25,8 +25,6 @@
                 <div class="flex space-x-4">
                     <a href="{{ route('creator.services.edit', $service) }}" 
                         class="hover:text-gray-900 transition">Edit</a>
-                    <a href="{{ route('services.show', $service) }}" target="_blank"
-                        class="hover:text-gray-900 transition">View live</a>
                     <form action="{{ route('creator.services.destroy', $service) }}" method="POST" class="inline" 
                         onsubmit="return confirm('Are you sure you want to delete this service?');">
                         @csrf
@@ -130,7 +128,7 @@
 
             <!-- Preview Section -->
             <div class="p-4 border-t">
-                <a href="{{ route('services.show', $service) }}?preview=true" 
+                <a href="{{ route('services.show', $service) }}" 
                     class="block w-full bg-gray-100 hover:bg-gray-200 text-center py-3 rounded-lg font-medium text-gray-700 transition">
                     Preview as Customer
                 </a>

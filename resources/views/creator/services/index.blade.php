@@ -82,9 +82,9 @@
 
                                 <!-- Action Buttons -->
                                 <div class="flex space-x-2 pt-3 border-t">
-                                    <a href="{{ route('creator.services.show', $service) }}" 
+                                    <a href="{{ route('creator.services.manage', $service) }}" 
                                         class="flex-1 bg-gray-100 hover:bg-gray-200 text-center py-2 rounded-lg text-sm font-medium transition">
-                                        View
+                                        Manage
                                     </a>
                                     <a href="{{ route('creator.services.edit', $service) }}" 
                                         class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 rounded-lg text-sm font-medium transition">

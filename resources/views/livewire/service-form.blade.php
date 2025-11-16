@@ -56,7 +56,7 @@
                     @endforeach
                 </select>
                 @error('address_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
-                <a href="{{ route('profile.addresses') }}" class="text-xs text-blue-600 hover:text-blue-700 mt-1 inline-block">+ Add new address</a>
+                <a href="{{ route('profile.edit') }}" class="text-xs text-blue-600 hover:text-blue-700 mt-1 inline-block">+ Add new address</a>
             </div>
         </div>
 

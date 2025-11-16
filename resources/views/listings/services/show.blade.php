@@ -120,16 +120,25 @@
                 </div>
             </div>
 
+            {{-- change this actions if its the owner --}}
+            
             <!-- Footer Actions -->
             <footer class="flex flex-col sm:flex-row justify-between items-center gap-3 p-4 border-t bg-gray-50">
-                <button type="button" 
-                    class="w-full sm:w-auto text-blue-600 font-medium hover:text-blue-700 transition order-2 sm:order-1">
-                    Add to wishlist
-                </button>
-                <button type="button" 
-                    class="w-full sm:w-auto bg-blue-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-blue-700 transition shadow-md order-1 sm:order-2">
-                    Proceed to Order
-                </button>
+                @can('update', $service)
+                    <a href="{{ route('creator.services.manage', $service) }}" class="w-full sm:w-auto text-blue-600 font-medium hover:text-blue-700 transition order-2 sm:order-1">
+                        Go to Manage
+                    </a>
+                @else
+                    <button type="button" 
+                        class="w-full sm:w-auto text-blue-600 font-medium hover:text-blue-700 transition order-2 sm:order-1">
+                        Add to wishlist
+                    </button>
+                    <button type="button" 
+                        class="w-full sm:w-auto bg-blue-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-blue-700 transition shadow-md order-1 sm:order-2">
+                        Proceed to Order
+                    </button>
+                @endcan
+              
             </footer>
         </div>
     </div>

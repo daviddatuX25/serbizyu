@@ -51,13 +51,14 @@ class ServiceController extends Controller
      */
     public function show(Service $service)
     {
-        $service = $this->serviceService->getService($service->id);
+        $this->authorize('view', $service);
+        return view('listings.services.show', compact('service'));
+    }
 
-        // If the authenticated user is the creator, show the creator's dashboard view
-        if (Auth::id() === $service->creator_id) {
-            $this->authorize('view', $service);
 
-            // Placeholder data as per the guide
+    public function manage(Service $service) {
+        $this->authorize('update', $service);
+        // Placeholder data as per the guide
             $analytics = [
                 'total_revenue' => 0,
                 'today_clicks' => 0,
@@ -65,12 +66,7 @@ class ServiceController extends Controller
             ];
             $orders = [];
             $reviews = [];
-
-            return view('creator.services.show', compact('service', 'analytics', 'orders', 'reviews'));
-        }
-
-        // Otherwise, show the public listing view
-        return view('listings.show', compact('service'));
+        return view('creator.services.show', compact('service', 'analytics', 'orders', 'reviews'));
     }
 
     /**
