@@ -11,11 +11,21 @@ use App\Domains\Listings\Services\WorkflowTemplateService;
 use DebugBar\DebugBar;
 use Livewire\Component;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
-class WorkflowBuilder extends Component
+class WorkflowBuilder extends Component 
 {
+    use AuthorizesRequests;
+
+    public WorkflowTemplate $workflowTemplate;
+    
+    /**
+     * Define the context: 'page' (default) or 'modal'.
+     * This will determine the save behavior.
+     */
+    public $context = 'page';
     // Use public property without type hint for Livewire compatibility
-    public $workflowTemplate;
     
     // Memory-based collections (not saved to DB yet)
     public $workTemplates = [];
@@ -59,6 +69,7 @@ class WorkflowBuilder extends Component
         $this->name = $workflowTemplate->name ?? '';
         $this->description = $workflowTemplate->description ?? '';
         $this->is_public = $workflowTemplate->is_public ?? false;
+        $this->hasSavedChanges = true;
     }
 
     /**
@@ -141,6 +152,17 @@ class WorkflowBuilder extends Component
 
     public function save(WorkflowTemplateService $workflowTemplateService, WorkTemplateService $workTemplateService)
     {
+        if (!$this->workflowTemplate->exists) {
+            // This is a new template, check 'create' permission
+            $this->authorize('create', WorkflowTemplate::class);
+        } else {
+            // This is an existing template, check 'update'
+            $this->authorize('update', $this->workflowTemplate);
+        }
+        
+        // Check if the model is NEW before saving
+        $isNew = !$this->workflowTemplate->exists;
+        
         // Check if the model is new (doesn't exist in the DB yet)
         $isCreating = !$this->workflowTemplate->exists;
 
@@ -204,11 +226,23 @@ class WorkflowBuilder extends Component
         
         // Mark as saved
         $this->hasSavedChanges = true;
-        
-        session()->flash('success', 'Workflow saved successfully.');
-        
-        // Dispatch browser event to update navigation guard
-        $this->dispatch('workflowSaved');
+
+        if ($this->context === 'modal') {
+            // --- MODAL CONTEXT ---
+            // We are in the ServiceForm modal.
+            // Dispatch the event with the new ID for the parent to catch.
+            $this->dispatch('workflowCreated', workflowId: $this->workflowTemplate->id);
+            
+            // No redirect. The parent component will close the modal.
+
+        } else {
+            // --- PAGE CONTEXT ---
+            // We are on the standalone workflow page.
+            // Redirect to the index page with a success message.
+            // This mimics the behavior of the controller[cite: 30].
+            session()->flash('success', 'Workflow saved successfully.');
+            return $this->redirect(route('creator.workflows.index'), navigate: true);
+        }
     }
 
     public function addStep()
@@ -289,7 +323,7 @@ class WorkflowBuilder extends Component
             $newOrder = $item['order'];
             
             $stepIndex = $steps->search(function ($step) use ($stepId) {
-                return $step['id'] === $stepId;
+                return $step['id'] == $stepId;
             });
             
             if ($stepIndex !== false) {
