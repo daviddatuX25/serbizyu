@@ -1,9 +1,22 @@
-<div class="max-w-lg mx-auto w-full bg-white rounded-2xl border border-gray-300 shadow-md overflow-hidden">
+<div>
     <header class="flex justify-between items-center p-4 border-b">
         <h1 class="text-lg font-semibold">{{ $service->exists ? 'Edit Service' : 'Create a Service' }}</h1>
     </header>
 
     <form wire:submit.prevent="save" class="p-4 space-y-4">
+        
+        <!-- Global Error Display -->
+        @if ($errors->any())
+            <div class="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+                <h3 class="text-red-800 font-semibold mb-2">Validation Errors:</h3>
+                <ul class="list-disc list-inside text-red-700 text-sm">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <!-- Title -->
         <div>
             <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
@@ -68,60 +81,46 @@
             @error('description') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
         </div>
 
-        <!-- Workflow Section -->
-        @if($workflow_template_id && $service->exists)
-            <!-- Filled State: Show selected workflow -->
-            <div class="border rounded-lg p-4 space-y-3" x-data="{ expanded: false }">
-                <div class="flex justify-between items-center">
-                    <h3 class="font-semibold text-sm">Workflow Steps</h3>
-                    <button type="button" wire:click="$set('workflow_template_id', '')" class="text-red-600 text-sm hover:text-red-700">
-                        Change
-                    </button>
-                </div>
-                
-                <!-- Compact View -->
-                <div class="text-sm text-gray-600" x-show="!expanded">
-                    @php
-                        $template = $workflowTemplates->firstWhere('id', $workflow_template_id);
-                    @endphp
-                    @if($template)
-                        {{ $template->workTemplates->pluck('name')->implode(' > ') }}
-                    @endif
-                </div>
-                
-                <!-- Expanded List View -->
-                <div class="space-y-2" x-show="expanded" x-cloak>
-                    @if($template)
-                        @foreach($template->workTemplates as $step)
-                            <p class="block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
-                                {{ $step->name }}
-                            </p>
-                        @endforeach
-                    @endif
-                </div>
-                
-                <button type="button" @click="expanded = !expanded" class="text-xs text-blue-600 hover:text-blue-700">
-                    <span x-show="!expanded">Show as list</span>
-                    <span x-show="expanded" x-cloak>Show compact</span>
-                </button>
+        <!-- Workflow Section - Simple wire:model approach -->
+        <div>
+            <label for="workflow_template_id" class="block text-sm font-medium text-gray-700 mb-1">Workflow</label>
+            <select wire:model.live="workflow_template_id" id="workflow_template_id"
+                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">Select a workflow...</option>
+                @foreach ($workflowTemplates as $template)
+                    <option value="{{ $template->id }}">{{ $template->name }}</option>
+                @endforeach
+            </select>
+            @error('workflow_template_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+            
+            @if($workflow_template_id)
+                @php
+                    $selectedWorkflow = $workflowTemplates->firstWhere('id', $workflow_template_id);
+                @endphp
+                @if($selectedWorkflow)
+                    <div class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <p class="text-sm text-gray-700"><strong>{{ $selectedWorkflow->name }}</strong></p>
+                        <p class="text-xs text-gray-600 mt-1">{{ $selectedWorkflow->description }}</p>
+                        @if ($selectedWorkflow->workTemplates->count() > 0)
+                            <div class="mt-2">
+                                <span class="text-xs font-semibold text-gray-700">Steps:</span>
+                                <ul class="list-disc list-inside text-xs text-gray-600">
+                                    @foreach ($selectedWorkflow->workTemplates as $work)
+                                        <li>{{ $work->name }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                    </div>
+                @endif
+            @endif
+            
+            <div class="mt-2 text-right">
+                <a href="{{ route('creator.workflows.create') }}" target="_blank" class="text-xs text-gray-600 hover:text-blue-700">
+                    + Create New Workflow
+                </a>
             </div>
-        @else
-            <!-- Empty State: Selection buttons -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Workflow</label>
-                <div class="flex space-x-2">
-                    <button type="button" wire:click="$dispatch('openWorkflowSelector')"
-                        class="flex-1 bg-gray-100 border border-gray-300 rounded-md p-2 text-sm hover:bg-gray-200 transition">
-                        Select existing
-                    </button>
-                    <a href="{{ route('creator.workflows.create') }}" 
-                        class="flex-1 bg-gray-800 text-white text-center rounded-md p-2 text-sm hover:bg-gray-900 transition">
-                        Create new workflow
-                    </a>
-                </div>
-                @error('workflow_template_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
-            </div>
-        @endif
+        </div>
 
         @include('livewire.partials.media-uploader')
 
@@ -131,24 +130,11 @@
                 class="bg-gray-100 border border-gray-300 rounded-md px-4 py-2 text-sm hover:bg-gray-200 transition">
                 Cancel
             </a>
-            <button type="submit" 
+            <button 
+                type="submit"
                 class="bg-blue-600 text-white rounded-md px-4 py-2 text-sm hover:bg-blue-700 transition">
                 {{ $service->exists ? 'Update' : 'Publish' }}
             </button>
         </div>
     </form>
 </div>
-
-@push('scripts')
-<script>
-    // Workflow selector modal listener
-    document.addEventListener('livewire:initialized', () => {
-        Livewire.on('openWorkflowSelector', () => {
-            // Open modal with workflow templates list
-            // Implementation depends on your modal system
-            console.log('Open workflow selector');
-        });
-    });
-</script>
-@endpush
-

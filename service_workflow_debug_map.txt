@@ -1,0 +1,657 @@
+MAP: Generated 2025-11-16 23:33:28
+--app/Livewire/ServiceForm.php
+<?php
+
+namespace App\Livewire;
+
+use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Services\ServiceService;
+use Barryvdh\Debugbar\Facades\Debugbar;
+use Barryvdh\Debugbar\Twig\Extension\Debug;
+use Livewire\Attributes\On;
+
+class ServiceForm extends FormWithMedia
+{
+    public ?Service $service = null;
+
+    // Livewire properties
+    public ?string $title = null;
+    public ?string $description = null;
+    public float|string|null $price = null;
+    public int|string|null $category_id = null;
+    public int|string|null $workflow_template_id = null;
+    public ?bool $pay_first = null;
+    public ?int $address_id = null;
+
+    public $categories;
+    public $workflowTemplates;
+    public $addresses;
+
+    protected $rules = [
+        'title' => 'required|string|min:3|max:255',
+        'description' => 'nullable|string|min:10',
+        'price' => 'required|numeric|min:0.01',
+        'category_id' => 'required|exists:categories,id',
+        'workflow_template_id' => 'required|integer|exists:workflow_templates,id',
+        'address_id' => 'required|exists:addresses,id',
+        'pay_first' => 'boolean',
+        'newFiles.*' => 'nullable|image|max:2048',
+    ];
+
+    public function updatedWorkflowTemplateId($value)
+    {
+        Debugbar::info('updatedWorkflowTemplateId called', [
+            'value' => $value,
+            'type' => gettype($value)
+        ]);
+        
+        // Cast to integer if it's a numeric string
+        if (is_string($value) && is_numeric($value)) {
+            $this->workflow_template_id = (int) $value;
+            Debugbar::info('Casted to integer', ['new_value' => $this->workflow_template_id]);
+        }
+    }
+
+    public function mount(
+        ?Service $service = null,
+        $categories = [],
+        $workflowTemplates = [],
+        $addresses = []
+    ) {
+        $this->service = $service;
+        $this->categories = collect($categories);
+        $this->workflowTemplates = collect($workflowTemplates);
+        $this->addresses = collect($addresses)->map(function ($address) {
+            $address->is_primary = $address->pivot->is_primary ?? false;
+            return $address;
+        });
+
+        Debugbar::info('Addresses', ['addresses' => $this->addresses]);
+
+        // Default values
+        $this->title = '';
+        $this->description = '';
+        $this->price = '';
+        $this->category_id = '';
+        $this->workflow_template_id = null; // Changed from ''
+        $this->pay_first = false;
+        $this->address_id = $this->addresses->firstWhere('pivot.is_primary', true)->id ?? null;
+        $this->existingImages = [];
+        $this->newFiles = [];
+        $this->imagesToRemove = [];
+
+        if ($service->exists) {
+            // Edit mode — overwrite defaults
+            $this->title = $service->title;
+            $this->description = $service->description;
+            $this->price = $service->price;
+            $this->category_id = $service->category_id;
+            $this->workflow_template_id = $service->workflow_template_id;
+            $this->pay_first = $service->pay_first ?? false;
+            $this->address_id = $service->address_id;
+
+            $this->existingImages = $service->media->map(fn($m) => [
+                'id' => $m->id,
+                'url' => $m->getUrl()
+            ])->toArray();
+        } else {
+            // Create mode — set default primary address if exists
+            $primary = $this->addresses->firstWhere('pivot.is_primary', true);
+            $this->address_id = $primary?->id ?? null;
+        }
+        
+        Debugbar::info('Mount completed', [
+            'service_exists' => $service->exists,
+            'workflow_template_id' => $this->workflow_template_id,
+            'workflowTemplates_count' => $this->workflowTemplates->count(),
+            'workflowTemplates_ids' => $this->workflowTemplates->pluck('id')->toArray()
+        ]);
+    }
+
+    public function save(ServiceService $serviceService)
+    {
+        Debugbar::info('=== SAVE METHOD CALLED ===');
+        Debugbar::info('workflow_template_id value and type', [
+            'value' => $this->workflow_template_id,
+            'type' => gettype($this->workflow_template_id),
+            'empty' => empty($this->workflow_template_id)
+        ]);
+        
+        Debugbar::info('BEFORE validate - newFiles', ['count' => count($this->newFiles)]);
+
+        try {
+            $this->validate();
+            Debugbar::info('Validation passed');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Debugbar::error('Validation failed', $e->errors());
+            throw $e; // rethrow so Livewire handles displaying errors
+        }
+
+        Debugbar::info('AFTER validate - newFiles', ['count' => count($this->newFiles)]);
+
+        $uploadedFiles = $this->getUploadedFiles();
+
+        $data = [
+            'title' => $this->title,
+            'description' => $this->description,
+            'price' => $this->price,
+            'category_id' => $this->category_id,
+            'workflow_template_id' => $this->workflow_template_id,
+            'address_id' => $this->address_id,
+            'pay_first' => $this->pay_first,
+            'creator_id' => auth()->id(),
+            'images_to_remove' => $this->imagesToRemove,
+        ];
+
+        Debugbar::info('Data to save', $data);
+
+        if ($this->service->exists) {
+            $serviceService->updateService($this->service, $data, $uploadedFiles);
+        } else {
+            $serviceService->createService($data, $uploadedFiles);
+        }
+
+        session()->flash('success', 'Service saved successfully!');
+        return redirect()->route('creator.services.index');
+    }
+
+    public function render()
+    {
+        return view('livewire.service-form');
+    }
+}
+----
+--resources/views/creator/services/create.blade.php
+<x-app-layout>
+    <div class="py-6">
+        <div class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">
+            <livewire:service-form 
+                :categories="$categories"
+                :workflowTemplates="$workflowTemplates"
+                :addresses="$addresses"
+                :key="'service-form-create'"
+            />
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/creator/services/edit.blade.php
+<x-app-layout>
+    <div class="py-6">
+        <div class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">
+            <livewire:service-form 
+                :service="$service"
+                :categories="$categories"
+                :workflowTemplates="$workflowTemplates"
+                :addresses="$addresses"
+                :key="'service-form-'.$service->id"
+            />
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/livewire/service-form.blade.php
+<div x-data="{ 
+    showWorkflowModal: false, 
+    tempWorkflowId: {{ $workflow_template_id ?? 'null' }}
+}">
+    <header class="flex justify-between items-center p-4 border-b">
+        <h1 class="text-lg font-semibold">{{ $service->exists ? 'Edit Service' : 'Create a Service' }}</h1>
+    </header>
+
+    <!-- Hidden input for two-way binding -->
+    <input type="hidden" wire:model.live="workflow_template_id" x-model="tempWorkflowId" id="workflow_template_id_hidden">
+
+    <form wire:submit.prevent="save" class="p-4 space-y-4" @submit="console.log('Form submitting...', $event)">
+        <!-- Title -->
+        <div>
+            <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+            <input type="text" wire:model.defer="title" id="title" 
+                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            @error('title') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+        </div>
+
+        <!-- Price and Pay First -->
+        <div class="flex space-x-4">
+            <div class="w-1/2">
+                <label for="price" class="block text-sm font-medium text-gray-700">Price</label>
+                <input type="number" wire:model.defer="price" id="price" step="0.01"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @error('price') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+            </div>
+            <div class="w-1/2">
+                <label for="pay-first" class="block text-sm font-medium text-gray-700">Pay First</label>
+                <select wire:model.defer="pay_first" id="pay-first" 
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="0">No</option>
+                    <option value="1">Yes</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Category and Address -->
+        <div class="flex space-x-4">
+            <div class="w-1/2">
+                <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                <select wire:model.defer="category_id" id="category"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Select...</option>
+                    @foreach ($categories as $cat)
+                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                    @endforeach
+                </select>
+                @error('category_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+            </div>
+            <div class="w-1/2">
+                <label for="address" class="block text-sm font-medium text-gray-700">Address</label>
+                <select wire:model="address_id" id="address"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Select...</option>
+                    @foreach($addresses as $address)
+                        <option value="{{ $address->id }}">
+                            {{ $address->street }}, {{ $address->city }}
+                            @if($address->is_primary) (Primary) @endif
+                        </option>
+                    @endforeach
+                </select>
+                @error('address_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                <a href="{{ route('profile.edit') }}" class="text-xs text-blue-600 hover:text-blue-700 mt-1 inline-block">+ Add new address</a>
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+            <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+            <textarea wire:model.defer="description" id="description" rows="4" 
+                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+            @error('description') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+        </div>
+
+        <!-- Workflow Section - Uses Alpine to display name reactively -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Workflow</label>
+            <div class="border border-gray-300 bg-gray-50 rounded-md p-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-800 font-semibold">
+                        <template x-if="tempWorkflowId">
+                            <span x-text="(() => {
+                                const workflows = {{ $workflowTemplates->pluck('name', 'id')->toJson() }};
+                                return workflows[tempWorkflowId] || 'None';
+                            })()"></span>
+                        </template>
+                        <template x-if="!tempWorkflowId">
+                            <span>None</span>
+                        </template>
+                    </span>
+                    <button type="button" @click="showWorkflowModal = true" class="text-sm text-blue-600 hover:underline">
+                        <span x-text="tempWorkflowId ? 'Change' : 'Select'">Select</span>
+                    </button>
+                </div>
+                <!-- DEBUG INFO -->
+                <div class="mt-2 text-xs text-gray-500 border-t pt-2">
+                    <strong>Debug:</strong> workflow_template_id = {{ $workflow_template_id ?? 'NULL' }} | 
+                    Alpine tempWorkflowId = <span x-text="tempWorkflowId || 'NULL'"></span>
+                </div>
+            </div>
+            @error('workflow_template_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+            <div class="mt-2 text-right">
+                <a href="{{ route('creator.workflows.create') }}" target="_blank" class="text-xs text-gray-600 hover:text-blue-700">
+                    + Create New Workflow
+                </a>
+            </div>
+        </div>
+
+        @include('livewire.partials.media-uploader')
+
+        <!-- Action Buttons -->
+        <div class="flex justify-end space-x-3 pt-4 border-t mt-6">
+            <a href="{{ route('creator.services.index') }}" 
+                class="bg-gray-100 border border-gray-300 rounded-md px-4 py-2 text-sm hover:bg-gray-200 transition">
+                Cancel
+            </a>
+            <button 
+                type="submit"
+                @click="console.log('Save button clicked'); console.log('tempWorkflowId:', tempWorkflowId);"
+                class="bg-blue-600 text-white rounded-md px-4 py-2 text-sm hover:bg-blue-700 transition">
+                {{ $service->exists ? 'Update' : 'Publish' }}
+            </button>
+        </div>
+    </form>
+
+    <div 
+        x-show="showWorkflowModal"
+        @keydown.escape.window="showWorkflowModal = false"
+        class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center"
+        aria-labelledby="modal-title"
+        role="dialog"
+        aria-modal="true"
+        style="display: none;"
+    >
+        <!-- Modal backdrop -->
+        <div 
+            x-show="showWorkflowModal"
+            x-transition:enter="ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 bg-gray-800 bg-opacity-75 transition-opacity"
+            @click="showWorkflowModal = false"
+        ></div>
+
+        <!-- Modal -->
+        <div 
+            x-show="showWorkflowModal"
+            x-transition:enter="ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+            x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+            x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+            class="relative inline-block bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col transform transition-all sm:my-8 sm:align-middle"
+        >
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-semibold" id="modal-title">Select a Workflow</h3>
+                <button @click="showWorkflowModal = false" class="text-gray-500 hover:text-gray-700">&times;</button>
+            </div>
+            <div class="p-4 overflow-y-auto">
+                <div class="space-y-4">
+                    @forelse ($workflowTemplates as $template)
+                        <div 
+                            class="p-4 border rounded-lg hover:bg-gray-100 hover:border-blue-500 {{ $workflow_template_id == $template->id ? 'bg-blue-50 border-blue-500' : '' }}"
+                        >
+                            <h4 class="font-bold text-lg">{{ $template->name }}</h4>
+                            <p class="text-sm text-gray-600">{{ $template->description }}</p>
+                            @if ($template->workTemplates->count() > 0)
+                                <div class="mt-2">
+                                    <span class="text-xs font-semibold text-gray-700">Steps:</span>
+                                    <ul class="list-disc list-inside text-sm text-gray-600">
+                                        @foreach ($template->workTemplates as $work)
+                                            <li>{{ $work->name }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @else
+                                <p class="text-sm text-gray-500 mt-2">No steps defined for this workflow.</p>
+                            @endif
+                            <div class="mt-3 text-right">
+                                <button 
+                                    type="button"
+                                    @click="
+                                        console.log('Button clicked for workflow:', {{ $template->id }});
+                                        console.log('Setting tempWorkflowId');
+                                        tempWorkflowId = {{ $template->id }};
+                                        console.log('tempWorkflowId set to:', tempWorkflowId);
+                                        setTimeout(() => console.log('After timeout, tempWorkflowId:', tempWorkflowId), 100);
+                                        showWorkflowModal = false;
+                                    "
+                                    class="px-4 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                                >
+                                    Select This Workflow
+                                </button>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-8">
+                            <p class="text-gray-500">You haven't created any workflow templates yet.</p>
+                            <a href="{{ route('creator.workflows.create') }}" class="mt-2 inline-block text-blue-500 hover:underline">Create one now</a>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+            <div class="p-4 border-t bg-gray-50 rounded-b-lg text-right">
+                <a href="{{ route('creator.workflows.create') }}" target="_blank" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+                    Create New Workflow
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Script -->
+    <script>
+        document.addEventListener('livewire:init', () => {
+            console.log('Livewire initialized');
+        });
+    </script>
+</div>
+----
+--resources/views/livewire/workflow-builder.blade.php
+<div>
+    <!-- Workflow Details Section -->
+    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+        <div class="p-6 bg-white border-b border-gray-200">
+            <h3 class="text-lg font-semibold mb-4">Workflow Details</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="workflow_name" class="block text-sm font-medium text-gray-700">Workflow Name</label>
+                    <input
+                        type="text"
+                        id="workflow_name"
+                        wire:model.defer="name"
+                        wire:change="$set('hasSavedChanges', false)"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+
+                <div>
+                    <label for="workflow_description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea
+                        id="workflow_description"
+                        wire:model.defer="description"
+                        wire:change="$set('hasSavedChanges', false)"
+                        rows="3"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="is_public" class="flex items-center">
+                        <input 
+                            id="is_public" 
+                            type="checkbox" 
+                            wire:model.defer="is_public"
+                            wire:change="$set('hasSavedChanges', false)"
+                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <span class="ml-2 text-sm text-gray-600">Make Public</span>
+                    </label>
+                    <button
+                        wire:click="save"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        Save Workflow
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflow Steps Section -->
+    <div class="mt-8 bg-white overflow-hidden shadow-sm sm:rounded-lg">
+        <div class="p-6 bg-white border-b border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Workflow Steps</h3>
+                <div>
+                    <button
+                        wire:click="addStep"
+                        class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                        Add New Step
+                    </button>
+                    <button
+                        wire:click="openCatalog"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 ml-2">
+                        Add From Catalog
+                    </button>
+                </div>
+            </div>
+
+            <!-- SORTABLE LIST - Corrected for Livewire 4 -->
+            <ul wire:sortable="updateStepOrder" class="space-y-4">
+                @forelse ($workTemplates as $workTemplate)
+                    <li
+                        wire:sortable.item="{{ $workTemplate['id'] }}"
+                        wire:key="step-{{ $workTemplate['id'] }}"
+                        class="p-4 bg-gray-50 rounded-lg shadow-sm flex justify-between items-center hover:shadow-md transition-shadow">
+                        <div class="flex items-center flex-1">
+                            <span wire:sortable.handle class="cursor-grab active:cursor-grabbing text-gray-400 mr-4 text-lg font-bold">
+                                ⋮⋮
+                            </span>
+                            <div>
+                                <p class="font-semibold">{{ $workTemplate['name'] }}</p>
+                                <p class="text-sm text-gray-600">{{ $workTemplate['description'] }}</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-4">
+                            <button
+                                wire:click="editStep({{ $workTemplate['id'] }})"
+                                class="text-indigo-600 hover:text-indigo-900 font-medium">
+                                Edit
+                            </button>
+                            <button
+                                wire:click="deleteStep({{ $workTemplate['id'] }})"
+                                class="text-red-600 hover:text-red-900 font-medium">
+                                Delete
+                            </button>
+                        </div>
+                    </li>
+                @empty
+                    <li class="text-center text-gray-500 py-8">
+                        No steps yet. Add one to get started.
+                    </li>
+                @endforelse
+            </ul>
+        </div>
+    </div>
+
+    <!-- Work Catalog Modal -->
+    @if($showCatalogModal)
+        <div class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+                <div class="p-6 border-b">
+                    <h3 class="text-lg font-semibold">Add Step From Catalog</h3>
+                </div>
+                <div class="p-6 max-h-96 overflow-y-auto">
+                    <ul class="space-y-4">
+                        @forelse ($workCatalogs as $catalog)
+                            <li class="p-4 bg-gray-50 rounded-lg shadow-sm flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold">{{ $catalog->name }}</p>
+                                    <p class="text-sm text-gray-600">{{ $catalog->description }}</p>
+                                </div>
+                                <div>
+                                    <button
+                                        wire:click="addStepFromCatalog({{ $catalog->id }})"
+                                        class="px-3 py-1 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
+                                        Add
+                                    </button>
+                                </div>
+                            </li>
+                        @empty
+                            <li class="text-center text-gray-500 py-4">
+                                No items in catalog.
+                            </li>
+                        @endforelse
+                    </ul>
+                </div>
+                <div class="p-4 bg-gray-50 border-t flex justify-end">
+                    <button
+                        wire:click="closeCatalog"
+                        class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Edit Step Modal -->
+    @if($showEditStepModal)
+        <div class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+                <div class="p-6 border-b">
+                    <h3 class="text-lg font-semibold">Edit Step</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label for="editing_step_name" class="block text-sm font-medium text-gray-700">Name</label>
+                        <input
+                            type="text"
+                            id="editing_step_name"
+                            wire:model.defer="editingStep.name"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label for="editing_step_description" class="block text-sm font-medium text-gray-700">Description</label>
+                        <textarea
+                            id="editing_step_description"
+                            wire:model.defer="editingStep.description"
+                            rows="3"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-50 border-t flex justify-end space-x-2">
+                    <button
+                        wire:click="closeEditStepModal"
+                        class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                        Cancel
+                    </button>
+                    <button
+                        wire:click="updateStep"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Navigation Guard Script -->
+    <script>
+        let hasUnsavedChanges = !@json($hasSavedChanges);
+
+        // Listen for changes to reset saved state
+        document.addEventListener('livewire:init', () => {
+            Livewire.on('workflowSaved', () => {
+                hasUnsavedChanges = false;
+            });
+        });
+
+        // Track form changes
+        document.addEventListener('input', (e) => {
+            if (e.target.matches('input, textarea, select')) {
+                hasUnsavedChanges = true;
+            }
+        });
+
+        // Prevent navigation if there are unsaved changes
+        window.addEventListener('beforeunload', (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = ''; // Chrome requires returnValue to be set
+                return 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        });
+
+        // Handle in-app navigation (for SPAs or Livewire navigation)
+        document.addEventListener('livewire:navigating', (e) => {
+            if (hasUnsavedChanges) {
+                if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+
+        // Handle regular link clicks
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (link && hasUnsavedChanges && !link.getAttribute('href').startsWith('#')) {
+                if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    </script>
+</div>
+----
+--SUMMARY
+Text:5 Binary:0 Skipped:1540
