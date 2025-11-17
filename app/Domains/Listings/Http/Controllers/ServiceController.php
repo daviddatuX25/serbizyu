@@ -51,9 +51,22 @@ class ServiceController extends Controller
      */
     public function show(Service $service)
     {
-        // The getService method eager loads all necessary relationships
-        $service = $this->serviceService->getService($service->id);
-        return view('listings.show', compact('service'));
+        $this->authorize('view', $service);
+        return view('listings.services.show', compact('service'));
+    }
+
+
+    public function manage(Service $service) {
+        $this->authorize('update', $service);
+        // Placeholder data as per the guide
+            $analytics = [
+                'total_revenue' => 0,
+                'today_clicks' => 0,
+                'wishlist_count' => 0,
+            ];
+            $orders = [];
+            $reviews = [];
+        return view('creator.services.show', compact('service', 'analytics', 'orders', 'reviews'));
     }
 
     /**

@@ -1,0 +1,1151 @@
+MAP: Generated 2025-11-16 11:22:33
+--app/Domains/Listings/Http/Controllers/WorkflowTemplateController.php
+<?php
+
+namespace App\Domains\Listings\Http\Controllers;
+
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class WorkflowTemplateController extends Controller
+{
+    public function __construct(private readonly WorkflowTemplateService $workflowTemplateService)
+    {
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $workflowTemplates = $this->workflowTemplateService->getWorkflowTemplatesByCreator(Auth::id());
+        return view('creator.workflows.index', compact('workflowTemplates'));
+    }
+
+    /**
+     * Show the form for creating a new workflow.
+     * Creates an unsaved model instance.
+     */
+    public function create()
+    {
+        // Create a NEW unsaved model instance
+        $workflowTemplate = new WorkflowTemplate([
+            'name' => 'Untitled Workflow',
+            'description' => '',
+            'creator_id' => Auth::id(),
+            'is_public' => false,
+        ]);
+
+        // IMPORTANT: Model exists in memory but NOT in database
+        // $workflowTemplate->exists === false
+        
+        return view('creator.workflows.builder', ['workflowTemplate' => $workflowTemplate]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(WorkflowTemplate $workflow)
+    {
+        $this->authorize('update', $workflow);   
+        return view('creator.workflows.builder', ['workflowTemplate' => $workflow]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, WorkflowTemplate $workflow)
+    {
+        $this->authorize('update', $workflow);
+        $this->workflowTemplateService->updateWorkflowTemplate($workflow, $request->all());
+        return redirect()->route('creator.workflows.index')->with('success', 'Workflow updated successfully.');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(WorkflowTemplate $workflow)
+    {
+        $this->authorize('delete', $workflow);
+        $this->workflowTemplateService->deleteWorkflowTemplate($workflow);
+        return redirect()->route('creator.workflows.index')->with('success', 'Workflow deleted successfully.');
+    }
+
+    /**
+     * Duplicate the specified resource.
+     */
+    public function duplicate(WorkflowTemplate $workflow)
+    {
+        $this->authorize('duplicate', $workflow);
+        $newWorkflow = $this->workflowTemplateService->duplicateWorkflowTemplate($workflow);
+        return redirect()->route('creator.workflows.edit', $newWorkflow)->with('success', 'Workflow duplicated successfully.');
+    }
+}
+----
+--app/Domains/Listings/Models/WorkflowTemplate.php
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domains\Users\Models\User;
+
+class WorkflowTemplate extends Model
+{
+    use hasFactory, SoftDeletes;
+
+    protected $fillable = ['name', 'description', 'creator_id', 'is_public'];
+
+    // casts
+    protected $casts = [
+        'is_public' => 'boolean',
+    ];
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+
+    public function services()
+    {
+        return $this->belongsToMany(Service::class);
+    }
+
+    public function workTemplates()
+    {
+        return $this->hasMany(WorkTemplate::class);
+    }
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\WorkflowTemplateFactory::new();
+    }
+
+}
+----
+--app/Domains/Listings/Policies/WorkflowPolicy.php
+<?php
+
+namespace App\Domains\Listings\Policies;
+
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Users\Models\User;
+use Illuminate\Auth\Access\Response;
+
+class WorkflowPolicy
+{
+    /**
+     * Determine whether the user can view any models.
+     */
+    public function viewAny(User $user): bool
+    {
+        return true;
+    }
+
+    /**
+     * Determine whether the user can view the model.
+     */
+    public function view(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return $user->id === $workflowTemplate->creator_id;
+    }
+
+    /**
+     * Determine whether the user can create models.
+     */
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    /**
+     * Determine whether the user can update the model.
+     */
+    public function update(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return $user->id === $workflowTemplate->creator_id;
+    }
+
+    /**
+     * Determine whether the user can delete the model.
+     */
+    public function delete(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return $user->id === $workflowTemplate->creator_id;
+    }
+
+    /**
+     * Determine whether the user can duplicate the model.
+     */
+    public function duplicate(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return $user->id === $workflowTemplate->creator_id;
+    }
+
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return false;
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, WorkflowTemplate $workflowTemplate): bool
+    {
+        return false;
+    }
+}
+----
+--app/Domains/Listings/Services/WorkflowTemplateService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Exceptions\ResourceNotFoundException;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class WorkflowTemplateService
+{
+    public function getWorkflowTemplate(int $id): WorkflowTemplate
+    {
+        $workflowTemplate = WorkflowTemplate::with('workTemplates')->find($id);
+        if ($workflowTemplate == null) {
+            throw new ResourceNotFoundException('Workflow template does not exist.');
+        }
+        return $workflowTemplate;
+    }
+
+    public function getWorkflowTemplatesByCreator(int $creatorId, array $filters = []): Collection
+    {
+        $query = WorkflowTemplate::where('creator_id', $creatorId)
+            ->orWhere('is_public', true)
+            ->orderBy('name');
+
+        if (isset($filters['search'])) {
+            $query->where('name', 'like', '%' . $filters['search'] . '%');
+        }
+
+        return $query->get();
+    }
+
+    public function createWorkflowTemplate(array $data): WorkflowTemplate
+    {
+        return WorkflowTemplate::create($data);
+    }
+
+    public function updateWorkflowTemplate(WorkflowTemplate $workflowTemplate, array $data): WorkflowTemplate
+    {
+        $workflowTemplate->update($data);
+        return $workflowTemplate;
+    }
+
+    public function deleteWorkflowTemplate(WorkflowTemplate $workflowTemplate): void
+    {
+        DB::transaction(function () use ($workflowTemplate) {
+            $workflowTemplate->workTemplates()->delete();
+            $workflowTemplate->delete();
+        });
+    }
+
+    public function duplicateWorkflowTemplate(WorkflowTemplate $workflowTemplate): WorkflowTemplate
+    {
+        return DB::transaction(function () use ($workflowTemplate) {
+            $newWorkflowTemplate = $workflowTemplate->replicate([
+                'name' // You might want to adjust the name of the duplicate
+            ]);
+            $newWorkflowTemplate->name = $workflowTemplate->name . ' (Copy)';
+            $newWorkflowTemplate->save();
+
+            foreach ($workflowTemplate->workTemplates as $workTemplate) {
+                $newWorkTemplate = $workTemplate->replicate();
+                $newWorkflowTemplate->workTemplates()->save($newWorkTemplate);
+            }
+
+            return $newWorkflowTemplate;
+        });
+    }
+}
+----
+--app/Livewire/WorkflowBuilder.php
+<?php
+
+namespace App\Livewire;
+
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Listings\Models\WorkTemplate;
+use App\Domains\Listings\Models\WorkCatalog;
+use App\Domains\Listings\Services\WorkCatalogService;
+use App\Domains\Listings\Services\WorkTemplateService;
+use App\Domains\Listings\Services\WorkflowTemplateService;
+use Livewire\Component;
+use Illuminate\Support\Collection;
+
+class WorkflowBuilder extends Component
+{
+    // Use public property without type hint for Livewire compatibility
+    public $workflowTemplate;
+    
+    // Memory-based collections (not saved to DB yet)
+    public $workTemplates = [];
+    public $pendingDeletes = []; // Track steps to delete on save
+    
+    public $showCatalogModal = false;
+    public $workCatalogs = [];
+    public $showEditStepModal = false;
+    public $editingStep = null;
+
+    public $name = '';
+    public $description = '';
+    public $is_public = false;
+
+    // Track if changes have been saved
+    public $hasSavedChanges = false;
+    private $tempIdCounter = -1; // Negative IDs for new items
+
+    public function mount(WorkflowTemplate $workflowTemplate)
+    {
+        $this->workflowTemplate = $workflowTemplate;
+        
+        // Load existing steps into memory
+        $this->workTemplates = $workflowTemplate->workTemplates()
+            ->orderBy('order')
+            ->get()
+            ->map(function ($step) {
+                // Convert to array for easier manipulation
+                return [
+                    'id' => $step->id,
+                    'workflow_template_id' => $step->workflow_template_id,
+                    'name' => $step->name,
+                    'description' => $step->description,
+                    'order' => $step->order,
+                    'work_catalog_id' => $step->work_catalog_id,
+                    'is_persisted' => true, // Track if it exists in DB
+                ];
+            })
+            ->toArray();
+
+        $this->name = $workflowTemplate->name ?? '';
+        $this->description = $workflowTemplate->description ?? '';
+        $this->is_public = $workflowTemplate->is_public ?? false;
+    }
+
+    /**
+     * Check if there are unsaved changes
+     */
+    public function hasUnsavedChanges(): bool
+    {
+        if ($this->hasSavedChanges) {
+            return false;
+        }
+
+        // Reload the model to get fresh data from DB
+        $original = WorkflowTemplate::find($this->workflowTemplate->id);
+
+        // Check if workflow template properties have changed
+        $workflowChanged = $this->name !== $original->name ||
+                          $this->description !== ($original->description ?? '') ||
+                          $this->is_public !== $original->is_public;
+
+        // Check if there are pending changes to steps
+        $stepsChanged = collect($this->workTemplates)->contains('is_persisted', false) || 
+                       !empty($this->pendingDeletes) ||
+                       $this->stepsOrderChanged($original);
+
+        return $workflowChanged || $stepsChanged;
+    }
+
+    /**
+     * Check if step order has changed
+     */
+    private function stepsOrderChanged($original): bool
+    {
+        $originalSteps = $original->workTemplates()
+            ->orderBy('order')
+            ->pluck('order', 'id')
+            ->toArray();
+
+        foreach ($this->workTemplates as $step) {
+            if ($step['is_persisted'] && isset($originalSteps[$step['id']])) {
+                if ($originalSteps[$step['id']] !== $step['order']) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public function openCatalog(WorkCatalogService $workCatalogService)
+    {
+        $this->workCatalogs = $workCatalogService->getAllWorkCatalogs();
+        $this->showCatalogModal = true;
+    }
+
+    public function closeCatalog()
+    {
+        $this->showCatalogModal = false;
+    }
+
+    public function addStepFromCatalog($catalogId, WorkCatalogService $workCatalogService)
+    {
+        $catalogItem = $workCatalogService->getWorkCatalog($catalogId);
+        
+        // Add to memory, not DB
+        $lastOrder = collect($this->workTemplates)->max('order') ?? -1;
+        
+        $this->workTemplates[] = [
+            'id' => $this->tempIdCounter--,
+            'workflow_template_id' => $this->workflowTemplate->id,
+            'name' => $catalogItem->name,
+            'description' => $catalogItem->description,
+            'order' => $lastOrder + 1,
+            'work_catalog_id' => $catalogItem->id,
+            'is_persisted' => false,
+        ];
+        
+        $this->hasSavedChanges = false;
+        $this->closeCatalog();
+    }
+
+    public function save(WorkflowTemplateService $workflowTemplateService, WorkTemplateService $workTemplateService)
+    {
+        // Reload workflow to avoid stale data issues
+        $this->workflowTemplate = WorkflowTemplate::find($this->workflowTemplate->id);
+
+        // Save workflow details
+        $workflowTemplateService->updateWorkflowTemplate($this->workflowTemplate, [
+            'name' => $this->name,
+            'description' => $this->description ?: null,
+            'is_public' => $this->is_public,
+        ]);
+
+        // Delete pending deletions
+        foreach ($this->pendingDeletes as $stepId) {
+            $step = WorkTemplate::find($stepId);
+            if ($step) {
+                $workTemplateService->deleteWorkTemplate($step);
+            }
+        }
+        $this->pendingDeletes = [];
+
+        // Save or update steps
+        foreach ($this->workTemplates as $index => $stepData) {
+            if (!$stepData['is_persisted']) {
+                // Create new step
+                $step = $workTemplateService->createWorkTemplate([
+                    'workflow_template_id' => $this->workflowTemplate->id,
+                    'name' => $stepData['name'],
+                    'description' => $stepData['description'],
+                    'order' => $stepData['order'],
+                    'work_catalog_id' => $stepData['work_catalog_id'] ?? null,
+                ]);
+                
+                // Update collection with real ID
+                $this->workTemplates[$index]['id'] = $step->id;
+                $this->workTemplates[$index]['is_persisted'] = true;
+            } else {
+                // Update existing step
+                $step = WorkTemplate::find($stepData['id']);
+                if ($step) {
+                    $workTemplateService->updateWorkTemplate($step, $stepData);
+                }
+            }
+        }
+
+        $this->workflowTemplate->refresh();
+        
+        // Mark as saved
+        $this->hasSavedChanges = true;
+        
+        session()->flash('success', 'Workflow saved successfully.');
+        
+        // Dispatch browser event to update navigation guard
+        $this->dispatch('workflowSaved');
+    }
+
+    public function addStep()
+    {
+        $lastOrder = collect($this->workTemplates)->max('order') ?? -1;
+        
+        // Add to memory only
+        $this->workTemplates[] = [
+            'id' => $this->tempIdCounter--,
+            'workflow_template_id' => $this->workflowTemplate->id,
+            'name' => 'New Step',
+            'description' => 'Step description',
+            'order' => $lastOrder + 1,
+            'work_catalog_id' => null,
+            'is_persisted' => false,
+        ];
+        
+        $this->hasSavedChanges = false;
+    }
+
+    public function deleteStep($stepId)
+    {
+        $steps = collect($this->workTemplates);
+        
+        // Find step in memory
+        $step = $steps->firstWhere('id', $stepId);
+
+        if ($step) {
+            // If persisted, add to pending deletes
+            if ($step['is_persisted']) {
+                $this->pendingDeletes[] = $stepId;
+            }
+            
+            // Remove from memory
+            $this->workTemplates = $steps->filter(function ($s) use ($stepId) {
+                return $s['id'] !== $stepId;
+            })->values()->toArray();
+            
+            $this->hasSavedChanges = false;
+        }
+    }
+
+    public function editStep($stepId)
+    {
+        $this->editingStep = collect($this->workTemplates)->firstWhere('id', $stepId);
+        $this->showEditStepModal = true;
+    }
+
+    public function closeEditStepModal()
+    {
+        $this->showEditStepModal = false;
+        $this->editingStep = null;
+    }
+
+    public function updateStep()
+    {
+        // Update in memory only
+        $steps = collect($this->workTemplates);
+        $stepIndex = $steps->search(function ($step) {
+            return $step['id'] === $this->editingStep['id'];
+        });
+
+        if ($stepIndex !== false) {
+            $this->workTemplates[$stepIndex] = $this->editingStep;
+            $this->hasSavedChanges = false;
+        }
+        
+        $this->closeEditStepModal();
+    }
+
+    public function updateStepOrder($orderedIds)
+    {
+        // Update order in memory
+        $steps = collect($this->workTemplates);
+        
+        foreach ($orderedIds as $item) {
+            $stepId = $item['value'];
+            $newOrder = $item['order'];
+            
+            $stepIndex = $steps->search(function ($step) use ($stepId) {
+                return $step['id'] === $stepId;
+            });
+            
+            if ($stepIndex !== false) {
+                $this->workTemplates[$stepIndex]['order'] = $newOrder;
+            }
+        }
+        
+        // Re-sort by order
+        $this->workTemplates = collect($this->workTemplates)
+            ->sortBy('order')
+            ->values()
+            ->toArray();
+            
+        $this->hasSavedChanges = false;
+    }
+
+    // Discard changes and reload from DB
+    public function discardChanges()
+    {
+        $fresh = WorkflowTemplate::find($this->workflowTemplate->id);
+        $this->mount($fresh);
+        $this->hasSavedChanges = true; // Prevent navigation warning
+        session()->flash('info', 'Changes discarded.');
+    }
+
+    public function render()
+    {
+        return view('livewire.workflow-builder');
+    }
+}
+----
+--resources/views/creator/workflows/builder.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Workflow Builder') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <livewire:workflow-builder :workflowTemplate="$workflowTemplate" />
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/creator/workflows/index.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('My Workflows') }}
+            </h2>
+            <a href="{{ route('creator.workflows.create') }}" 
+               class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Create New Workflow
+            </a>
+        </div>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <!-- Session Messages -->
+            @if (session('success'))
+                <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+                    <span class="block sm:inline">{{ session('success') }}</span>
+                </div>
+            @endif
+            @if (session('error'))
+                <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    <span class="block sm:inline">{{ session('error') }}</span>
+                </div>
+            @endif
+
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 bg-white border-b border-gray-200">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Name
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Description
+                                    </th>
+                                    <th scope="col" class="relative px-6 py-3">
+                                        <span class="sr-only">Actions</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @forelse ($workflowTemplates as $workflow)
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-medium text-gray-900">{{ $workflow->name }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900">{{ $workflow->description }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <a href="{{ route('creator.workflows.edit', $workflow) }}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                                            <form action="{{ route('creator.workflows.duplicate', $workflow) }}" method="POST" class="inline-block ml-4">
+                                                @csrf
+                                                <button type="submit" class="text-blue-600 hover:text-blue-900">Duplicate</button>
+                                            </form>
+                                            <form action="{{ route('creator.workflows.destroy', $workflow) }}" method="POST" class="inline-block ml-4" onsubmit="return confirm('Are you sure you want to delete this workflow?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                                            No workflows found.
+                                            <a href="{{ route('creator.workflows.create') }}" class="text-indigo-600 hover:text-indigo-900 underline">Create one now</a>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/livewire/workflow-builder.blade.php
+<div>
+    <!-- Workflow Details Section -->
+    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+        <div class="p-6 bg-white border-b border-gray-200">
+            <h3 class="text-lg font-semibold mb-4">Workflow Details</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="workflow_name" class="block text-sm font-medium text-gray-700">Workflow Name</label>
+                    <input
+                        type="text"
+                        id="workflow_name"
+                        wire:model.defer="name"
+                        wire:change="$set('hasSavedChanges', false)"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+
+                <div>
+                    <label for="workflow_description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea
+                        id="workflow_description"
+                        wire:model.defer="description"
+                        wire:change="$set('hasSavedChanges', false)"
+                        rows="3"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="is_public" class="flex items-center">
+                        <input 
+                            id="is_public" 
+                            type="checkbox" 
+                            wire:model.defer="is_public"
+                            wire:change="$set('hasSavedChanges', false)"
+                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <span class="ml-2 text-sm text-gray-600">Make Public</span>
+                    </label>
+                    <button
+                        wire:click="save"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        Save Workflow
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflow Steps Section -->
+    <div class="mt-8 bg-white overflow-hidden shadow-sm sm:rounded-lg">
+        <div class="p-6 bg-white border-b border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Workflow Steps</h3>
+                <div>
+                    <button
+                        wire:click="addStep"
+                        class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                        Add New Step
+                    </button>
+                    <button
+                        wire:click="openCatalog"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 ml-2">
+                        Add From Catalog
+                    </button>
+                </div>
+            </div>
+
+            <!-- SORTABLE LIST - Corrected for Livewire 4 -->
+            <ul wire:sortable="updateStepOrder" class="space-y-4">
+                @forelse ($workTemplates as $workTemplate)
+                    <li
+                        wire:sortable.item="{{ $workTemplate['id'] }}"
+                        wire:key="step-{{ $workTemplate['id'] }}"
+                        class="p-4 bg-gray-50 rounded-lg shadow-sm flex justify-between items-center hover:shadow-md transition-shadow">
+                        <div class="flex items-center flex-1">
+                            <span wire:sortable.handle class="cursor-grab active:cursor-grabbing text-gray-400 mr-4 text-lg font-bold">
+                                ⋮⋮
+                            </span>
+                            <div>
+                                <p class="font-semibold">{{ $workTemplate['name'] }}</p>
+                                <p class="text-sm text-gray-600">{{ $workTemplate['description'] }}</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-4">
+                            <button
+                                wire:click="editStep({{ $workTemplate['id'] }})"
+                                class="text-indigo-600 hover:text-indigo-900 font-medium">
+                                Edit
+                            </button>
+                            <button
+                                wire:click="deleteStep({{ $workTemplate['id'] }})"
+                                class="text-red-600 hover:text-red-900 font-medium">
+                                Delete
+                            </button>
+                        </div>
+                    </li>
+                @empty
+                    <li class="text-center text-gray-500 py-8">
+                        No steps yet. Add one to get started.
+                    </li>
+                @endforelse
+            </ul>
+        </div>
+    </div>
+
+    <!-- Work Catalog Modal -->
+    @if($showCatalogModal)
+        <div class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+                <div class="p-6 border-b">
+                    <h3 class="text-lg font-semibold">Add Step From Catalog</h3>
+                </div>
+                <div class="p-6 max-h-96 overflow-y-auto">
+                    <ul class="space-y-4">
+                        @forelse ($workCatalogs as $catalog)
+                            <li class="p-4 bg-gray-50 rounded-lg shadow-sm flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold">{{ $catalog->name }}</p>
+                                    <p class="text-sm text-gray-600">{{ $catalog->description }}</p>
+                                </div>
+                                <div>
+                                    <button
+                                        wire:click="addStepFromCatalog({{ $catalog->id }})"
+                                        class="px-3 py-1 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
+                                        Add
+                                    </button>
+                                </div>
+                            </li>
+                        @empty
+                            <li class="text-center text-gray-500 py-4">
+                                No items in catalog.
+                            </li>
+                        @endforelse
+                    </ul>
+                </div>
+                <div class="p-4 bg-gray-50 border-t flex justify-end">
+                    <button
+                        wire:click="closeCatalog"
+                        class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Edit Step Modal -->
+    @if($showEditStepModal)
+        <div class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+                <div class="p-6 border-b">
+                    <h3 class="text-lg font-semibold">Edit Step</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label for="editing_step_name" class="block text-sm font-medium text-gray-700">Name</label>
+                        <input
+                            type="text"
+                            id="editing_step_name"
+                            wire:model.defer="editingStep.name"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label for="editing_step_description" class="block text-sm font-medium text-gray-700">Description</label>
+                        <textarea
+                            id="editing_step_description"
+                            wire:model.defer="editingStep.description"
+                            rows="3"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-50 border-t flex justify-end space-x-2">
+                    <button
+                        wire:click="closeEditStepModal"
+                        class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                        Cancel
+                    </button>
+                    <button
+                        wire:click="updateStep"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Navigation Guard Script -->
+    <script>
+        let hasUnsavedChanges = !@json($hasSavedChanges);
+
+        // Listen for changes to reset saved state
+        document.addEventListener('livewire:init', () => {
+            Livewire.on('workflowSaved', () => {
+                hasUnsavedChanges = false;
+            });
+        });
+
+        // Track form changes
+        document.addEventListener('input', (e) => {
+            if (e.target.matches('input, textarea, select')) {
+                hasUnsavedChanges = true;
+            }
+        });
+
+        // Prevent navigation if there are unsaved changes
+        window.addEventListener('beforeunload', (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = ''; // Chrome requires returnValue to be set
+                return 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        });
+
+        // Handle in-app navigation (for SPAs or Livewire navigation)
+        document.addEventListener('livewire:navigating', (e) => {
+            if (hasUnsavedChanges) {
+                if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+
+        // Handle regular link clicks
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (link && hasUnsavedChanges && !link.getAttribute('href').startsWith('#')) {
+                if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    </script>
+</div>
+----
+--routes/web.php
+<?php
+use Illuminate\Support\Facades\Route;
+use App\Domains\Listings\Http\Controllers\ServiceController;
+use App\Domains\Users\Http\Controllers\ProfileController;
+use App\Domains\Users\Http\Controllers\UserVerificationController;
+use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
+use App\Domains\Listings\Http\Controllers\CategoryController;
+use App\Domains\Common\Http\Controllers\MediaServeController;
+use App\Domains\Listings\Http\Controllers\ListingController;
+use App\Domains\Listings\Http\Controllers\WorkCatalogController;
+use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
+use App\Domains\Listings\Http\Controllers\WorkTemplateController;
+use App\Domains\Listings\Http\Controllers\OpenOfferController;
+
+// Authentication routes
+require __DIR__.'/auth.php';
+
+// Home and static pages
+    Route::get('/', function () {
+        return view('home');
+    })->name('home');
+
+    Route::get('browse', [ListingController::class, 'index'])->name('browse');
+
+    Route::get('create', function () {
+        return view('create');
+    })->name('create');
+
+    Route::get('about', function () {
+        return view('about');
+    })->name('about');
+
+    Route::get('faq', function () {
+        return view('faq');
+    })->name('faq');
+
+// Public-facing service page
+Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
+
+// Creator space
+Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
+    Route::get('/', function () {
+        return view('dashboard');
+    })->name('dashboard');
+
+    // Service Management
+    Route::resource('services', ServiceController::class);
+    Route::get('services/{service}/manage', [ServiceController::class, 'manage'])->name('services.manage');
+
+    // Category Management
+    Route::resource('categories', CategoryController::class);
+
+    // Workflow Management
+    Route::get('workflows', [WorkflowTemplateController::class, 'index'])->name('workflows.index');
+    Route::get('workflows/create', [WorkflowTemplateController::class, 'create'])->name('workflows.create');
+    Route::get('workflows/{workflow}/edit', [WorkflowTemplateController::class, 'edit'])->name('workflows.edit');
+    Route::patch('workflows/{workflow}', [WorkflowTemplateController::class, 'update'])->name('workflows.update');
+    Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
+    Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
+});
+
+// User Verification
+Route::middleware(['auth'])->prefix('verification')->name('verification.')->group(function () {
+    Route::get('/submit', [UserVerificationController::class, 'create'])->name('create');
+    Route::post('/', [UserVerificationController::class, 'store'])->name('store');
+    Route::get('/status', [UserVerificationController::class, 'status'])->name('status');
+});
+
+// Profile editor
+   Route::middleware(['auth'])->prefix('profile')->group(function () {
+        Route::get('/', [ProfileController::class, 'edit'])
+            ->name('profile.edit');
+
+        Route::patch('/', [ProfileController::class, 'update'])
+            ->name('profile.update');
+
+        Route::delete('/', [ProfileController::class, 'destroy'])
+            ->name('profile.destroy');
+});
+
+// Admin Routes
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/verifications', [AdminUserVerificationController::class, 'index'])->name('verifications.index');
+    Route::get('/verifications/{verification}', [AdminUserVerificationController::class, 'show'])->name('verifications.show');
+    Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
+    Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
+});
+
+Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
+    ->middleware('auth')
+    ->name('media.serve');
+
+----
+--tests/Feature/WorkflowManagementTest.php
+<?php
+
+namespace Tests\Feature;
+
+use App\Domains\Listings\Models\WorkCatalog;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Listings\Models\WorkTemplate;
+use App\Domains\Users\Models\User;
+use App\Livewire\WorkflowBuilder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+use Tests\TestCase;
+
+class WorkflowManagementTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_component_can_render()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->assertStatus(200);
+    }
+
+    public function test_it_displays_existing_steps()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+        WorkTemplate::factory()->create(['workflow_template_id' => $workflow->id, 'name' => 'First Step']);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->assertSee('First Step');
+    }
+
+    public function test_can_save_workflow_details()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id, 'name' => 'Old Name']);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->set('name', 'New Name')
+            ->call('save');
+
+        $this->assertDatabaseHas('workflow_templates', ['id' => $workflow->id, 'name' => 'New Name']);
+    }
+
+    public function test_can_add_a_new_step()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->call('addStep');
+
+        $this->assertDatabaseHas('work_templates', [
+            'workflow_template_id' => $workflow->id,
+            'name' => 'New Step',
+        ]);
+    }
+
+    public function test_can_delete_a_step()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+        $step = WorkTemplate::factory()->create(['workflow_template_id' => $workflow->id]);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->call('deleteStep', $step->id);
+
+        $this->assertDatabaseMissing('work_templates', ['id' => $step->id]);
+    }
+
+    public function test_can_add_step_from_catalog()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+        $catalogItem = WorkCatalog::factory()->create();
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->call('addStepFromCatalog', $catalogItem->id);
+
+        $this->assertDatabaseHas('work_templates', [
+            'workflow_template_id' => $workflow->id,
+            'work_catalog_id' => $catalogItem->id,
+        ]);
+    }
+
+    public function test_can_reorder_steps()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+        $step1 = WorkTemplate::factory()->create(['workflow_template_id' => $workflow->id, 'order' => 0]);
+        $step2 = WorkTemplate::factory()->create(['workflow_template_id' => $workflow->id, 'order' => 1]);
+
+        $newOrder = [
+            ['value' => $step2->id, 'order' => 1],
+            ['value' => $step1->id, 'order' => 2],
+        ];
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->call('updateStepOrder', $newOrder);
+
+        $this->assertDatabaseHas('work_templates', ['id' => $step1->id, 'order' => 2]);
+        $this->assertDatabaseHas('work_templates', ['id' => $step2->id, 'order' => 1]);
+    }
+    
+    public function test_can_update_a_step()
+    {
+        $user = User::factory()->create();
+        $workflow = WorkflowTemplate::factory()->create(['creator_id' => $user->id]);
+        $step = WorkTemplate::factory()->create(['workflow_template_id' => $workflow->id, 'name' => 'Old Step Name']);
+
+        Livewire::actingAs($user)
+            ->test(WorkflowBuilder::class, ['workflow' => $workflow])
+            ->call('editStep', $step->id)
+            ->set('editingStep.name', 'New Step Name')
+            ->call('updateStep');
+
+        $this->assertDatabaseHas('work_templates', ['id' => $step->id, 'name' => 'New Step Name']);
+    }
+}
+----
+--SUMMARY
+Text:10 Binary:0 Skipped:1972

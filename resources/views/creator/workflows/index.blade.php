@@ -4,12 +4,10 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('My Workflows') }}
             </h2>
-            <form action="{{ route('creator.workflows.store') }}" method="POST">
-                @csrf
-                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Create New Workflow
-                </button>
-            </form>
+            <a href="{{ route('creator.workflows.create') }}" 
+               class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Create New Workflow
+            </a>
         </div>
     </x-slot>
 
@@ -70,10 +68,7 @@
                                     <tr>
                                         <td colspan="3" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                                             No workflows found.
-                                            <form action="{{ route('creator.workflows.store') }}" method="POST" class="inline-block">
-                                                @csrf
-                                                <button type="submit" class="text-indigo-600 hover:text-indigo-900 underline">Create one now</button>
-                                            </form>
+                                            <a href="{{ route('creator.workflows.create') }}" class="text-indigo-600 hover:text-indigo-900 underline">Create one now</a>
                                         </td>
                                     </tr>
                                 @endforelse

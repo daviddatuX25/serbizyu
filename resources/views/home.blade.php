@@ -1,4 +1,4 @@
-<x-app-layout header="Welcome to Serbizyu" :cssFiles='["home.css", "browse.css"]' jsFiles="home.js">
+<x-app-layout header="Welcome to Serbizyu" :cssFiles='["home.css", "browse.css"]' :jsFiles="['app.js', 'home.js']">
     <!-- Single Hero Section Container with Swiper -->
     <section class="hero-section relative">
     <!-- Swiper Container -->

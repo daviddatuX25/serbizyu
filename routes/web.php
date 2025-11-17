@@ -45,18 +45,18 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
 
     // Service Management
     Route::resource('services', ServiceController::class);
-
-    // Open Offer Management
-     Route::resource('offers', OpenOfferController::class);
+    Route::get('services/{service}/manage', [ServiceController::class, 'manage'])->name('services.manage');
 
     // Category Management
     Route::resource('categories', CategoryController::class);
 
     // Workflow Management
+    Route::get('workflows', [WorkflowTemplateController::class, 'index'])->name('workflows.index');
+    Route::get('workflows/create', [WorkflowTemplateController::class, 'create'])->name('workflows.create');
+    Route::get('workflows/{workflow}/edit', [WorkflowTemplateController::class, 'edit'])->name('workflows.edit');
+    Route::patch('workflows/{workflow}', [WorkflowTemplateController::class, 'update'])->name('workflows.update');
+    Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
     Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
-    Route::post('workflows/{workflow}/steps/reorder', [WorkTemplateController::class, 'reorder'])->name('workflows.steps.reorder');
-    Route::resource('workflows', WorkflowTemplateController::class);
-    Route::resource('workflows.steps', WorkTemplateController::class)->except(['index', 'show', 'create', 'edit']);
 });
 
 // User Verification
@@ -68,14 +68,14 @@ Route::middleware(['auth'])->prefix('verification')->name('verification.')->grou
 
 // Profile editor
    Route::middleware(['auth'])->prefix('profile')->group(function () {
-    Route::get('/', [ProfileController::class, 'edit'])
-        ->name('profile.edit');
+        Route::get('/', [ProfileController::class, 'edit'])
+            ->name('profile.edit');
 
-    Route::patch('/', [ProfileController::class, 'update'])
-        ->name('profile.update');
+        Route::patch('/', [ProfileController::class, 'update'])
+            ->name('profile.update');
 
-    Route::delete('/', [ProfileController::class, 'destroy'])
-        ->name('profile.destroy');
+        Route::delete('/', [ProfileController::class, 'destroy'])
+            ->name('profile.destroy');
 });
 
 // Admin Routes
@@ -89,3 +89,4 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
     ->middleware('auth')
     ->name('media.serve');
+

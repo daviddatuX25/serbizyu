@@ -11,6 +11,7 @@
                         type="text"
                         id="workflow_name"
                         wire:model.defer="name"
+                        wire:change="$set('hasSavedChanges', false)"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
                         focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 </div>
@@ -20,6 +21,7 @@
                     <textarea
                         id="workflow_description"
                         wire:model.defer="description"
+                        wire:change="$set('hasSavedChanges', false)"
                         rows="3"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
                         focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
@@ -27,7 +29,12 @@
 
                 <div class="flex items-center justify-between">
                     <label for="is_public" class="flex items-center">
-                        <input id="is_public" type="checkbox" wire:model.defer="is_public" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <input 
+                            id="is_public" 
+                            type="checkbox" 
+                            wire:model.defer="is_public"
+                            wire:change="$set('hasSavedChanges', false)"
+                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                         <span class="ml-2 text-sm text-gray-600">Make Public</span>
                     </label>
                     <button
@@ -178,4 +185,51 @@
             </div>
         </div>
     @endif
+
+    <!-- Navigation Guard Script -->
+    <script>
+        let hasUnsavedChanges = !@json($hasSavedChanges);
+
+        // Listen for changes to reset saved state
+        document.addEventListener('livewire:init', () => {
+            Livewire.on('workflowSaved', () => {
+                hasUnsavedChanges = false;
+            });
+        });
+
+        // Track form changes
+        document.addEventListener('input', (e) => {
+            if (e.target.matches('input, textarea, select')) {
+                hasUnsavedChanges = true;
+            }
+        });
+
+        // Prevent navigation if there are unsaved changes
+        window.addEventListener('beforeunload', (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = ''; // Chrome requires returnValue to be set
+                return 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        });
+
+        // Handle in-app navigation (for SPAs or Livewire navigation)
+        document.addEventListener('livewire:navigating', (e) => {
+            if (hasUnsavedChanges) {
+                if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+
+        // Handle regular link clicks
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (link && hasUnsavedChanges && !link.getAttribute('href').startsWith('#')) {
+                if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    </script>
 </div>
