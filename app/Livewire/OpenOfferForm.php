@@ -22,9 +22,10 @@ class OpenOfferForm extends FormWithMedia
     public ?int $workflow_template_id = null;
     public bool $pay_first = false;
     public ?int $address_id = null;
+    public ?string $deadline = null;
 
     /** @var array|UploadedFile[] */
-    public array $new_images = [];
+    public array $newFiles = []; // Renamed from new_images
 
     /** @var int[] IDs of media to remove (when editing) */
     public array $images_to_remove = [];
@@ -43,8 +44,9 @@ class OpenOfferForm extends FormWithMedia
             'workflow_template_id' => 'nullable|integer|exists:workflow_templates,id',
             'pay_first' => 'nullable|boolean',
             'address_id' => 'nullable|integer',
-            'new_images' => 'nullable|array',
-            'new_images.*' => 'file|max:5120', // 5MB per file guard; adjust as needed
+            'deadline' => 'nullable|date|after_or_equal:today',
+            'newFiles' => 'nullable|array', // Updated rule
+            'newFiles.*' => 'file|max:5120', // Updated rule
             'images_to_remove' => 'nullable|array',
             'images_to_remove.*' => 'integer',
         ];
@@ -73,14 +75,42 @@ class OpenOfferForm extends FormWithMedia
             $this->workflow_template_id = $this->offer->workflow_template_id;
             $this->pay_first = (bool)$this->offer->pay_first;
             $this->address_id = $this->offer->address_id;
-            // existing media loaded for display in blade via $offer->getMedia('gallery') or ->loadMedia('gallery')
+            $this->deadline = $this->offer->deadline ? $this->offer->deadline->format('Y-m-d') : null;
         }
     }
 
-    public function updatedNewImages()
+    public function updatedNewFiles() // Renamed method
     {
-        // Optional: limit number of files, validate individually, etc.
-        $this->validateOnly('new_images');
+        $this->validateOnly('newFiles'); // Updated validation
+    }
+
+    public function getExistingImagesProperty()
+    {
+        if (!$this->offer) {
+            return collect();
+        }
+
+        return $this->offer->getMedia('images')->map(function ($media) {
+            return [
+                'id' => $media->id,
+                'url' => route('media.serve', ['payload' => encrypt(json_encode(['media_id' => $media->id]))]),
+                'is_removed' => in_array($media->id, $this->images_to_remove),
+            ];
+        });
+    }
+
+    public function removeExistingMedia(int $mediaId)
+    {
+        if (in_array($mediaId, $this->images_to_remove)) {
+            $this->images_to_remove = array_diff($this->images_to_remove, [$mediaId]);
+        } else {
+            $this->images_to_remove[] = $mediaId;
+        }
+    }
+
+    public function removeNewFile(int $index)
+    {
+        array_splice($this->newFiles, $index, 1);
     }
 
     public function save()
@@ -88,7 +118,6 @@ class OpenOfferForm extends FormWithMedia
         $this->validate();
 
         $openOfferService = app(\App\Domains\Listings\Services\OpenOfferService::class);
-        $uploader = app(MediaUploader::class);
 
         $data = [
             'title' => $this->title,
@@ -98,52 +127,39 @@ class OpenOfferForm extends FormWithMedia
             'workflow_template_id' => $this->workflow_template_id,
             'pay_first' => $this->pay_first,
             'address_id' => $this->address_id,
-            'creator_id' => auth()->id(),
+            'deadline' => $this->deadline,
             'images_to_remove' => $this->images_to_remove,
         ];
 
-        // Prepare new_images as local disk paths (service expects strings to locate files)
         $tempPaths = [];
-        if (!empty($this->new_images)) {
-            foreach ($this->new_images as $file) {
+        if (!empty($this->newFiles)) { // Updated property
+            foreach ($this->newFiles as $file) { // Updated property
                 if ($file instanceof UploadedFile) {
-                    // store to local disk - folder "livewire-temp/offers"
                     $path = $file->store('livewire-temp/offers', 'local');
                     $tempPaths[] = $path;
                 }
             }
-            $data['new_images'] = $tempPaths;
         }
 
         try {
             if ($this->offer) {
-                $updated = $openOfferService->updateOpenOffer($this->offer, $data, $uploader);
+                $updated = $openOfferService->updateOpenOffer($this->offer, $data, $tempPaths);
                 $this->emit('openOfferSaved', $updated->id);
-                session()->flash('success', 'Open offer updated successfully.');
+                session()->flash('success', 'Open offer updated successfully!');
                 return redirect()->route('creator.offers.index');
             } else {
-                $created = $openOfferService->createOpenOffer($data, $uploader);
+                $created = $openOfferService->createOpenOffer(auth()->user(), $data, $tempPaths);
                 $this->emit('openOfferSaved', $created->id);
-                session()->flash('success', 'Open offer created successfully.');
+                session()->flash('success', 'Open offer created successfully!');
                 return redirect()->route('creator.offers.index');
             }
         } catch (\Throwable $e) {
-            // Clean up temp files on failure
             foreach ($tempPaths as $p) {
                 Storage::disk('local')->delete($p);
             }
 
-            // Log and show generic error
             \Log::error('OpenOfferForm save failed: ' . $e->getMessage(), ['exception' => $e]);
             $this->addError('save', 'Failed to save open offer: ' . $e->getMessage());
-        }
-    }
-
-    public function removeExistingMedia(int $mediaId)
-    {
-        // Mark for removal - frontend can call this to add to images_to_remove
-        if (!in_array($mediaId, $this->images_to_remove)) {
-            $this->images_to_remove[] = $mediaId;
         }
     }
 

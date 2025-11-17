@@ -11,6 +11,7 @@ use App\Domains\Listings\Http\Controllers\WorkCatalogController;
 use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
 use App\Domains\Listings\Http\Controllers\WorkTemplateController;
 use App\Domains\Listings\Http\Controllers\OpenOfferController;
+use App\Domains\Listings\Http\Controllers\OpenOfferBidController; // Added
 
 // Authentication routes
 require __DIR__.'/auth.php';
@@ -37,6 +38,9 @@ require __DIR__.'/auth.php';
 // Public-facing service page
 Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
 
+// Public-facing open offer page
+Route::get('/open-offers/{open_offer}', [OpenOfferController::class, 'show'])->name('open-offers.show');
+
 // Creator space
 Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
     Route::get('/', function () {
@@ -49,6 +53,15 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
 
     // Category Management
     Route::resource('categories', CategoryController::class);
+
+    // Open Offer Management
+    Route::resource('offers', OpenOfferController::class);
+    Route::post('offers/{offer}/close', [OpenOfferController::class, 'close'])->name('offers.close');
+
+    // Bidding Management
+    Route::post('offers/{openOffer}/bids', [OpenOfferBidController::class, 'store'])->name('offers.bids.store');
+    Route::post('bids/{openOfferBid}/accept', [OpenOfferBidController::class, 'accept'])->name('bids.accept');
+    Route::post('bids/{openOfferBid}/reject', [OpenOfferBidController::class, 'reject'])->name('bids.reject');
 
     // Workflow Management
     Route::get('workflows', [WorkflowTemplateController::class, 'index'])->name('workflows.index');

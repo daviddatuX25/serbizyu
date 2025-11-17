@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Domains\Listings\Models\Service;
-
+use App\Domains\Users\Models\User;
 
 class OpenOfferBid extends Model
 {
@@ -17,19 +17,24 @@ class OpenOfferBid extends Model
         'open_offer_id',
         'bidder_id',
         'service_id',
-        'proposed_price',
-        'accepted'
+        'amount',
+        'message',
+        'status',
     ];
     
-
     public function service()
     {
-        return $this->belongsToOne(Service::class);
+        return $this->belongsTo(Service::class);
     }
 
     public function openOffer()
     {
-        return $this->belongsToOne(OpenOffer::class);
+        return $this->belongsTo(OpenOffer::class);
+    }
+
+    public function bidder()
+    {
+        return $this->belongsTo(User::class, 'bidder_id');
     }
 
     protected static function newFactory()

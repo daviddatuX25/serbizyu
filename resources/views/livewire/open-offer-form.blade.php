@@ -57,24 +57,16 @@
             @error('address_id') <div class="text-red-600">{{ $message }}</div> @enderror
         </div>
 
-        {{-- existing images (edit mode) --}}
-        @if ($offer)
-            <div>
-                <h4>Existing images</h4>
-                @foreach($offer->getMedia('gallery') ?? [] as $media)
-                    <div style="display:inline-block;margin:4px">
-                        <img src="{{ route('media.serve', ['payload' => encrypt(json_encode(['media_id' => $media->id]))]) }}" alt="" style="width:96px;height:96px;object-fit:cover" />
-                        <button type="button" wire:click="removeExistingMedia({{ $media->id }})">Remove</button>
-                    </div>
-                @endforeach
-            </div>
-        @endif
+        <div>
+            <label for="deadline">Deadline (optional)</label>
+            <input id="deadline" wire:model.defer="deadline" type="date" />
+            @error('deadline') <div class="text-red-600">{{ $message }}</div> @enderror
+        </div>
 
-        
         {{-- Media Upload Section --}}
         @include('livewire.partials.media-upload', [
             'newFiles' => $newFiles,
-            'existingImages' => $existingImages
+            'existingImages' => $this->existingImages // Use computed property
         ])
 
         <div>

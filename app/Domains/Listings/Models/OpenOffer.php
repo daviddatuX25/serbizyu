@@ -12,6 +12,7 @@ use Plank\Mediable\MediableInterface;
 use Plank\Mediable\Media;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Enums\OpenOfferStatus; // Added OpenOfferStatus enum
 
 class OpenOffer extends Model implements MediableInterface
 {
@@ -21,11 +22,25 @@ class OpenOffer extends Model implements MediableInterface
 
     protected $table = 'open_offers';
     
-    protected $fillable = ['title', 'description', 'budget', 'pay_first', 'fulfilled' ,'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
+    protected $fillable = [
+        'title',
+        'description',
+        'budget',
+        'pay_first',
+        'fulfilled',
+        'category_id',
+        'creator_id',
+        'workflow_template_id',
+        'address_id',
+        'deadline', // Added deadline
+        'status',   // Added status
+    ];
 
     // casts
     protected $casts = [
         'fulfilled' => 'boolean',
+        'deadline' => 'datetime', // Added deadline cast
+        'status' => OpenOfferStatus::class, // Added status cast
     ];
 
 
@@ -42,9 +57,13 @@ class OpenOffer extends Model implements MediableInterface
 
     public function creator()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'creator_id'); // Explicitly define foreign key
     }
     
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'creator_id'); // Alias for creator
+    }
 
     public function workflowTemplate()
     {

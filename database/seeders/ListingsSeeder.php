@@ -14,7 +14,7 @@ class ListingsSeeder extends Seeder
 {
     public function run(): void
     {
-        $users = User::all();
+        $users = User::role('user')->get();
         $categories = Category::all();
         $workflows = WorkflowTemplate::where('is_public', true)->get();
         $addresses = Address::all();

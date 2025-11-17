@@ -23,12 +23,18 @@
     @if(count($existingImages) > 0)
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
             @foreach($existingImages as $img)
-                <div class="relative">
+                <div class="relative {{ $img['is_removed'] ? 'opacity-50 grayscale' : '' }}">
                     <img src="{{ $img['url'] }}" class="w-full h-32 object-cover rounded border border-gray-200">
-                    <button type="button" wire:click="removeExistingImage({{ $img['id'] }})"
-                        class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-xs rounded shadow-md">
-                        ✕
+                    <button type="button" wire:click="removeExistingMedia({{ $img['id'] }})"
+                        class="absolute top-1 right-1 text-white px-2 py-1 text-xs rounded shadow-md
+                        {{ $img['is_removed'] ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700' }}">
+                        {{ $img['is_removed'] ? 'Undo' : '✕' }}
                     </button>
+                    @if ($img['is_removed'])
+                        <span class="absolute bottom-1 left-1 bg-yellow-600 text-white px-2 py-0.5 text-xs rounded">
+                            Removed
+                        </span>
+                    @endif
                 </div>
             @endforeach
         </div>
