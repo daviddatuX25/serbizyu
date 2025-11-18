@@ -94,4 +94,8 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
         return $this->hasOne(UserVerification::class);
     }
 
+    public function orders()
+    {
+        return $this->hasMany(\App\Domains\Orders\Models\Order::class, 'buyer_id');
+    }
 }
