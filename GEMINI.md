@@ -84,6 +84,33 @@ php artisan serve;
 npm run dev;
 ```
 
+### Common Issues & Troubleshooting
+
+**404 Errors for Uploaded Images**
+
+If you are seeing 404 errors for images that you know have been uploaded, there are two common configuration issues in a local development environment.
+
+1.  **Storage Link Not Created:** Public files are stored in `storage/app/public`, but accessed via a URL that points to `public/storage`. For this to work, a symbolic link must be created.
+    *   **Symptom:** Image URLs like `http://127.0.0.1:8000/storage/your-image.jpg` give a 404 error.
+    *   **Fix:** Run the following command:
+        ```bash
+        php artisan storage:link
+        ```
+
+2.  **Incorrect `APP_URL`:** The URL for generated media files is based on the `APP_URL` variable in your `.env` file. If this doesn't match the address of your development server, the links will be broken.
+    *   **Symptom:** The page loads, but image URLs point to the wrong address (e.g., `http://localhost` instead of `http://127.0.0.1:8000`).
+    *   **Fix:**
+        1.  Open your `.env` file.
+        2.  Find the `APP_URL` line and ensure it matches your development server address, including the port. For `php artisan serve`, this should be:
+            ```
+            APP_URL=http://127.0.0.1:8000
+            ```
+        3.  After saving the `.env` file, clear the configuration cache:
+            ```bash
+            php artisan config:clear
+            ```
+        4.  Restart your development server.
+
 ### Testing
 
 To run the test suite, use the following command:

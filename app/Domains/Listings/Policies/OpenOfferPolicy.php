@@ -25,6 +25,14 @@ class OpenOfferPolicy
     }
 
     /**
+     * Determine whether the user can view the media attached to the model.
+     */
+    public function viewMedia(?User $user, OpenOffer $openOffer): bool
+    {
+        return true; // Align with the 'view' policy
+    }
+
+    /**
      * Determine whether the user can create models.
      */
     public function create(User $user): bool
@@ -37,7 +45,7 @@ class OpenOfferPolicy
      */
     public function update(User $user, OpenOffer $openOffer): bool
     {
-        return $user->id === $openOffer->user_id; // Only the offer owner can update it
+        return $user->id === $openOffer->creator_id; // Only the offer owner can update it
     }
 
     /**
@@ -45,7 +53,7 @@ class OpenOfferPolicy
      */
     public function delete(User $user, OpenOffer $openOffer): bool
     {
-        return $user->id === $openOffer->user_id; // Only the offer owner can delete it
+        return $user->id === $openOffer->creator_id; // Only the offer owner can delete it
     }
 
     /**
@@ -53,7 +61,7 @@ class OpenOfferPolicy
      */
     public function close(User $user, OpenOffer $openOffer): bool
     {
-        return $user->id === $openOffer->user_id; // Only the offer owner can close it
+        return $user->id === $openOffer->creator_id; // Only the offer owner can close it
     }
 
     /**
@@ -61,7 +69,7 @@ class OpenOfferPolicy
      */
     public function restore(User $user, OpenOffer $openOffer): bool
     {
-        return $user->id === $openOffer->user_id;
+        return $user->id === $openOffer->creator_id;
     }
 
     /**
@@ -69,6 +77,6 @@ class OpenOfferPolicy
      */
     public function forceDelete(User $user, OpenOffer $openOffer): bool
     {
-        return $user->id === $openOffer->user_id;
+        return $user->id === $openOffer->creator_id;
     }
 }

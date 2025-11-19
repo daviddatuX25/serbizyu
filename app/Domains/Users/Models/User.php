@@ -104,4 +104,8 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
         return $this->hasMany(\App\Domains\Listings\Models\Service::class, 'creator_id');
     }
 
+    public function bids()
+    {
+        return $this->hasMany(\App\Domains\Listings\Models\OpenOfferBid::class, 'bidder_id');
+    }
 }

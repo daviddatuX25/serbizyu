@@ -39,7 +39,7 @@ require __DIR__.'/auth.php';
 Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
 
 // Public-facing open offer page
-Route::get('/open-offers/{open_offer}', [OpenOfferController::class, 'show'])->name('open-offers.show');
+Route::get('/openoffers/{openoffer}', [OpenOfferController::class, 'show'])->name('openoffers.show');
 
 // Creator space
 Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
@@ -55,13 +55,15 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     Route::resource('categories', CategoryController::class);
 
     // Open Offer Management
-    Route::resource('offers', OpenOfferController::class);
-    Route::post('offers/{offer}/close', [OpenOfferController::class, 'close'])->name('offers.close');
+    Route::resource('openoffers', OpenOfferController::class)->except(['show']);
+    Route::post('openoffers/{openoffer}/close', [OpenOfferController::class, 'close'])->name('openoffers.close');
 
     // Bidding Management
-    Route::post('offers/{openOffer}/bids', [OpenOfferBidController::class, 'store'])->name('offers.bids.store');
-    Route::post('bids/{openOfferBid}/accept', [OpenOfferBidController::class, 'accept'])->name('bids.accept');
-    Route::post('bids/{openOfferBid}/reject', [OpenOfferBidController::class, 'reject'])->name('bids.reject');
+    Route::prefix('openoffers/{openoffer}')->name('openoffers.')->group(function () {
+        Route::resource('bids', OpenOfferBidController::class);
+        Route::post('bids/{bid}/accept', [OpenOfferBidController::class, 'accept'])->name('bids.accept');
+        Route::post('bids/{bid}/reject', [OpenOfferBidController::class, 'reject'])->name('bids.reject');
+    });
 
     // Workflow Management
     Route::get('workflows', [WorkflowTemplateController::class, 'index'])->name('workflows.index');
@@ -102,4 +104,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
     ->middleware('auth')
     ->name('media.serve');
+
+
+
 

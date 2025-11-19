@@ -54,9 +54,12 @@
 
     <div class="card-actions">
         @can('update', $openoffer)
-            <a href="{{ route('creator.offers.edit', $openoffer) }}" class="btn-primary">Manage</a>
+            <a href="{{ route('creator.openoffers.edit', $openoffer) }}" class="btn-primary">Manage</a>
         @else
-            <a href="{{ route('open-offers.show', $openoffer) }}" class="btn-secondary">View Offer & Bid</a>
+            <a href="{{ route('openoffers.show', $openoffer) }}" class="btn-secondary">View Offer & Bid</a>
         @endcan
     </div>
 </article>
+
+
+

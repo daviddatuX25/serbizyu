@@ -4,6 +4,7 @@ namespace App\Domains\Listings\Http\Controllers;
 
 use App\Domains\Listings\Models\OpenOffer;
 use App\Domains\Listings\Services\OpenOfferService;
+use App\Domains\Common\Services\AddressService;
 use App\Domains\Listings\Http\Requests\StoreOpenOfferRequest;
 use App\Domains\Listings\Http\Requests\UpdateOpenOfferRequest;
 use App\Http\Controllers\Controller;
@@ -14,10 +15,12 @@ class OpenOfferController extends Controller
 {
     protected $openOfferService;
 
-    public function __construct(OpenOfferService $openOfferService)
-    {
+    public function __construct(
+        OpenOfferService $openOfferService,
+        private AddressService $addressService
+    ) {
         $this->openOfferService = $openOfferService;
-        $this->authorizeResource(OpenOffer::class, 'offer', ['except' => ['index', 'show']]);
+        $this->authorizeResource(OpenOffer::class, 'openoffer', ['except' => ['index', 'show']]);
     }
 
     /**
@@ -25,8 +28,8 @@ class OpenOfferController extends Controller
      */
     public function index()
     {
-        $openOffers = OpenOffer::latest()->paginate(10); // Example: paginate offers
-        return view('offers.index', compact('openOffers'));
+        $offers = Auth::user()->openOffers()->latest()->paginate(10);
+        return view('creator.offers.index', compact('offers'));
     }
 
     /**
@@ -34,7 +37,8 @@ class OpenOfferController extends Controller
      */
     public function create()
     {
-        return view('offers.create');
+        $addresses = $this->addressService->getAddressesForUser();
+        return view('creator.offers.create', compact('addresses'));
     }
 
     /**
@@ -48,61 +52,65 @@ class OpenOfferController extends Controller
             $request->file('images') ?? []
         );
 
-        return redirect()->route('creator.offers.show', $openOffer)
+        return redirect()->route('creator.openoffers.show', $openOffer)
             ->with('success', 'Open Offer created successfully!');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(OpenOffer $offer)
+    public function show(OpenOffer $openoffer)
     {
-        return view('offers.show', ['openOffer' => $offer]);
+        $openoffer->load(['address', 'media']);
+        return view('offers.show', ['offer' => $openoffer]);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(OpenOffer $offer)
+    public function edit(OpenOffer $openoffer)
     {
-        return view('offers.edit', ['openOffer' => $offer]);
+        $openoffer->load(['address', 'media']);
+        $addresses = $this->addressService->getAddressesForUser();
+        return view('creator.offers.edit', ['offer' => $openoffer, 'addresses' => $addresses]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateOpenOfferRequest $request, OpenOffer $offer)
+    public function update(UpdateOpenOfferRequest $request, OpenOffer $openoffer)
     {
         $openOffer = $this->openOfferService->updateOpenOffer(
-            $offer,
+            $openoffer,
             $request->validated(),
             $request->file('images') ?? []
         );
 
-        return redirect()->route('creator.offers.show', $openOffer)
+        return redirect()->route('creator.openoffers.show', $openOffer)
             ->with('success', 'Open Offer updated successfully!');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(OpenOffer $offer)
+    public function destroy(OpenOffer $openoffer)
     {
-        $this->openOfferService->deleteOpenOffer($offer);
+        $this->openOfferService->deleteOpenOffer($openoffer);
 
-        return redirect()->route('creator.offers.index')
+        return redirect()->route('creator.openoffers.index')
             ->with('success', 'Open Offer deleted successfully!');
     }
 
     /**
      * Close the specified open offer.
      */
-    public function close(OpenOffer $offer)
+    public function close(OpenOffer $openoffer)
     {
-        $this->authorize('close', $offer);
+        $this->authorize('close', $openoffer);
 
-        $this->openOfferService->closeOpenOffer($offer);
+        $this->openOfferService->closeOpenOffer($openoffer);
 
         return back()->with('success', 'Open Offer closed successfully!');
     }
 }
+

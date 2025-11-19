@@ -53,7 +53,15 @@
 
         <div>
             <label for="address_id">Address (optional)</label>
-            <input id="address_id" wire:model.defer="address_id" type="number" />
+            <select id="address_id" wire:model.defer="address_id">
+                <option value="">-- select --</option>
+                @foreach($addresses as $address)
+                    <option value="{{ $address->id }}">
+                        {{ $address->street }}, {{ $address->town }}
+                        @if($address->is_primary) (Primary) @endif
+                    </option>
+                @endforeach
+            </select>
             @error('address_id') <div class="text-red-600">{{ $message }}</div> @enderror
         </div>
 
@@ -64,13 +72,10 @@
         </div>
 
         {{-- Media Upload Section --}}
-        @include('livewire.partials.media-upload', [
-            'newFiles' => $newFiles,
-            'existingImages' => $this->existingImages // Use computed property
-        ])
+        @include('livewire.partials.media-upload')
 
         <div>
-            <button type="submit">{{ $offer ? 'Update Offer' : 'Create Offer' }}</button>
+            <button type="submit">{{ $offer->exists ? 'Update Offer' : 'Create Offer' }}</button>
         </div>
     </form>
 </div>

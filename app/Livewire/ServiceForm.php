@@ -74,9 +74,6 @@ class ServiceForm extends FormWithMedia
         $this->workflow_template_id = null; // Changed from ''
         $this->pay_first = false;
         $this->address_id = $this->addresses->firstWhere('pivot.is_primary', true)->id ?? null;
-        $this->existingImages = [];
-        $this->newFiles = [];
-        $this->imagesToRemove = [];
 
         if ($service->exists) {
             // Edit mode — overwrite defaults
@@ -88,10 +85,7 @@ class ServiceForm extends FormWithMedia
             $this->pay_first = $service->pay_first ?? false;
             $this->address_id = $service->address_id;
 
-            $this->existingImages = $service->media->map(fn($m) => [
-                'id' => $m->id,
-                'url' => $m->getUrl()
-            ])->toArray();
+            $this->loadExistingMedia($this->service);
         } else {
             // Create mode — set default primary address if exists
             $primary = $this->addresses->firstWhere('pivot.is_primary', true);

@@ -7,73 +7,72 @@ use App\Domains\Users\Models\User;
 use Illuminate\Support\Facades\DB;
 use Plank\Mediable\MediaUploader;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class OpenOfferService
 {
-    public function createOpenOffer(User $user, array $data, array $newMedia = []): OpenOffer
+    public function createOpenOffer(User $user, array $data, array $uploadedFiles = []): OpenOffer
     {
-        return DB::transaction(function () use ($user, $data, $newMedia) {
-            $openOffer = $user->openOffers()->create([
-                'title' => $data['title'],
-                'description' => $data['description'],
-                'budget' => $data['budget'],
-                'category_id' => $data['category_id'],
-                'deadline' => $data['deadline'] ?? null,
-                'workflow_template_id' => $data['workflow_template_id'] ?? null,
-                'pay_first' => $data['pay_first'] ?? false,
-                'address_id' => $data['address_id'] ?? null,
-            ]);
+        $openOffer = $user->openOffers()->create([
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'budget' => $data['budget'],
+            'category_id' => $data['category_id'],
+            'deadline' => $data['deadline'] ?? null,
+            'workflow_template_id' => $data['workflow_template_id'] ?? null,
+            'pay_first' => $data['pay_first'] ?? false,
+            'address_id' => $data['address_id'] ?? null,
+            'fulfilled' => false,
+        ]);
 
-            if (!empty($newMedia)) {
-                $mediaUploader = app(MediaUploader::class);
-                foreach ($newMedia as $file) {
-                    // Assuming $file is a path to a temporary file stored by Livewire
-                    $mediaUploader->fromSource(Storage::disk('local')->path($file))
-                        ->toDirectory('open-offers')
-                        ->upload()
-                        ->attachTo($openOffer, 'images');
-                    Storage::disk('local')->delete($file); // Clean up temp file
-                }
-            }
+        $this->handleUploadedFiles($openOffer, $uploadedFiles);
 
-            return $openOffer;
-        });
+        return $openOffer;
     }
 
-    public function updateOpenOffer(OpenOffer $openOffer, array $data, array $newMedia = []): OpenOffer
+    public function updateOpenOffer(OpenOffer $openOffer, array $data, array $uploadedFiles = []): OpenOffer
     {
-        return DB::transaction(function () use ($openOffer, $data, $newMedia) {
-            $openOffer->update([
-                'title' => $data['title'],
-                'description' => $data['description'],
-                'budget' => $data['budget'],
-                'category_id' => $data['category_id'],
-                'deadline' => $data['deadline'] ?? null,
-                'workflow_template_id' => $data['workflow_template_id'] ?? null,
-                'pay_first' => $data['pay_first'] ?? false,
-                'address_id' => $data['address_id'] ?? null,
-            ]);
+        $openOffer->update([
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'budget' => $data['budget'],
+            'category_id' => $data['category_id'],
+            'deadline' => $data['deadline'] ?? null,
+            'workflow_template_id' => $data['workflow_template_id'] ?? null,
+            'pay_first' => $data['pay_first'] ?? false,
+            'address_id' => $data['address_id'] ?? null,
+        ]);
 
-            // Handle images to remove
-            if (isset($data['images_to_remove']) && !empty($data['images_to_remove'])) {
-                $openOffer->media()->whereIn('id', $data['images_to_remove'])->delete();
-            }
+        // Handle images to remove
+        if (isset($data['images_to_remove']) && !empty($data['images_to_remove'])) {
+            $openOffer->media()->whereIn('id', $data['images_to_remove'])->delete();
+        }
 
-            // Attach new media
-            if (!empty($newMedia)) {
-                $mediaUploader = app(MediaUploader::class);
-                foreach ($newMedia as $file) {
-                    // Assuming $file is a path to a temporary file stored by Livewire
-                    $mediaUploader->fromSource(Storage::disk('local')->path($file))
-                        ->toDirectory('open-offers')
-                        ->upload()
-                        ->attachTo($openOffer, 'images');
-                    Storage::disk('local')->delete($file); // Clean up temp file
+        $this->handleUploadedFiles($openOffer, $uploadedFiles);
+
+        return $openOffer;
+    }
+
+    protected function handleUploadedFiles(OpenOffer $openOffer, array $files): void
+    {
+        $mediaUploader = app(MediaUploader::class);
+
+        foreach ($files as $file) {
+            if ($file instanceof TemporaryUploadedFile) {
+                try {
+                    $sourcePath = $file->getRealPath();
+
+                    $media = $mediaUploader->fromSource($sourcePath)
+                        ->toDestination('public', 'open-offers')
+                        ->upload();
+
+                    $openOffer->attachMedia($media, 'images');
+                } catch (\Exception $e) {
+                    // Log error but continue
+                    \Log::error('Failed to upload media for open offer: ' . $e->getMessage());
                 }
             }
-
-            return $openOffer;
-        });
+        }
     }
 
     public function deleteOpenOffer(OpenOffer $openOffer): void

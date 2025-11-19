@@ -22,14 +22,41 @@ class OpenOfferBidController extends Controller
     }
 
     /**
+     * Display a listing of the resource.
+     */
+    public function index(OpenOffer $openoffer)
+    {
+        $bids = $openoffer->bids()->with('user')->latest()->paginate(10);
+        return view('creator.bids.index', compact('bids', 'openoffer'));
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(OpenOffer $openoffer, OpenOfferBid $bid)
+    {
+        $this->authorize('view', $bid);
+        return view('creator.bids.show', compact('bid'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(OpenOffer $openoffer, OpenOfferBid $bid)
+    {
+        $this->authorize('update', $bid);
+        return view('creator.bids.edit', compact('bid', 'openoffer'));
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreOpenOfferBidRequest $request, OpenOffer $openOffer)
+    public function store(StoreOpenOfferBidRequest $request, OpenOffer $openoffer)
     {
         try {
             $bid = $this->openOfferBidService->createBid(
                 Auth::user(),
-                $openOffer,
+                $openoffer,
                 $request->validated()
             );
             return back()->with('success', 'Bid placed successfully!');
@@ -41,13 +68,13 @@ class OpenOfferBidController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateOpenOfferBidRequest $request, OpenOfferBid $openOfferBid)
+    public function update(UpdateOpenOfferBidRequest $request, OpenOffer $openoffer, OpenOfferBid $bid)
     {
-        $this->authorize('update', $openOfferBid);
+        $this->authorize('update', $bid);
 
         try {
             $bid = $this->openOfferBidService->updateBid(
-                $openOfferBid,
+                $bid,
                 $request->validated()
             );
             return back()->with('success', 'Bid updated successfully!');
@@ -59,12 +86,12 @@ class OpenOfferBidController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(OpenOfferBid $openOfferBid)
+    public function destroy(OpenOffer $openoffer, OpenOfferBid $bid)
     {
-        $this->authorize('delete', $openOfferBid);
+        $this->authorize('delete', $bid);
 
         try {
-            $this->openOfferBidService->deleteBid($openOfferBid);
+            $this->openOfferBidService->deleteBid($bid);
             return back()->with('success', 'Bid deleted successfully!');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
@@ -74,12 +101,12 @@ class OpenOfferBidController extends Controller
     /**
      * Accept the specified bid.
      */
-    public function accept(OpenOfferBid $openOfferBid)
+    public function accept(OpenOffer $openoffer, OpenOfferBid $bid)
     {
-        $this->authorize('accept', $openOfferBid);
+        $this->authorize('accept', $bid);
 
         try {
-            $this->openOfferBidService->acceptBid($openOfferBid);
+            $this->openOfferBidService->acceptBid($bid);
             return back()->with('success', 'Bid accepted successfully! Offer closed.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
@@ -89,15 +116,15 @@ class OpenOfferBidController extends Controller
     /**
      * Reject the specified bid.
      */
-    public function reject(OpenOfferBid $openOfferBid)
+    public function reject(OpenOffer $openoffer, OpenOfferBid $bid)
     {
-        $this->authorize('reject', $openOfferBid);
+        $this->authorize('reject', $bid);
 
         try {
-            $this->openOfferBidService->rejectBid($openOfferBid);
+            $this->openOfferBidService->rejectBid($bid);
             return back()->with('success', 'Bid rejected.');
         } catch (\Exception $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', 'Something went wrong.');
         }
     }
 }

@@ -33,6 +33,17 @@
                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
                                 @error('editingBidMessage') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                             </div>
+                            <div class="mb-4">
+                                <label for="editingBidServiceId" class="block text-sm font-medium text-gray-700">Service</label>
+                                <select id="editingBidServiceId" wire:model.defer="editingBidServiceId"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                    <option value="">Select a service</option>
+                                    @foreach ($services as $service)
+                                        <option value="{{ $service->id }}">{{ $service->title }}</option>
+                                    @endforeach
+                                </select>
+                                @error('editingBidServiceId') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                            </div>
                             <div class="flex space-x-2">
                                 <button wire:click="updateBid"
                                         class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -49,6 +60,9 @@
                             <div>
                                 <p class="text-gray-800 font-medium">Bidder: {{ $bid->bidder->username }}</p>
                                 <p class="text-xl font-bold text-indigo-600">${{ number_format($bid->amount, 2) }}</p>
+                                @if ($bid->service)
+                                    <p class="text-sm text-gray-600">Service: {{ $bid->service->title }}</p>
+                                @endif
                             </div>
                             <div>
                                 <span class="px-2 py-1 text-xs font-semibold rounded-full
@@ -83,6 +97,13 @@
                                 <button wire:click="editBid({{ $bid->id }})"
                                         class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
                                     Edit
+                                </button>
+                            @endcan
+                            @can('delete', $bid)
+                                <button wire:click="deleteBid({{ $bid->id }})"
+                                        onclick="return confirm('Are you sure you want to delete this bid?');"
+                                        class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                    Delete
                                 </button>
                             @endcan
                         </div>

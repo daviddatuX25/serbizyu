@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('My Open Offers') }}
+            {{ __('My Bids') }}
         </h2>
     </x-slot>
 
@@ -9,36 +9,24 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
-                    <div class="flex justify-end mb-4">
-                        <a href="{{ route('creator.openoffers.create') }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                            Create New Offer
-                        </a>
-                    </div>
-
-                    @if (session('success'))
-                        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                            <span class="block sm:inline">{{ session('success') }}</span>
-                        </div>
-                    @endif
-
-                    @if ($openOffers->isEmpty())
-                        <p>You haven't created any open offers yet.</p>
+                    @if ($bids->isEmpty())
+                        <p>You have not placed any bids yet.</p>
                     @else
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Title
+                                            Offer Title
                                         </th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Budget
+                                            Amount
                                         </th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Status
                                         </th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Deadline
+                                            Date Placed
                                         </th>
                                         <th scope="col" class="relative px-6 py-3">
                                             <span class="sr-only">Actions</span>
@@ -46,39 +34,42 @@
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
-                                    @foreach ($openOffers as $offer)
+                                    @foreach ($bids as $bid)
                                         <tr>
                                             <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="text-sm font-medium text-gray-900">{{ $offer->title }}</div>
+                                                <a href="{{ route('openoffers.show', $bid->openOffer) }}" class="text-blue-600 hover:underline">
+                                                    {{ $bid->openOffer->title }}
+                                                </a>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="text-sm text-gray-900">${{ number_format($offer->budget, 2) }}</div>
+                                                ${{ number_format($bid->amount, 2) }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                    {{ ucfirst($offer->status->value) }}
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                    @switch($bid->status)
+                                                        @case('pending') bg-yellow-100 text-yellow-800 @break
+                                                        @case('accepted') bg-green-100 text-green-800 @break
+                                                        @case('rejected') bg-red-100 text-red-800 @break
+                                                    @endswitch">
+                                                    {{ ucfirst($bid->status) }}
                                                 </span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {{ $offer->deadline ? $offer->deadline->format('M d, Y') : 'N/A' }}
+                                                {{ $bid->created_at->format('M d, Y') }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <a href="{{ route('creator.openoffers.show', $offer) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
-                                                <a href="{{ route('creator.openoffers.edit', $offer) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
-                                                <form action="{{ route('creator.openoffers.destroy', $offer) }}" method="POST" class="inline-block">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure you want to delete this offer?')">Delete</button>
-                                                </form>
+                                                <a href="{{ route('creator.bids.show', $bid) }}" class="text-indigo-600 hover:text-indigo-900">View</a>
+                                                @can('update', $bid)
+                                                    <a href="{{ route('creator.bids.edit', $bid) }}" class="ml-4 text-indigo-600 hover:text-indigo-900">Edit</a>
+                                                @endcan
                                             </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                             </table>
                         </div>
-
                         <div class="mt-4">
-                            {{ $openOffers->links() }}
+                            {{ $bids->links() }}
                         </div>
                     @endif
                 </div>

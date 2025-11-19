@@ -15,7 +15,7 @@ return new class extends Migration
             // 'title', 'description', 'budget', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'
             $table->id();
             $table->string('title');
-            $table->string('description');
+            $table->string('description')->nullable();
             $table->decimal('budget', 10, 2);
             $table->boolean('pay_first');
             $table->boolean('fulfilled');

@@ -5,6 +5,7 @@ namespace App\Livewire;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Illuminate\Database\Eloquent\Model;
 
 abstract class FormWithMedia extends Component
 {
@@ -14,6 +15,21 @@ abstract class FormWithMedia extends Component
     public array $imagesToRemove = [];
     public array $existingImages = [];
     public array $selectedImages = [];
+
+    /**
+     * Populate the existingImages array from a model's media relationship.
+     *
+     * @param Model $model The model instance that has media.
+     */
+    protected function loadExistingMedia(Model $model)
+    {
+        if ($model->exists && $model->relationLoaded('media')) {
+            $this->existingImages = $model->media->map(fn($m) => [
+                'id' => $m->id,
+                'url' => $m->getUrl()
+            ])->toArray();
+        }
+    }
 
     /**
      * Update new files from input

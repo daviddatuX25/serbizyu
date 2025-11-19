@@ -8,7 +8,7 @@
 
     <div class="py-6">
         <div class="max-w-4xl mx-auto">
-            <livewire:open-offer-form :offer="$offer" />
+            <livewire:open-offer-form :offer="$offer" :addresses="$addresses" />
         </div>
     </div>
 </x-app-layout>

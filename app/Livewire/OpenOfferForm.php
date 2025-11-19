@@ -8,6 +8,8 @@ use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Storage;
 use Plank\Mediable\MediaUploader;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Collection;
 
 class OpenOfferForm extends FormWithMedia
 {
@@ -24,15 +26,10 @@ class OpenOfferForm extends FormWithMedia
     public ?int $address_id = null;
     public ?string $deadline = null;
 
-    /** @var array|UploadedFile[] */
-    public array $newFiles = []; // Renamed from new_images
-
-    /** @var int[] IDs of media to remove (when editing) */
-    public array $images_to_remove = [];
-
     // For lists (categories, workflows) loaded for select inputs
     public array $categories = [];
     public array $workflowTemplates = [];
+    public Collection $addresses;
 
     protected function rules(): array
     {
@@ -43,12 +40,12 @@ class OpenOfferForm extends FormWithMedia
             'category_id' => 'required|integer|exists:categories,id',
             'workflow_template_id' => 'nullable|integer|exists:workflow_templates,id',
             'pay_first' => 'nullable|boolean',
-            'address_id' => 'nullable|integer',
+            'address_id' => 'nullable|integer|exists:addresses,id',
             'deadline' => 'nullable|date|after_or_equal:today',
-            'newFiles' => 'nullable|array', // Updated rule
-            'newFiles.*' => 'file|max:5120', // Updated rule
-            'images_to_remove' => 'nullable|array',
-            'images_to_remove.*' => 'integer',
+            'newFiles' => 'nullable|array',
+            'newFiles.*' => 'file|max:5120',
+            'imagesToRemove' => 'nullable|array',
+            'imagesToRemove.*' => 'integer',
         ];
     }
 
@@ -56,9 +53,13 @@ class OpenOfferForm extends FormWithMedia
         // you can listen to custom events if needed
     ];
 
-    public function mount(?OpenOffer $offer = null)
+    public function mount(?OpenOffer $offer = null, Collection $addresses = null)
     {
         $this->offer = $offer;
+        $this->addresses = $addresses ? $addresses->map(function ($address) {
+            $address->is_primary = $address->pivot->is_primary ?? false;
+            return $address;
+        }) : new Collection();
 
         // Load selects (you can replace with services or inject them)
         $this->categories = app(\App\Domains\Listings\Services\CategoryService::class)->listAllCategories()->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->toArray();
@@ -66,8 +67,8 @@ class OpenOfferForm extends FormWithMedia
         $this->workflowTemplates = app(\App\Domains\Listings\Services\WorkflowTemplateService::class)
             ->getWorkflowTemplatesByCreator(auth()->id())
             ->map(fn($w) => ['id' => $w->id, 'name' => $w->name])->toArray();
-
-        if ($this->offer) {
+            
+        if ($this->offer && $this->offer->exists) {
             $this->title = $this->offer->title;
             $this->description = $this->offer->description;
             $this->budget = $this->offer->budget;
@@ -76,41 +77,9 @@ class OpenOfferForm extends FormWithMedia
             $this->pay_first = (bool)$this->offer->pay_first;
             $this->address_id = $this->offer->address_id;
             $this->deadline = $this->offer->deadline ? $this->offer->deadline->format('Y-m-d') : null;
+
+            $this->loadExistingMedia($this->offer);
         }
-    }
-
-    public function updatedNewFiles() // Renamed method
-    {
-        $this->validateOnly('newFiles'); // Updated validation
-    }
-
-    public function getExistingImagesProperty()
-    {
-        if (!$this->offer) {
-            return collect();
-        }
-
-        return $this->offer->getMedia('images')->map(function ($media) {
-            return [
-                'id' => $media->id,
-                'url' => route('media.serve', ['payload' => encrypt(json_encode(['media_id' => $media->id]))]),
-                'is_removed' => in_array($media->id, $this->images_to_remove),
-            ];
-        });
-    }
-
-    public function removeExistingMedia(int $mediaId)
-    {
-        if (in_array($mediaId, $this->images_to_remove)) {
-            $this->images_to_remove = array_diff($this->images_to_remove, [$mediaId]);
-        } else {
-            $this->images_to_remove[] = $mediaId;
-        }
-    }
-
-    public function removeNewFile(int $index)
-    {
-        array_splice($this->newFiles, $index, 1);
     }
 
     public function save()
@@ -128,36 +97,25 @@ class OpenOfferForm extends FormWithMedia
             'pay_first' => $this->pay_first,
             'address_id' => $this->address_id,
             'deadline' => $this->deadline,
-            'images_to_remove' => $this->images_to_remove,
+            'images_to_remove' => $this->imagesToRemove,
         ];
 
-        $tempPaths = [];
-        if (!empty($this->newFiles)) { // Updated property
-            foreach ($this->newFiles as $file) { // Updated property
-                if ($file instanceof UploadedFile) {
-                    $path = $file->store('livewire-temp/offers', 'local');
-                    $tempPaths[] = $path;
-                }
-            }
-        }
+        $uploadedFiles = $this->getUploadedFiles();
 
         try {
-            if ($this->offer) {
-                $updated = $openOfferService->updateOpenOffer($this->offer, $data, $tempPaths);
-                $this->emit('openOfferSaved', $updated->id);
+            if ($this->offer && $this->offer->exists) {
+                $updated = $openOfferService->updateOpenOffer($this->offer, $data, $uploadedFiles);
+                $this->dispatch('openOfferSaved', $updated->id);
                 session()->flash('success', 'Open offer updated successfully!');
-                return redirect()->route('creator.offers.index');
+                return redirect()->route('creator.openoffers.index');
             } else {
-                $created = $openOfferService->createOpenOffer(auth()->user(), $data, $tempPaths);
-                $this->emit('openOfferSaved', $created->id);
+                $created = $openOfferService->createOpenOffer(auth()->user(), $data, $uploadedFiles);
+                $this->dispatch('openOfferSaved', $created->id);
                 session()->flash('success', 'Open offer created successfully!');
-                return redirect()->route('creator.offers.index');
+                return redirect()->route('creator.openoffers.index');
             }
-        } catch (\Throwable $e) {
-            foreach ($tempPaths as $p) {
-                Storage::disk('local')->delete($p);
-            }
-
+        }
+        catch (\Throwable $e) {
             \Log::error('OpenOfferForm save failed: ' . $e->getMessage(), ['exception' => $e]);
             $this->addError('save', 'Failed to save open offer: ' . $e->getMessage());
         }
@@ -168,3 +126,5 @@ class OpenOfferForm extends FormWithMedia
         return view('livewire.open-offer-form');
     }
 }
+
+

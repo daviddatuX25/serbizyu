@@ -244,26 +244,4 @@ class ServiceService
 
         return $query->get();
     }
-
-    /**
-     * Helper: upload a single file to the service gallery
-     */
-    private function handleFileUpload(Service $service, $file): void
-    {
-        if ($file instanceof UploadedFile && $file->isValid()) {
-            try {
-                $uploader = app(MediaUploader::class); 
-                $media = $uploader->fromSource($file->getRealPath())
-                    ->toDestination('media', 'services')
-                    ->upload();
-
-                $service->attachMedia($media, 'gallery');
-                Log::info('Attached media: ' . $file->getClientOriginalName());
-            } catch (\Exception $e) {
-                Log::error('Failed to upload media: ' . $e->getMessage());
-            }
-        } else {
-            Log::warning('Invalid file skipped', ['file' => $file]);
-        }
-    }
 }

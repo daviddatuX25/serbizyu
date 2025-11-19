@@ -13,9 +13,10 @@ class BidPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(?User $user, OpenOffer $openOffer): bool
     {
-        return $user !== null; // Any authenticated user can view bids
+        // Allow viewing bids if the user is the offer creator or has placed a bid.
+        return $user?->id === $openOffer->creator_id || $openOffer->bids->where('bidder_id', $user?->id)->isNotEmpty();
     }
 
     /**
@@ -23,7 +24,7 @@ class BidPolicy
      */
     public function view(User $user, OpenOfferBid $openOfferBid): bool
     {
-        return $user !== null; // Any authenticated user can view a bid
+        return $user->id === $openOfferBid->bidder_id || $user->id === $openOfferBid->openOffer->creator_id;
     }
 
     /**
@@ -31,9 +32,8 @@ class BidPolicy
      */
     public function create(User $user, OpenOffer $openOffer): bool
     {
-        // A user can bid on an offer if they are not the owner, have the 'creator' role, and the offer is open.
+        // A user can bid on an offer if they are not the owner and the offer is open.
         return $user->id !== $openOffer->creator_id
-            && $user->hasRole('creator')
             && $openOffer->status === OpenOfferStatus::OPEN;
     }
 
