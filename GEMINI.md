@@ -193,16 +193,16 @@ Execute sequentially per feature/subfeature. Document in a tracker; re-engage us
 **Goal:** Complete Web CRUD for categories (foundation for listings)
 
 #### Backend Tasks
-- [ ] Create `CategoryController` for Web CRUD in the `Listings` domain.
-- [ ] Add routes: GET, POST, PUT, DELETE `/creator/categories`
-- [ ] Add filtering/search query parameters to the `index` method.
-- [ ] Implement authorization (admin/creator only for write actions).
-- [ ] Test all CRUD operations via the browser.
+- [x] Create `CategoryController` for Web CRUD in the `Listings` domain.
+- [x] Add routes: GET, POST, PUT, DELETE `/creator/categories`
+- [x] Add filtering/search query parameters to the `index` method.
+- [x] Implement authorization (admin/creator only for write actions).
+- [x] Test all CRUD operations via the browser.
 
 #### Frontend Tasks
-- [ ] Create Blade views for category management (`index`, `create`, `edit`).
-- [ ] Use Alpine.js for confirmations or minor UI enhancements.
-- [ ] Display success/error feedback messages.
+- [x] Create Blade views for category management (`index`, `create`, `edit`).
+- [x] Use Alpine.js for confirmations or minor UI enhancements.
+- [x] Display success/error feedback messages.
 
 #### Files:
 ```
@@ -263,19 +263,19 @@ Frontend:
 ### Milestone 1.4: Open Offers Web CRUD & UI [0/12]
 
 #### Backend Tasks
-- [ ] Create `OpenOfferController` for Web CRUD in the `Listings` domain.
-- [ ] Add routes for offers CRUD.
-- [ ] Add "close offer" endpoint/method.
-- [ ] Implement `OpenOfferPolicy`.
+- [x] Create `OpenOfferController` for Web CRUD in the `Listings` domain.
+- [x] Add routes for offers CRUD.
+- [x] Add "close offer" endpoint/method.
+- [x] Implement `OpenOfferPolicy`.
 - [ ] Add auto-expiration job for offers (optional field).
-- [ ] Handle offer fulfillment status changes.
+- [x] Handle offer fulfillment status changes.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/offers/create.blade.php`.
-- [ ] Create `resources/views/offers/edit.blade.php`.
-- [ ] Create `resources/views/offers/show.blade.php`.
+- [x] Create `resources/views/offers/create.blade.php`.
+- [x] Create `resources/views/offers/edit.blade.php`.
+- [x] Create `resources/views/offers/show.blade.php`.
 - [ ] Create a Livewire component for budget calculation or other interactive elements.
-- [ ] Show bid count dynamically.
+- [x] Show bid count dynamically.
 - [ ] Add close offer button (owner only, using a Livewire action).
 
 #### Files:
@@ -299,18 +299,18 @@ Frontend:
 ### Milestone 1.5: Bidding System Web & UI [0/14]
 
 #### Backend Tasks
-- [ ] Create `OpenOfferBidController` for handling bid actions.
-- [ ] Add routes for bid CRUD.
-- [ ] Add accept/reject bid methods.
+- [x] Create `OpenOfferBidController` for handling bid actions.
+- [x] Add routes for bid CRUD.
+- [x] Add accept/reject bid methods.
 - [ ] Validate: no duplicate bids, service owner matches bidder.
-- [ ] Implement `BidPolicy`.
+- [x] Implement `BidPolicy`.
 - [ ] Auto-close offer when bid accepted.
 - [ ] Send notifications (email for now).
 
 #### Frontend Tasks
-- [ ] Add bid form to offer detail page (as a Livewire component).
-- [ ] Create a `BidList` Livewire component.
-- [ ] Add accept/reject buttons with `wire:click` actions.
+- [x] Add bid form to offer detail page (as a Livewire component).
+- [x] Create a `BidList` Livewire component.
+- [x] Add accept/reject buttons with `wire:click` actions.
 - [ ] Show bid status badges.
 - [ ] Add "My Bids" section to the user dashboard.
 
