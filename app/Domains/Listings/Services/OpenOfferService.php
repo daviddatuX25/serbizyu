@@ -94,7 +94,7 @@ class OpenOfferService
      */
     public function getFilteredOffers(array $filters = [])
     {
-        $query = OpenOffer::with(['creator.media', 'address', 'media', 'bids']);
+        $query = OpenOffer::whereHas('creator')->with(['creator', 'address', 'media', 'bids']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];

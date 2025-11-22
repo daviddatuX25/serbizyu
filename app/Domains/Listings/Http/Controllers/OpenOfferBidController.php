@@ -26,7 +26,8 @@ class OpenOfferBidController extends Controller
      */
     public function index(OpenOffer $openoffer)
     {
-        $bids = $openoffer->bids()->with('user')->latest()->paginate(10);
+        $this->authorize('viewAny', [OpenOfferBid::class, $openoffer]);
+        $bids = $openoffer->bids()->with('bidder')->latest()->paginate(10);
         return view('creator.bids.index', compact('bids', 'openoffer'));
     }
 
