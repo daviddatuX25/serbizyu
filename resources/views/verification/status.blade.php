@@ -56,9 +56,7 @@
                                 @if ($idFrontMedia)
                                     <div>
                                         <h4 class="font-semibold text-lg mb-2">ID Front:</h4>
-                                        <img src="{{ route('media.serve', [
-                                            'encryptedPath' => Crypt::encryptString(json_encode(['media_id' => $idFrontMedia->id]))
-                                        ]) }}" 
+                                        <img src="{{ route('media.serve', ['payload' => Crypt::encryptString(json_encode(['media_id' => $idFrontMedia->id]))]) }}" 
                                             alt="ID Front" 
                                             class="max-w-full h-auto rounded-lg shadow-md">
                                     </div>
@@ -67,9 +65,7 @@
                                 @if ($idBackMedia)
                                     <div>
                                         <h4 class="font-semibold text-lg mb-2">ID Back:</h4>
-                                        <img src="{{ route('media.serve', [
-                                            'encryptedPath' => Crypt::encryptString(json_encode(['media_id' => $idBackMedia->id]))
-                                        ]) }}" 
+                                        <img src="{{ route('media.serve', ['payload' => Crypt::encryptString(json_encode(['media_id' => $idBackMedia->id]))]) }}" 
                                             alt="ID Back" 
                                             class="max-w-full h-auto rounded-lg shadow-md">
                                     </div>

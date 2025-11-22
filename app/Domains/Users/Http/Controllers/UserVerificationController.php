@@ -53,7 +53,7 @@ class UserVerificationController extends Controller
         // Upload the front ID and attach to the verification record
         if ($request->hasFile('id_front')) {
             $media = $uploader->fromSource($request->file('id_front'))
-                ->toDestination('local', $user->id) // Use user ID as directory
+                ->toDestination('local', 'verifications/' . $user->id) // Use user ID as directory
                 ->upload();
             $verification->attachMedia($media, 'verification-id-front');
         }
@@ -61,7 +61,7 @@ class UserVerificationController extends Controller
         // Upload the back ID and attach to the verification record
         if ($request->hasFile('id_back')) {
             $media = $uploader->fromSource($request->file('id_back'))
-                ->toDestination('local', $user->id) // Use user ID as directory
+                ->toDestination('local', 'verifications/' . $user->id) // Use user ID as directory
                 ->upload();
             $verification->attachMedia($media, 'verification-id-back');
         }
