@@ -5,8 +5,6 @@ namespace App\Livewire;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Services\ServiceService;
 use Barryvdh\Debugbar\Facades\Debugbar;
-use Barryvdh\Debugbar\Twig\Extension\Debug;
-use Livewire\Attributes\On;
 
 class ServiceForm extends FormWithMedia
 {
@@ -33,7 +31,7 @@ class ServiceForm extends FormWithMedia
         'workflow_template_id' => 'required|integer|exists:workflow_templates,id',
         'address_id' => 'required|exists:addresses,id',
         'pay_first' => 'boolean',
-        'newFiles.*' => 'nullable|image|max:2048',
+        'newFiles.*' => 'nullable|image|max:2048', // Uses MediaConfig.UPLOAD_LIMITS['images']
     ];
 
     public function updatedWorkflowTemplateId($value)
@@ -43,7 +41,6 @@ class ServiceForm extends FormWithMedia
             'type' => gettype($value)
         ]);
         
-        // Cast to integer if it's a numeric string
         if (is_string($value) && is_numeric($value)) {
             $this->workflow_template_id = (int) $value;
             Debugbar::info('Casted to integer', ['new_value' => $this->workflow_template_id]);
@@ -71,12 +68,12 @@ class ServiceForm extends FormWithMedia
         $this->description = '';
         $this->price = '';
         $this->category_id = '';
-        $this->workflow_template_id = null; // Changed from ''
+        $this->workflow_template_id = null;
         $this->pay_first = false;
         $this->address_id = $this->addresses->firstWhere('pivot.is_primary', true)->id ?? null;
 
-        if ($service->exists) {
-            // Edit mode — overwrite defaults
+        if ($service && $service->exists) {
+            // Edit mode – populate with existing data
             $this->title = $service->title;
             $this->description = $service->description;
             $this->price = $service->price;
@@ -85,44 +82,45 @@ class ServiceForm extends FormWithMedia
             $this->pay_first = $service->pay_first ?? false;
             $this->address_id = $service->address_id;
 
+            // IMPORTANT: Load existing media for display
+            // This captures current state without destructive behavior
             $this->loadExistingMedia($this->service);
         } else {
-            // Create mode — set default primary address if exists
+            // Create mode – set default primary address if exists
             $primary = $this->addresses->firstWhere('pivot.is_primary', true);
             $this->address_id = $primary?->id ?? null;
         }
         
         Debugbar::info('Mount completed', [
             'service_exists' => $service->exists,
-            'workflow_template_id' => $this->workflow_template_id,
-            'workflowTemplates_count' => $this->workflowTemplates->count(),
-            'workflowTemplates_ids' => $this->workflowTemplates->pluck('id')->toArray()
+            'existing_media_count' => count($this->existingImages),
         ]);
     }
 
+    /**
+     * Save service with non-destructive media handling
+     * 
+     * Workflow:
+     * 1. Validate all form data
+     * 2. Prepare service data (excluding media info)
+     * 3. Prepare media data (uploads + removals)
+     * 4. Call service layer
+     * 5. Reset and redirect
+     */
     public function save(ServiceService $serviceService)
     {
         Debugbar::info('=== SAVE METHOD CALLED ===');
-        Debugbar::info('workflow_template_id value and type', [
-            'value' => $this->workflow_template_id,
-            'type' => gettype($this->workflow_template_id),
-            'empty' => empty($this->workflow_template_id)
-        ]);
-        
-        Debugbar::info('BEFORE validate - newFiles', ['count' => count($this->newFiles)]);
 
         try {
+            // Step 1: Validate
             $this->validate();
             Debugbar::info('Validation passed');
         } catch (\Illuminate\Validation\ValidationException $e) {
             Debugbar::error('Validation failed', $e->errors());
-            throw $e; // rethrow so Livewire handles displaying errors
+            throw $e;
         }
 
-        Debugbar::info('AFTER validate - newFiles', ['count' => count($this->newFiles)]);
-
-        $uploadedFiles = $this->getUploadedFiles();
-
+        // Step 2: Prepare service data (media handled separately)
         $data = [
             'title' => $this->title,
             'description' => $this->description,
@@ -132,25 +130,57 @@ class ServiceForm extends FormWithMedia
             'address_id' => $this->address_id,
             'pay_first' => $this->pay_first,
             'creator_id' => auth()->id(),
-            'images_to_remove' => $this->imagesToRemove,
         ];
 
-        Debugbar::info('Data to save', $data);
+        // Step 3: Get uploaded files and removal list
+        $uploadedFiles = $this->getUploadedFiles();
+        $imagesToRemove = $this->imagesToRemove;
 
-        if ($this->service->exists) {
-            $serviceService->updateService($this->service, $data, $uploadedFiles);
-        } else {
-            $serviceService->createService($data, $uploadedFiles);
+        // Step 4: Include media instructions in data array
+        $data['images_to_remove'] = $imagesToRemove;
+
+        Debugbar::info('Prepared save data', [
+            'files_to_add' => count($uploadedFiles),
+            'files_to_remove' => count($imagesToRemove),
+            'total_existing' => count($this->existingImages),
+        ]);
+
+        try {
+            if ($this->service && $this->service->exists) {
+                // UPDATE: Pass both uploads and removals
+                $serviceService->updateService(
+                    $this->service,
+                    $data,
+                    $uploadedFiles
+                );
+                
+                Debugbar::info('Service updated', ['id' => $this->service->id]);
+            } else {
+                // CREATE: Pass uploads (no removals on create)
+                $serviceService->createService($data, $uploadedFiles);
+                Debugbar::info('Service created');
+            }
+
+            // Step 5: Success
+            $this->resetMediaForm();
+            session()->flash('success', 'Service saved successfully!');
+            return redirect()->route('creator.services.index');
+
+        } catch (\Throwable $e) {
+            Debugbar::error('Service save failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->addError('save', 'Failed to save service: ' . $e->getMessage());
         }
-
-        session()->flash('success', 'Service saved successfully!');
-        return redirect()->route('creator.services.index');
     }
 
-     public function testLivewire()
+    /**
+     * Restore removed image (user changed their mind)
+     */
+    public function restoreImage(int $mediaId)
     {
-        Debugbar::info('TEST METHOD CALLED - Livewire is working!');
-        session()->flash('message', 'Livewire is working!');
+        $this->restoreExistingImage($mediaId, $this->service);
     }
 
     public function render()

@@ -1,4 +1,4 @@
-MAP: Generated 2025-11-22 13:32:38
+MAP: Generated 2025-11-22 14:02:34
 --app/Domains/Listings/Models/OpenOffer.php
 <?php
 
@@ -295,48 +295,39 @@ class OpenOfferService
 namespace App\Domains\Listings\Services;
 
 use App\Domains\Listings\Models\Service;
-use App\Exceptions\ResourceNotFoundException;
-use App\Domains\Users\Services\UserService;
-use App\Domains\Listings\Services\CategoryService;
-use App\Domains\Listings\Services\WorkflowTemplateService;
-use App\Domains\Common\Services\AddressService;
-use Barryvdh\Debugbar\Facades\Debugbar;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Http\UploadedFile;
+use App\Config\MediaConfig;
 use Plank\Mediable\MediaUploader;
-use Illuminate\Database\Eloquent\Collection;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use Symfony\Component\ErrorHandler\Debug;
+use Illuminate\Support\Facades\Log;
 
 class ServiceService
 {
-    public function __construct(
-        private UserService $userService,
-        private CategoryService $categoryService,
-        private WorkflowTemplateService $workflowTemplateService,
-        private AddressService $addressService
-    ) {}
+    protected MediaConfig $mediaConfig;
+    protected MediaUploader $mediaUploader;
+
+    public function __construct()
+    {
+        $this->mediaConfig = new MediaConfig();
+        $this->mediaUploader = app(MediaUploader::class);
+    }
 
     /**
      * Create a new service with optional images
-     */
-   /**
-     * Create a new service with optional uploaded images
      */
     public function createService(array $data, array $uploadedFiles = []): Service
     {
         Log::info('Creating service', ['data_keys' => array_keys($data)]);
 
-        // Remove any image removal keys
+        // Remove media-related keys from service data
         $serviceData = collect($data)->except(['images_to_remove'])->toArray();
 
         // Create service
         $service = Service::create($serviceData);
 
-        // Handle uploads
-        $this->handleUploadedFiles($service, $uploadedFiles);
+        // Handle uploads - uses MediaConfig for validation
+        $this->handleUploadedFiles($service, $uploadedFiles, [], 'gallery');
 
-        return $service->loadMedia('gallery');
+        return $service->load('media');
     }
 
     /**
@@ -344,63 +335,119 @@ class ServiceService
      */
     public function updateService(Service $service, array $data, array $uploadedFiles = []): Service
     {
-        // Update service info
-        $service->update(collect($data)->except(['images_to_remove'])->toArray());
+        // Update service info (NOT media)
+        $serviceData = collect($data)->except(['images_to_remove'])->toArray();
+        $service->update($serviceData);
 
-        // Remove images if requested
-        if (!empty($data['images_to_remove'])) {
-            foreach ($data['images_to_remove'] as $mediaId) {
+        // Extract images to remove list
+        $imagesToRemove = $data['images_to_remove'] ?? [];
+
+        // Handle media: removes only explicitly requested, adds new, keeps rest
+        $this->handleUploadedFiles($service, $uploadedFiles, $imagesToRemove, 'gallery');
+
+        return $service->load('media');
+    }
+
+    /**
+     * Handle media uploads using MediaConfig
+     * 
+     * @param Service $service The service model
+     * @param array $files Newly uploaded files
+     * @param array $imagesToRemove Media IDs to detach
+     * @param string $tag Media tag (e.g., 'gallery')
+     */
+    protected function handleUploadedFiles(
+        Service $service,
+        array $files,
+        array $imagesToRemove = [],
+        string $tag = 'gallery'
+    ): void {
+        // STEP 1: Remove only explicitly requested media
+        if (!empty($imagesToRemove)) {
+            foreach ($imagesToRemove as $mediaId) {
                 try {
                     $service->detachMedia($mediaId);
-                    Log::info("Detached media ID: $mediaId");
+                    Log::info("Detached media ID: $mediaId from service {$service->id}");
                 } catch (\Exception $e) {
                     Log::warning('Failed to detach media: ' . $e->getMessage());
                 }
             }
         }
 
-        // Handle newly uploaded files
-        $this->handleUploadedFiles($service, $uploadedFiles);
-
-        return $service->loadMedia('gallery');
-    }
-
-    protected function handleUploadedFiles(Service $service, array $files): void
-    {
-        Debugbar::info('handleUploadedFiles called', ['files_count' => count($files)]);
-
-        $uploader = app(MediaUploader::class);
+        // STEP 2: Upload and attach NEW files
+        if (empty($files)) {
+            return;
+        }
 
         foreach ($files as $file) {
-            Debugbar::info('Processing file', ['file' => $file]);
+            if (!$file instanceof TemporaryUploadedFile) {
+                continue;
+            }
 
-            if ($file instanceof TemporaryUploadedFile) {
-                try {
-                    // Use getRealPath() directly - it's already stored by Livewire
-                    $sourcePath = $file->getRealPath();
-                    
-                    Debugbar::info('Source path', ['path' => $sourcePath, 'exists' => file_exists($sourcePath)]);
+            try {
+                // Detect media type from file
+                $mediaType = $this->detectMediaType($file);
 
-                    $media = $uploader->fromSource($sourcePath)
-                        ->toDestination('public', 'services')
-                        ->upload();
+                // Get limit from MediaConfig
+                $maxSizeKb = $this->mediaConfig->getUploadLimit($mediaType);
+                $fileSizeKb = $file->getSize() / 1024;
 
-                    $service->attachMedia($media, 'gallery');
-
-                    Debugbar::info('Attached media', ['media_id' => $media->id]);
-
-                } catch (\Exception $e) {
-                    Debugbar::error('Failed to upload media: ' . $e->getMessage());
-                    Log::error('Media upload failed', [
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
+                // Validate against MediaConfig limits
+                if ($fileSizeKb > $maxSizeKb) {
+                    Log::warning("File exceeds MediaConfig limit", [
+                        'filename' => $file->getClientOriginalName(),
+                        'size_kb' => $fileSizeKb,
+                        'limit_kb' => $maxSizeKb,
+                        'type' => $mediaType,
                     ]);
+                    continue;
                 }
-            } else {
-                Debugbar::warning('Skipped invalid file', ['file' => $file]);
+
+                $sourcePath = $file->getRealPath();
+
+                // Upload using MediaConfig destination
+                $destination = $this->mediaConfig->getDestination($mediaType);
+                
+                $media = $this->mediaUploader->fromSource($sourcePath)
+                    ->toDestination('public', $destination)
+                    ->upload();
+
+                // Attach to service - preserves existing media
+                $service->attachMedia($media, $tag);
+
+                Log::info('Attached new media', [
+                    'media_id' => $media->id,
+                    'service_id' => $service->id,
+                    'type' => $mediaType,
+                    'destination' => $destination,
+                ]);
+
+            } catch (\Exception $e) {
+                Log::error('Media upload failed: ' . $e->getMessage(), [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
             }
         }
-}
+    }
+
+    /**
+     * Detect media type from uploaded file
+     * Uses MIME type to determine category
+     */
+    private function detectMediaType(TemporaryUploadedFile $file): string
+    {
+        $mimeType = $file->getMimeType();
+
+        return match (true) {
+            str_starts_with($mimeType, 'image/') => 'images',
+            str_starts_with($mimeType, 'video/') => 'videos',
+            str_starts_with($mimeType, 'audio/') => 'audio',
+            str_contains($mimeType, 'pdf') => 'documents',
+            str_contains($mimeType, 'word') || str_contains($mimeType, 'document') => 'documents',
+            default => 'documents',
+        };
+    }
 
     /**
      * Delete a service
@@ -418,11 +465,11 @@ class ServiceService
         $service = Service::with(['creator', 'category', 'workflowTemplate', 'address', 'media'])->find($id);
 
         if (!$service) {
-            throw new ResourceNotFoundException('Service does not exist.');
+            throw new \App\Exceptions\ResourceNotFoundException('Service does not exist.');
         }
 
         if ($service->trashed()) {
-            throw new ResourceNotFoundException('Service has been deleted.');
+            throw new \App\Exceptions\ResourceNotFoundException('Service has been deleted.');
         }
 
         return $service;
@@ -431,16 +478,16 @@ class ServiceService
     /**
      * Retrieve all services
      */
-    public function getAllServices(): Collection
+    public function getAllServices()
     {
         $services = Service::withMedia()->get();
 
         if ($services->isEmpty()) {
-            throw new ResourceNotFoundException('No services found.');
+            throw new \App\Exceptions\ResourceNotFoundException('No services found.');
         }
 
         if ($services->every->trashed()) {
-            throw new ResourceNotFoundException('Services have all been deleted.');
+            throw new \App\Exceptions\ResourceNotFoundException('Services have all been deleted.');
         }
 
         return $services;
@@ -547,128 +594,167 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
+/**
+ * Non-Destructive Media Form Handler
+ * 
+ * Keeps all existing media unless explicitly removed by user
+ * Appends new uploads to existing collection
+ */
 abstract class FormWithMedia extends Component
 {
     use WithFileUploads;
 
+    // New uploads from user
     public array $newFiles = [];
+    
+    // Media IDs that user explicitly removed (marked for deletion)
     public array $imagesToRemove = [];
+    
+    // Existing media currently attached to model
     public array $existingImages = [];
+    
+    // Not used in non-destructive approach, but kept for compatibility
     public array $selectedImages = [];
 
     /**
-     * Populate the existingImages array from a model's media relationship.
-     *
-     * @param Model $model The model instance that has media.
+     * Load existing media from a model
+     * 
+     * This captures the CURRENT state of media.
+     * When user removes an image, it goes to $imagesToRemove
+     * When user adds files, they go to $newFiles
      */
     protected function loadExistingMedia(Model $model)
     {
         if ($model->exists && $model->relationLoaded('media')) {
             $this->existingImages = $model->media->map(fn($m) => [
                 'id' => $m->id,
-                'url' => $m->getUrl()
+                'url' => $m->getUrl(),
+                'filename' => $m->filename,
+                'created_at' => $m->created_at->format('M d, Y'),
             ])->toArray();
+
+            Log::info('Loaded existing media', [
+                'model' => class_basename($model),
+                'count' => count($this->existingImages)
+            ]);
         }
     }
 
     /**
-     * Update new files from input
+     * Validate new file uploads
      */
     public function updatedNewFiles()
     {
         $this->validate([
-            'newFiles.*' => 'image|max:2048', // max 2MB
+            'newFiles.*' => 'image|max:2048', // Adjust as needed
         ]);
+
+        Log::info('New files validated', ['count' => count($this->newFiles)]);
     }
 
     /**
-     * Remove a newly added file
+     * Remove a newly added file (not yet saved)
      */
     public function removeNewFile(int $index)
     {
         if (isset($this->newFiles[$index])) {
+            $removed = $this->newFiles[$index];
             array_splice($this->newFiles, $index, 1);
+            
+            Log::info('Removed new file', ['index' => $index]);
+            session()->flash('info', 'New upload removed');
         }
     }
 
     /**
-     * Remove an existing image
+     * Mark an existing image for removal
+     * 
+     * Does NOT delete immediately - just marks it for deletion on save
      */
     public function removeExistingImage(int $id)
     {
+        // Add to removal queue only if not already there
         if (!in_array($id, $this->imagesToRemove)) {
             $this->imagesToRemove[] = $id;
+            
+            Log::info('Marked media for removal', ['media_id' => $id]);
         }
 
+        // Remove from display (cosmetic - shows as "pending deletion")
         $this->existingImages = array_values(
             array_filter($this->existingImages, fn($img) => $img['id'] !== $id)
         );
+
+        session()->flash('info', 'Image marked for removal');
     }
 
     /**
-     * Select all images for batch operations.
+     * Restore an image that was marked for removal
+     * 
+     * Call this if user changes their mind
      */
-    public function selectAllImages()
+    public function restoreExistingImage(int $id, Model $model)
     {
-        $this->selectedImages = array_merge(
-            collect($this->existingImages)->pluck('id')->all(),
-            array_keys($this->newFiles)
+        // Remove from deletion queue
+        $this->imagesToRemove = array_filter(
+            $this->imagesToRemove,
+            fn($mediaId) => $mediaId !== $id
         );
-        // In a real UI, you would bind checkboxes to this array.
-        // For now, this method simulates selecting all.
-        session()->flash('info', 'All images selected. (Backend only)');
+
+        // Reload existing images to show it again
+        $this->loadExistingMedia($model);
+        
+        Log::info('Restored media from removal', ['media_id' => $id]);
+        session()->flash('success', 'Image restored');
     }
 
     /**
-     * Delete all selected images.
-     */
-    public function deleteSelected()
-    {
-        if (empty($this->selectedImages)) {
-            session()->flash('error', 'No images selected to delete.');
-            return;
-        }
-
-        // This is a placeholder implementation.
-        // A real implementation would require checkboxes in the UI
-        // bound to the $selectedImages property.
-        session()->flash('info', 'Delete selected functionality not fully implemented.');
-
-        // Reset selection
-        $this->selectedImages = [];
-    }
-
-
-    /**
-     * Return TemporaryUploadedFiles for processing
+     * Get uploaded files ready for processing
      */
     protected function getUploadedFiles(): array
     {
-        // Add debug
-        \Illuminate\Support\Facades\Log::info('getUploadedFiles called', [
-            'newFiles_count' => count($this->newFiles),
-            'newFiles' => $this->newFiles,
-        ]);
-        
-        // Check each file
         $filtered = [];
+        
         foreach ($this->newFiles as $file) {
-            \Illuminate\Support\Facades\Log::info('Checking file', [
-                'file' => $file,
-                'is_temp' => $file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile,
-                'class' => get_class($file),
-            ]);
-            
-            if ($file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile) {
+            if ($file instanceof TemporaryUploadedFile) {
                 $filtered[] = $file;
             }
         }
-        
-        \Illuminate\Support\Facades\Log::info('Filtered files', ['count' => count($filtered)]);
-        
+
+        Log::info('Preparing uploaded files', [
+            'total_newFiles' => count($this->newFiles),
+            'filtered_count' => count($filtered),
+        ]);
+
         return $filtered;
-}
+    }
+
+    /**
+     * Get data to pass to service layer
+     * 
+     * Returns both the files to add AND the IDs to remove
+     */
+    protected function getMediaData(): array
+    {
+        return [
+            'newFiles' => $this->getUploadedFiles(),
+            'imagesToRemove' => $this->imagesToRemove,
+        ];
+    }
+
+    /**
+     * Reset media form state after save
+     */
+    protected function resetMediaForm()
+    {
+        $this->newFiles = [];
+        $this->imagesToRemove = [];
+        $this->selectedImages = [];
+        
+        Log::info('Media form reset');
+    }
 }
 ----
 --app/Livewire/OpenOfferForm.php
@@ -819,8 +905,6 @@ namespace App\Livewire;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Services\ServiceService;
 use Barryvdh\Debugbar\Facades\Debugbar;
-use Barryvdh\Debugbar\Twig\Extension\Debug;
-use Livewire\Attributes\On;
 
 class ServiceForm extends FormWithMedia
 {
@@ -847,7 +931,7 @@ class ServiceForm extends FormWithMedia
         'workflow_template_id' => 'required|integer|exists:workflow_templates,id',
         'address_id' => 'required|exists:addresses,id',
         'pay_first' => 'boolean',
-        'newFiles.*' => 'nullable|image|max:2048',
+        'newFiles.*' => 'nullable|image|max:2048', // Uses MediaConfig.UPLOAD_LIMITS['images']
     ];
 
     public function updatedWorkflowTemplateId($value)
@@ -857,7 +941,6 @@ class ServiceForm extends FormWithMedia
             'type' => gettype($value)
         ]);
         
-        // Cast to integer if it's a numeric string
         if (is_string($value) && is_numeric($value)) {
             $this->workflow_template_id = (int) $value;
             Debugbar::info('Casted to integer', ['new_value' => $this->workflow_template_id]);
@@ -885,12 +968,12 @@ class ServiceForm extends FormWithMedia
         $this->description = '';
         $this->price = '';
         $this->category_id = '';
-        $this->workflow_template_id = null; // Changed from ''
+        $this->workflow_template_id = null;
         $this->pay_first = false;
         $this->address_id = $this->addresses->firstWhere('pivot.is_primary', true)->id ?? null;
 
-        if ($service->exists) {
-            // Edit mode — overwrite defaults
+        if ($service && $service->exists) {
+            // Edit mode – populate with existing data
             $this->title = $service->title;
             $this->description = $service->description;
             $this->price = $service->price;
@@ -899,44 +982,45 @@ class ServiceForm extends FormWithMedia
             $this->pay_first = $service->pay_first ?? false;
             $this->address_id = $service->address_id;
 
+            // IMPORTANT: Load existing media for display
+            // This captures current state without destructive behavior
             $this->loadExistingMedia($this->service);
         } else {
-            // Create mode — set default primary address if exists
+            // Create mode – set default primary address if exists
             $primary = $this->addresses->firstWhere('pivot.is_primary', true);
             $this->address_id = $primary?->id ?? null;
         }
         
         Debugbar::info('Mount completed', [
             'service_exists' => $service->exists,
-            'workflow_template_id' => $this->workflow_template_id,
-            'workflowTemplates_count' => $this->workflowTemplates->count(),
-            'workflowTemplates_ids' => $this->workflowTemplates->pluck('id')->toArray()
+            'existing_media_count' => count($this->existingImages),
         ]);
     }
 
+    /**
+     * Save service with non-destructive media handling
+     * 
+     * Workflow:
+     * 1. Validate all form data
+     * 2. Prepare service data (excluding media info)
+     * 3. Prepare media data (uploads + removals)
+     * 4. Call service layer
+     * 5. Reset and redirect
+     */
     public function save(ServiceService $serviceService)
     {
         Debugbar::info('=== SAVE METHOD CALLED ===');
-        Debugbar::info('workflow_template_id value and type', [
-            'value' => $this->workflow_template_id,
-            'type' => gettype($this->workflow_template_id),
-            'empty' => empty($this->workflow_template_id)
-        ]);
-        
-        Debugbar::info('BEFORE validate - newFiles', ['count' => count($this->newFiles)]);
 
         try {
+            // Step 1: Validate
             $this->validate();
             Debugbar::info('Validation passed');
         } catch (\Illuminate\Validation\ValidationException $e) {
             Debugbar::error('Validation failed', $e->errors());
-            throw $e; // rethrow so Livewire handles displaying errors
+            throw $e;
         }
 
-        Debugbar::info('AFTER validate - newFiles', ['count' => count($this->newFiles)]);
-
-        $uploadedFiles = $this->getUploadedFiles();
-
+        // Step 2: Prepare service data (media handled separately)
         $data = [
             'title' => $this->title,
             'description' => $this->description,
@@ -946,25 +1030,57 @@ class ServiceForm extends FormWithMedia
             'address_id' => $this->address_id,
             'pay_first' => $this->pay_first,
             'creator_id' => auth()->id(),
-            'images_to_remove' => $this->imagesToRemove,
         ];
 
-        Debugbar::info('Data to save', $data);
+        // Step 3: Get uploaded files and removal list
+        $uploadedFiles = $this->getUploadedFiles();
+        $imagesToRemove = $this->imagesToRemove;
 
-        if ($this->service->exists) {
-            $serviceService->updateService($this->service, $data, $uploadedFiles);
-        } else {
-            $serviceService->createService($data, $uploadedFiles);
+        // Step 4: Include media instructions in data array
+        $data['images_to_remove'] = $imagesToRemove;
+
+        Debugbar::info('Prepared save data', [
+            'files_to_add' => count($uploadedFiles),
+            'files_to_remove' => count($imagesToRemove),
+            'total_existing' => count($this->existingImages),
+        ]);
+
+        try {
+            if ($this->service && $this->service->exists) {
+                // UPDATE: Pass both uploads and removals
+                $serviceService->updateService(
+                    $this->service,
+                    $data,
+                    $uploadedFiles
+                );
+                
+                Debugbar::info('Service updated', ['id' => $this->service->id]);
+            } else {
+                // CREATE: Pass uploads (no removals on create)
+                $serviceService->createService($data, $uploadedFiles);
+                Debugbar::info('Service created');
+            }
+
+            // Step 5: Success
+            $this->resetMediaForm();
+            session()->flash('success', 'Service saved successfully!');
+            return redirect()->route('creator.services.index');
+
+        } catch (\Throwable $e) {
+            Debugbar::error('Service save failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->addError('save', 'Failed to save service: ' . $e->getMessage());
         }
-
-        session()->flash('success', 'Service saved successfully!');
-        return redirect()->route('creator.services.index');
     }
 
-     public function testLivewire()
+    /**
+     * Restore removed image (user changed their mind)
+     */
+    public function restoreImage(int $mediaId)
     {
-        Debugbar::info('TEST METHOD CALLED - Livewire is working!');
-        session()->flash('message', 'Livewire is working!');
+        $this->restoreExistingImage($mediaId, $this->service);
     }
 
     public function render()
@@ -1346,4 +1462,4 @@ return [
 </div>
 ----
 --SUMMARY
-Text:9 Binary:0 Skipped:799
+Text:9 Binary:0 Skipped:777

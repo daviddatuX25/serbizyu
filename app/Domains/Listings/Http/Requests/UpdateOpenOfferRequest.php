@@ -31,7 +31,7 @@ class UpdateOpenOfferRequest extends FormRequest
             'category_id' => ['sometimes', 'required', 'exists:categories,id'],
             'deadline' => ['nullable', 'date', 'after_or_equal:today'],
             'images' => ['array'],
-            'images.*' => ['nullable', 'image', 'max:2048'], // Max 2MB per image
+            'images.*' => ['nullable', 'image', 'max:5048'], // Max 2MB per image
         ];
     }
 }
