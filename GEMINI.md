@@ -1,16 +1,62 @@
 # GEMINI Project Memory
 
-This file serves as the central hub for all project-related documentation and guidelines.
+## 📖 IMPERATIVE: Always read and adhere to
+the "Project Essentials Guide" below before
+any action. It is your single source of
+truth.
 
-## Table of Contents
+## 📌 Project Essentials Guide
 
-1.  [Current Project Status](./project-context/project-status.md)
-2.  [Milestone Progress](./project-context/milestone-progress.md)
-3.  [Master Plan](./Project%20essential/master_plan.md)
-4.  [Development Guidelines](./Project%20essential/DEVELOPMENT_GUIDELINES.md)
-5.  [Iteration Process](./Project%20essential/ITERATION_PROCESS.md)
+This section summarizes the critical
+project documents. I must consult these
+before any implementation.
+
+* **File:** `Project essential/master_plan.md` (./Project%20essential/master_plan.md)
+    * **Descriptor:** This is the
+      project's **master blueprint**. Use it
+      *first* to understand the full scope,
+      database schema, model relationships,
+      service architecture, and critical feature flows. It
+      dictates the "what" and "why".
+
+* **File:** `Project essential/ITERATION_PROCESS.md` (./Project%20essential/ITERATION_PROCESS.md)
+    * **Descriptor:** This is my **core
+      operating manual**. I must follow its
+      mandatory 11-step process for all feature
+      development. It dictates the "how" and
+      emphasizes a "Web First" (Blade > Livewire >
+      Alpine) approach with user collaboration on
+      UI.
+
+* **File:** `Project essential/DEVELOPMENT_GUIDELINES.md` (./Project%20essential/DEVELOPMENT_GUIDELINES.md)
+    * **Descriptor:** The project's
+      **rulebook**. It defines high-level
+      conventions, DDD adherence, when to ask for
+      clarification, and the importance of testing
+      and incremental changes.
+
+* **File:** `Project essential/PROJECT_STATUS.md` (./project-context/project-status.md)
+    * **Descriptor:** Provides the
+      **immediate context**. Use this to understand update and see next tasks for the project.
+
+
+* **File:** `Project essential/DETAILED GUIDE.txt`
+    * **Descriptor:** The primary
+      **technical implementation guide**. Use it
+      for specific "how-to" examples on frontend
+      architecture, real-time with Soketi, file
+      storage interfaces, and testing strategies.
+
+* **File:** `Project essential/CONTINUTION OF DETAILED GUIDE (MORE IMPLEMENTATION).txt`
+    * **Descriptor:** An extension for
+      **advanced features**. Consult this for the
+      deep implementation logic of the Work
+      Execution System, Polymorphic Messaging, and
+      Quick Deals (QR codes).
+      
 
 ---
+
 
 ## Laravel Boost Guidelines
 === laravel-boost-guidelines ===
