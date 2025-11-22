@@ -53,7 +53,7 @@ class OpenOfferForm extends FormWithMedia
         // you can listen to custom events if needed
     ];
 
-    public function mount(?OpenOffer $offer = null, Collection $addresses = null)
+    public function mount(?OpenOffer $offer = null, ?Collection $addresses = null)
     {
         $this->offer = $offer;
         $this->addresses = $addresses ? $addresses->map(function ($address) {
@@ -119,6 +119,14 @@ class OpenOfferForm extends FormWithMedia
             \Log::error('OpenOfferForm save failed: ' . $e->getMessage(), ['exception' => $e]);
             $this->addError('save', 'Failed to save open offer: ' . $e->getMessage());
         }
+    }
+
+    public function close(OpenOffer $openoffer){
+        $this->authorize('close', $openoffer);
+
+        $this->openOfferService->closeOpenOffer($openoffer);
+
+        return back()->with('success', 'Open Offer closed successfully!');
     }
 
     public function render()
