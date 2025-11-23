@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Domains\Common\Interfaces\AddressProviderInterface;
+use App\Domains\Common\Services\PhilippineAddressProvider;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use Illuminate\Auth\Middleware\Authenticate;
@@ -32,6 +34,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(AddressProviderInterface::class, PhilippineAddressProvider::class);
+
         // Register CategoryService
         $this->app->singleton(CategoryService::class);
 
