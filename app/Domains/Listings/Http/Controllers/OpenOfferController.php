@@ -37,23 +37,7 @@ class OpenOfferController extends Controller
      */
     public function create()
     {
-        $addresses = $this->addressService->getAddressesForUser();
-        return view('creator.offers.create', compact('addresses'));
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreOpenOfferRequest $request)
-    {
-        $openOffer = $this->openOfferService->createOpenOffer(
-            Auth::user(),
-            $request->validated(),
-            $request->file('images') ?? []
-        );
-
-        return redirect()->route('creator.openoffers.show', $openOffer)
-            ->with('success', 'Open Offer created successfully!');
+        return view('creator.offers.create');
     }
 
     /**
@@ -77,24 +61,7 @@ class OpenOfferController extends Controller
      */
     public function edit(OpenOffer $openoffer)
     {
-        $openoffer->load(['address', 'media']);
-        $addresses = $this->addressService->getAddressesForUser();
-        return view('creator.offers.edit', ['offer' => $openoffer, 'addresses' => $addresses]);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateOpenOfferRequest $request, OpenOffer $openoffer)
-    {
-        $openOffer = $this->openOfferService->updateOpenOffer(
-            $openoffer,
-            $request->validated(),
-            $request->file('images') ?? []
-        );
-
-        return redirect()->route('creator.openoffers.show', $openOffer)
-            ->with('success', 'Open Offer updated successfully!');
+        return view('creator.offers.edit', ['offer' => $openoffer]);
     }
 
     /**

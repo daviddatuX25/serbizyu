@@ -147,7 +147,8 @@ class AddressManager extends Component
                 $this->addressService->updateUserAddress($this->addressId, $dataToService);
                 session()->flash('success', 'Address updated successfully.');
             } else {
-                $this->addressService->createAddressForUser($dataToService);
+                $newAddress = $this->addressService->createAddressForUser($dataToService);
+                $this->dispatch('address-created', address: $newAddress->toArray());
                 session()->flash('success', 'Address added successfully.');
             }
 
