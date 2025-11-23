@@ -1,7 +1,6 @@
 @props([
-  // AUTOMATICALLY pull from config if not provided
-  'navItems' => config('navigation.main'), 
-  'authProfileData' => Auth::user() 
+  'navItems' => config('navigation.main'),
+  'authProfileData' => Auth::user()
 ])
 
 <header class="navbar" x-data="{ open: false }">
@@ -32,11 +31,13 @@
         @endguest
 
         @auth
-    <a href="{{ route('creator.dashboard') }}" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors shrink-0">
-        <i data-lucide="layout-dashboard" class="w-5 h-5 md:w-6 md:h-6 text-gray-900 dark:text-gray-100"></i>
-    </a>
-    <x-nav.profile-dropdown :authProfileData="$authProfileData" />
-@endauth
+          @if(!Str::startsWith(request()->route()->getName(), 'creator.'))
+            <a href="{{ route('creator.dashboard') }}" class="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-full hover:bg-green-700 transition-all duration-300 ease-in-out transform hover:scale-105">
+              Creator Space
+            </a>
+          @endif
+          <x-nav.profile-dropdown :authProfileData="$authProfileData" />
+        @endauth
       </div>
     </nav>
 
@@ -71,8 +72,11 @@
         @endguest
         
         @auth
+           @if(!Str::startsWith(request()->route()->getName(), 'creator.'))
+           {{-- better style this: --}}
+            <a href="{{ route('creator.dashboard') }}" class="block text-center navbar-mobile-link bg-green-600 text-white hover:bg-green-700  px-3 py-2 rounded-full ">Creator Space</a>
+           @endif
            <div class="border-t pt-2">
-            <a href="{{ route('creator.dashboard') }}" class="navbar-creator-link">Creator Space</a>
                <span class="block px-3 py-2 text-sm text-gray-500">{{ $authProfileData->name ?? 'User' }}</span>
                
                <form method="POST" action="{{ route('logout') }}">

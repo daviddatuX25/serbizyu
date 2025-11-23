@@ -39,7 +39,7 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="h-full bg-green-50 text-gray-700 font-sans antialiased overflow-x-hidden">
+<body class="h-full text-gray-700 font-sans antialiased overflow-x-hidden">
 
     <aside 
         x-data="{ 
@@ -139,7 +139,7 @@
     </aside>
 
 
-    <main class="min-h-screen transition-all duration-300 ease-in-out md:ml-20 lg:ml-72 bg-green-50">
+    <main class="min-h-screen transition-all duration-300 ease-in-out md:ml-20 lg:ml-72">
         
         <header x-data="{ searchActive: false, mobileNavOpen: false }"
                 class="sticky top-0 z-30 bg-green-50/90 backdrop-blur-sm px-4 py-4 md:px-8 md:py-6 border-b border-green-100 md:border-none">
@@ -184,11 +184,23 @@
 
                         <div x-show="!searchActive" class="hidden sm:flex items-center">
                             @foreach($mainMenu as $item)
-                                <a href="{{ route($item['route']) }}" 
-                                   class="px-5 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ml-1
-                                   {{ request()->routeIs($item['route']) ? 'bg-green-800 text-white' : 'hover:bg-green-100 text-gray-600' }}">
-                                    {{ $item['label'] }}
-                                </a>
+                                @if(isset($item['auth']) && $item['auth'])
+                                    @auth
+                                        @if(!Str::startsWith(request()->route()->getName(), 'creator.'))
+                                            <a href="{{ route($item['route']) }}" 
+                                               class="px-5 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ml-1
+                                               {{ request()->routeIs($item['route']) ? 'bg-green-800 text-white' : 'hover:bg-green-100 text-gray-600' }}">
+                                                {{ $item['label'] }}
+                                            </a>
+                                        @endif
+                                    @endauth
+                                @else
+                                    <a href="{{ route($item['route']) }}" 
+                                       class="px-5 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ml-1
+                                       {{ request()->routeIs($item['route']) ? 'bg-green-800 text-white' : 'hover:bg-green-100 text-gray-600' }}">
+                                        {{ $item['label'] }}
+                                    </a>
+                                @endif
                             @endforeach
                         </div>
 

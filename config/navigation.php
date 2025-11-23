@@ -45,10 +45,13 @@ return [
             'route' => 'verification.status', // Defined in your web.php
             'icon'  => 'shield-check',
         ],
+    ],
+
+     'creator_space' => [
         [
-            'label' => 'Addresses',
-            'route' => 'profile.edit', // Placeholder: You can change this if you create a specific AddressController later
-            'icon'  => 'map-pin',
+            'label' => 'Creator Space',
+            'route' => 'creator.dashboard',
+            'icon'  => 'layout-dashboard',
         ],
     ],
 ];
