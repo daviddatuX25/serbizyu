@@ -11,7 +11,7 @@
         <!-- Title -->
         <div>
             <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
-            <input type="text" wire:model.defer="title" id="title" 
+            <input type="text" wire:model="title" id="title" 
                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
             @error('title') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
         </div>
@@ -19,7 +19,7 @@
         <!-- Description -->
         <div>
             <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
-            <textarea wire:model.defer="description" id="description" rows="4" 
+            <textarea wire:model="description" id="description" rows="4" 
                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"></textarea>
             @error('description') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
         </div>
@@ -32,16 +32,24 @@
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <span class="text-gray-500 sm:text-sm"> ₱ </span>
                     </div>
-                    <input type="number" wire:model.defer="budget" id="budget" step="0.01"
+                    <input type="number" wire:model="budget" id="budget" step="0.01"
                         class="block w-full pl-7 pr-12 border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 sm:text-sm" placeholder="0.00">
                 </div>
                 @error('budget') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
             </div>
             <div>
-                <label for="deadline" class="block text-sm font-medium text-gray-700">Deadline (Optional)</label>
-                <input type="date" wire:model.defer="deadline" id="deadline"
-                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
-                @error('deadline') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                <label class="block text-sm font-medium text-gray-700">Expiration</label>
+                <div class="mt-2 space-y-2">
+                    <div class="flex flex-wrap gap-2">
+                        @foreach([1, 3, 7, 14, 30] as $days)
+                            <label class="flex items-center">
+                                <input type="radio" value="{{ $days }}" wire:model="deadline_option" class="form-radio">
+                                <span class="ml-2">{{ $days }} day{{ $days > 1 ? 's' : '' }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+                @error('deadline_option') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
             </div>
         </div>
 
@@ -49,7 +57,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label for="category_id" class="block text-sm font-medium text-gray-700">Category</label>
-                <select wire:model.defer="category_id" id="category_id"
+                <select wire:model="category_id" id="category_id"
                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
                     <option value="">Select a category...</option>
                     @foreach ($categories as $cat)
@@ -60,7 +68,7 @@
             </div>
             <div>
                 <label for="address_id" class="block text-sm font-medium text-gray-700">Location (Optional)</label>
-                <select wire:model.defer="address_id" id="address_id"
+                <select wire:model="address_id" id="address_id"
                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
                     <option value="">Select a location...</option>
                     @foreach($addresses as $address)
@@ -77,7 +85,7 @@
         <!-- Workflow Section -->
         <div>
             <label for="workflow_template_id" class="block text-sm font-medium text-gray-700 mb-1">Workflow (Optional)</label>
-            <select wire:model.defer="workflow_template_id" id="workflow_template_id"
+            <select wire:model="workflow_template_id" id="workflow_template_id"
                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
                 <option value="">No workflow required</option>
                 @foreach ($workflowTemplates as $template)
@@ -90,7 +98,7 @@
         <!-- Pay First Checkbox -->
         <div class="relative flex items-start">
             <div class="flex items-center h-5">
-                <input type="checkbox" wire:model.defer="pay_first" id="pay_first" class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                <input type="checkbox" wire:model="pay_first" id="pay_first" class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
             </div>
             <div class="ml-3 text-sm">
                 <label for="pay_first" class="font-medium text-gray-700">Require payment before work begins</label>

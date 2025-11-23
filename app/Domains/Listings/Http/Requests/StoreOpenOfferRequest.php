@@ -22,12 +22,15 @@ class StoreOpenOfferRequest extends FormRequest
      */
     public function rules(): array
     {
+        $maxDays = config('listings.open_offer_max_days', 30);
+        $maxDate = now()->addDays($maxDays)->format('Y-m-d');
+
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'budget' => ['required', 'numeric', 'min:0'],
             'category_id' => ['required', 'exists:categories,id'],
-            'deadline' => ['nullable', 'date', 'after_or_equal:today'],
+            'deadline' => ['nullable', 'date', 'after_or_equal:today', 'before_or_equal:' . $maxDate],
             'images' => ['array'],
             'images.*' => ['nullable', 'image', 'max:5000'],  // Max 5MB per image
         ];

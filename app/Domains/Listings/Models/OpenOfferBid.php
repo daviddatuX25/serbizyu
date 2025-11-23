@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Users\Models\User;
+use App\Enums\BidStatus;
 
 class OpenOfferBid extends Model
 {
@@ -20,6 +21,10 @@ class OpenOfferBid extends Model
         'amount',
         'message',
         'status',
+    ];
+
+    protected $casts = [
+        'status' => BidStatus::class,
     ];
     
     public function service()

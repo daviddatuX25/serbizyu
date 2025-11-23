@@ -1,5 +1,5 @@
 {{-- resources/views/creator/offers/index.blade.php --}}
-<x-app-layout>
+<x-creator-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800">
             Open Offers
@@ -21,6 +21,7 @@
                             <th class="px-4 py-2 border">Title</th>
                             <th class="px-4 py-2 border">Budget</th>
                             <th class="px-4 py-2 border">Category</th>
+                            <th class="px-4 py-2 border">Deadline</th>
                             <th class="px-4 py-2 border">Actions</th>
                         </tr>
                     </thead>
@@ -30,6 +31,7 @@
                                 <td class="border px-4 py-2">{{ $offer->title }}</td>
                                 <td class="border px-4 py-2">₱{{ number_format($offer->budget, 2) }}</td>
                                 <td class="border px-4 py-2">{{ $offer->category?->name }}</td>
+                                <td class="border px-4 py-2">{{ $offer->deadline?->format('M d, Y') }}</td>
                                 <td class="border px-4 py-2">
                                     <a href="{{ route('openoffers.show', $offer) }}" class="text-blue-600">View</a>
                                     |
@@ -55,6 +57,4 @@
             @endif
         </div>
     </div>
-</x-app-layout>
-
-
+</x-creator-layout>

@@ -6,6 +6,7 @@ use App\Domains\Listings\Models\OpenOffer;
 use App\Domains\Listings\Models\OpenOfferBid;
 use App\Domains\Users\Models\User;
 use Illuminate\Auth\Access\Response;
+use App\Enums\BidStatus;
 
 class OpenOfferBidPolicy
 {
@@ -14,7 +15,7 @@ class OpenOfferBidPolicy
      */
     public function viewAny(User $user, OpenOffer $openOffer): bool
     {
-        return $user->id === $openOffer->creator_id;
+        return true;
     }
 
     /**
@@ -30,7 +31,20 @@ class OpenOfferBidPolicy
      */
     public function create(User $user, OpenOffer $openOffer): bool
     {
-        return $user->id !== $openOffer->creator_id;
+        if ($user->id === $openOffer->creator_id) {
+            return false;
+        }
+
+        $hasActiveBid = $openOffer->bids()
+            ->where('bidder_id', $user->id)
+            ->where('status', '!=', BidStatus::REJECTED)
+            ->exists();
+
+        if ($hasActiveBid) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

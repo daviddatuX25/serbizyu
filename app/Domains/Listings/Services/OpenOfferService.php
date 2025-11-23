@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Plank\Mediable\MediaUploader;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use App\Enums\OpenOfferStatus;
 
 class OpenOfferService
 {
@@ -22,7 +23,6 @@ class OpenOfferService
             'workflow_template_id' => $data['workflow_template_id'] ?? null,
             'pay_first' => $data['pay_first'] ?? false,
             'address_id' => $data['address_id'] ?? null,
-            'fulfilled' => false,
         ]);
 
         $this->handleUploadedFiles($openOffer, $uploadedFiles);
@@ -85,7 +85,20 @@ class OpenOfferService
 
     public function closeOpenOffer(OpenOffer $openOffer): OpenOffer
     {
-        $openOffer->update(['status' => 'closed']);
+        $openOffer->update(['status' => OpenOfferStatus::CLOSED]);
+        return $openOffer;
+    }
+
+    public function renewOpenOffer(OpenOffer $openOffer): OpenOffer
+    {
+        $maxDays = config('listings.open_offer_max_days', 30);
+        $newDeadline = now()->addDays($maxDays);
+
+        $openOffer->update([
+            'status' => OpenOfferStatus::OPEN,
+            'deadline' => $newDeadline,
+        ]);
+
         return $openOffer;
     }
 

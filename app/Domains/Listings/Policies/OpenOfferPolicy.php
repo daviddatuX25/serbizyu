@@ -5,6 +5,7 @@ namespace App\Domains\Listings\Policies;
 use App\Domains\Listings\Models\OpenOffer;
 use App\Domains\Users\Models\User;
 use Illuminate\Auth\Access\Response;
+use App\Enums\OpenOfferStatus;
 
 class OpenOfferPolicy
 {
@@ -62,6 +63,14 @@ class OpenOfferPolicy
     public function close(User $user, OpenOffer $openOffer): bool
     {
         return $user->id === $openOffer->creator_id; // Only the offer owner can close it
+    }
+
+    /**
+     * Determine whether the user can renew the model.
+     */
+    public function renew(User $user, OpenOffer $openOffer): bool
+    {
+        return $user->id === $openOffer->creator_id && $openOffer->status === OpenOfferStatus::EXPIRED;
     }
 
     /**

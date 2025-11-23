@@ -44,7 +44,7 @@ Route::get('/openoffers/{openoffer}', [OpenOfferController::class, 'show'])->nam
 // Creator space
 Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
     Route::get('/', function () {
-        return view('dashboard');
+        return view('creator.dashboard');
     })->name('dashboard');
 
     // Service Management
@@ -57,10 +57,13 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     // Open Offer Management
     Route::resource('openoffers', OpenOfferController::class)->except(['show']);
     Route::post('openoffers/{openoffer}/close', [OpenOfferController::class, 'close'])->name('openoffers.close');
+    Route::post('openoffers/{openoffer}/renew', [OpenOfferController::class, 'renew'])->name('openoffers.renew');
 
-    // Bidding Management
+    // Bidding Management for Open Offer Owners
     Route::prefix('openoffers/{openoffer}')->name('openoffers.')->group(function () {
-        Route::resource('bids', OpenOfferBidController::class);
+        Route::resource('bids', OpenOfferBidController::class)->only([
+            'index', 'store', 'edit', 'update', 'destroy'
+        ]);
         Route::post('bids/{bid}/accept', [OpenOfferBidController::class, 'accept'])->name('bids.accept');
         Route::post('bids/{bid}/reject', [OpenOfferBidController::class, 'reject'])->name('bids.reject');
     });

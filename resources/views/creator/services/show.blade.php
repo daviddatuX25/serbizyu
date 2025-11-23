@@ -1,4 +1,11 @@
-<x-app-layout>
+<x-creator-layout>
+    <x-slot name="header">
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('My Services') }}
+            </h2>
+        </div>
+    </x-slot>
     <div x-data="{ activeTab: 'overview' }">
         {{-- Header --}}
         <header class="bg-white shadow">
@@ -73,4 +80,4 @@
     <style>
         [x-cloak] { display: none !important; }
     </style>
-</x-app-layout>
+</x-creator-layout>

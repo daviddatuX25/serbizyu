@@ -25,6 +25,7 @@ class OpenOfferForm extends FormWithMedia
     public bool $pay_first = false;
     public ?int $address_id = null;
     public ?string $deadline = null;
+    public string $deadline_option = '7';
 
     // For lists (categories, workflows) loaded for select inputs
     public array $categories = [];
@@ -41,7 +42,7 @@ class OpenOfferForm extends FormWithMedia
             'workflow_template_id' => 'nullable|integer|exists:workflow_templates,id',
             'pay_first' => 'nullable|boolean',
             'address_id' => 'nullable|integer|exists:addresses,id',
-            'deadline' => 'nullable|date|after_or_equal:today',
+            'deadline_option' => 'required|in:1,3,7,14,30',
             'newFiles' => 'nullable|array',
             'newFiles.*' => 'file|max:5120',
             'imagesToRemove' => 'nullable|array',
@@ -88,6 +89,8 @@ class OpenOfferForm extends FormWithMedia
 
         $openOfferService = app(\App\Domains\Listings\Services\OpenOfferService::class);
 
+        $deadline = now()->addDays((int)$this->deadline_option);
+
         $data = [
             'title' => $this->title,
             'description' => $this->description,
@@ -96,7 +99,7 @@ class OpenOfferForm extends FormWithMedia
             'workflow_template_id' => $this->workflow_template_id,
             'pay_first' => $this->pay_first,
             'address_id' => $this->address_id,
-            'deadline' => $this->deadline,
+            'deadline' => $deadline,
             'images_to_remove' => $this->imagesToRemove,
         ];
 
@@ -134,5 +137,3 @@ class OpenOfferForm extends FormWithMedia
         return view('livewire.open-offer-form');
     }
 }
-
-

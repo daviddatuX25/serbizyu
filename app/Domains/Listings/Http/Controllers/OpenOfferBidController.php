@@ -18,44 +18,25 @@ class OpenOfferBidController extends Controller
     public function __construct(OpenOfferBidService $openOfferBidService)
     {
         $this->openOfferBidService = $openOfferBidService;
-        // No authorizeResource here as actions are specific
     }
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index(OpenOffer $openoffer)
     {
         $this->authorize('viewAny', [OpenOfferBid::class, $openoffer]);
-        $bids = $openoffer->bids()->with('bidder')->latest()->paginate(10);
-        return view('creator.bids.index', compact('bids', 'openoffer'));
+
+        if (Auth::user()->id === $openoffer->creator_id) {
+            $bids = $openoffer->bids()->with('bidder')->latest()->paginate(10);
+        } else {
+            $bids = $openoffer->bids()->where('bidder_id', Auth::id())->with('bidder')->latest()->paginate(10);
+        }
+
+        return view('creator.openoffers.bids.index', compact('bids', 'openoffer'));
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(OpenOffer $openoffer, OpenOfferBid $bid)
-    {
-        $this->authorize('view', $bid);
-        return view('creator.bids.show', compact('bid'));
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(OpenOffer $openoffer, OpenOfferBid $bid)
-    {
-        $this->authorize('update', $bid);
-        return view('creator.bids.edit', compact('bid', 'openoffer'));
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(StoreOpenOfferBidRequest $request, OpenOffer $openoffer)
     {
         try {
-            $bid = $this->openOfferBidService->createBid(
+            $this->openOfferBidService->createBid(
                 Auth::user(),
                 $openoffer,
                 $request->validated()
@@ -66,27 +47,27 @@ class OpenOfferBidController extends Controller
         }
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
+    public function edit(OpenOffer $openoffer, OpenOfferBid $bid)
+    {
+        $this->authorize('update', $bid);
+        return view('creator.openoffers.bids.edit', compact('bid', 'openoffer'));
+    }
+
     public function update(UpdateOpenOfferBidRequest $request, OpenOffer $openoffer, OpenOfferBid $bid)
     {
         $this->authorize('update', $bid);
 
         try {
-            $bid = $this->openOfferBidService->updateBid(
+            $this->openOfferBidService->updateBid(
                 $bid,
                 $request->validated()
             );
-            return back()->with('success', 'Bid updated successfully!');
+            return redirect()->route('creator.openoffers.bids.index', $openoffer)->with('success', 'Bid updated successfully!');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(OpenOffer $openoffer, OpenOfferBid $bid)
     {
         $this->authorize('delete', $bid);
@@ -99,9 +80,6 @@ class OpenOfferBidController extends Controller
         }
     }
 
-    /**
-     * Accept the specified bid.
-     */
     public function accept(OpenOffer $openoffer, OpenOfferBid $bid)
     {
         $this->authorize('accept', $bid);
@@ -114,9 +92,6 @@ class OpenOfferBidController extends Controller
         }
     }
 
-    /**
-     * Reject the specified bid.
-     */
     public function reject(OpenOffer $openoffer, OpenOfferBid $bid)
     {
         $this->authorize('reject', $bid);

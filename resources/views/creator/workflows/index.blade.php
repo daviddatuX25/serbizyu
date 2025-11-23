@@ -1,16 +1,16 @@
-<x-app-layout>
+<x-creator-layout>
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('My Workflows') }}
             </h2>
-            <a href="{{ route('creator.workflows.create') }}" 
-               class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                Create New Workflow
-            </a>
+            
         </div>
     </x-slot>
-
+    <a href="{{ route('creator.workflows.create') }}" 
+        class="w-[200px] px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        Create New Workflow
+    </a>
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <!-- Session Messages -->
@@ -79,4 +79,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-creator-layout>

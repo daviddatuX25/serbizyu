@@ -115,7 +115,6 @@ class ListingsSeeder extends Seeder
                 'budget' => 5000.00,
                 'category' => 'Catering Service',
                 'workflow' => 'Event Catering Service',
-                'fulfilled' => false,
             ],
             [
                 'title' => 'Need House Painting',
@@ -123,7 +122,6 @@ class ListingsSeeder extends Seeder
                 'budget' => 12000.00,
                 'category' => 'Home Repair & Maintenance',
                 'workflow' => 'House Painting Service',
-                'fulfilled' => false,
             ],
             [
                 'title' => 'Event Decoration Needed',
@@ -131,7 +129,6 @@ class ListingsSeeder extends Seeder
                 'budget' => 15000.00,
                 'category' => 'Event Decorating Service',
                 'workflow' => 'Event Decoration Service',
-                'fulfilled' => false,
             ],
             [
                 'title' => 'Plumbing Repair Urgent',
@@ -139,7 +136,6 @@ class ListingsSeeder extends Seeder
                 'budget' => 3000.00,
                 'category' => 'Home Repair & Maintenance',
                 'workflow' => 'Basic Plumbing Service',
-                'fulfilled' => false,
             ],
             [
                 'title' => 'Small Bathroom Renovation',
@@ -147,7 +143,6 @@ class ListingsSeeder extends Seeder
                 'budget' => 25000.00,
                 'category' => 'Construction Service',
                 'workflow' => 'Small Construction Project',
-                'fulfilled' => false,
             ],
             [
                 'title' => 'Electrical Wiring Installation',
@@ -155,7 +150,6 @@ class ListingsSeeder extends Seeder
                 'budget' => 8000.00,
                 'category' => 'Home Repair & Maintenance',
                 'workflow' => 'Electrical Repair Service',
-                'fulfilled' => false,
             ],
             [
                 'title' => 'Birthday Party Catering',
@@ -163,7 +157,6 @@ class ListingsSeeder extends Seeder
                 'budget' => 4000.00,
                 'category' => 'Catering Service',
                 'workflow' => 'Event Catering Service',
-                'fulfilled' => true,
             ],
         ];
 
@@ -179,7 +172,6 @@ class ListingsSeeder extends Seeder
                     'description' => $offerData['description'],
                     'budget' => $offerData['budget'],
                     'pay_first' => true,
-                    'fulfilled' => $offerData['fulfilled'],
                     'category_id' => $category->id,
                     'creator_id' => $user->id,
                     'workflow_template_id' => $workflow->id,

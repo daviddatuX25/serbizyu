@@ -27,6 +27,6 @@ class CloseExpiredOffers implements ShouldQueue
     {
         OpenOffer::where('deadline', '<=', Date::now())
             ->where('status', '!=', OpenOfferStatus::CLOSED)
-            ->update(['status' => OpenOfferStatus::CLOSED]);
+            ->update(['status' => OpenOfferStatus::EXPIRED]);
     }
 }

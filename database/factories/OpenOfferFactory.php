@@ -24,7 +24,6 @@ class OpenOfferFactory extends Factory
             'title' => $this->faker->sentence(3),
             'description' => $this->faker->paragraph(),
             'budget' => $this->faker->randomFloat(2, 10, 100),
-            'fulfilled' => $this->faker->boolean(30),
             'pay_first' => $this->faker->boolean(30),
             'category_id' => Category::inRandomOrder()->first()->id,
             'creator_id' => User::inRandomOrder()->first()->id,

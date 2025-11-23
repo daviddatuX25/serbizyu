@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Enums\OpenOfferStatus;
 
 return new class extends Migration
 {
@@ -17,8 +18,9 @@ return new class extends Migration
             $table->string('title');
             $table->string('description')->nullable();
             $table->decimal('budget', 10, 2);
+            $table->timestamp('deadline')->nullable();
+            $table->enum('status', array_column(OpenOfferStatus::cases(), 'value'))->default(OpenOfferStatus::OPEN->value);
             $table->boolean('pay_first');
-            $table->boolean('fulfilled');
             $table->foreignId('address_id')->constrained('addresses');
             $table->foreignId('category_id')->constrained();
             $table->foreignId('creator_id')->constrained('users');

@@ -27,7 +27,6 @@ class OpenOffer extends Model implements MediableInterface
         'description',
         'budget',
         'pay_first',
-        'fulfilled',
         'category_id',
         'creator_id',
         'workflow_template_id',
@@ -38,7 +37,6 @@ class OpenOffer extends Model implements MediableInterface
 
     // casts
     protected $casts = [
-        'fulfilled' => 'boolean',
         'deadline' => 'datetime', // Added deadline cast
         'status' => OpenOfferStatus::class, // Added status cast
     ];

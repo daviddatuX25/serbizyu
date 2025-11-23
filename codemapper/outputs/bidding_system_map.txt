@@ -1,0 +1,808 @@
+MAP: Generated 2025-11-23 12:10:08
+--app/Domains/Listings/Models/OpenOfferBid.php
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domains\Listings\Models\Service;
+use App\Domains\Users\Models\User;
+
+class OpenOfferBid extends Model
+{
+    use hasFactory, SoftDeletes;
+
+    protected $table = 'open_offer_bids';
+    protected $fillable = [
+        'open_offer_id',
+        'bidder_id',
+        'service_id',
+        'amount',
+        'message',
+        'status',
+    ];
+    
+    public function service()
+    {
+        return $this->belongsTo(Service::class);
+    }
+
+    public function openOffer()
+    {
+        return $this->belongsTo(OpenOffer::class);
+    }
+
+    public function bidder()
+    {
+        return $this->belongsTo(User::class, 'bidder_id');
+    }
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\OpenOfferBidFactory::new();
+    }
+}
+----
+--app/Domains/Listings/Policies/OpenOfferBidPolicy.php
+<?php
+
+namespace App\Domains\Listings\Policies;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Listings\Models\OpenOfferBid;
+use App\Domains\Users\Models\User;
+use Illuminate\Auth\Access\Response;
+
+class OpenOfferBidPolicy
+{
+    /**
+     * Determine whether the user can view any models.
+     */
+    public function viewAny(User $user, OpenOffer $openOffer): bool
+    {
+        // Allow the offer creator to see all bids
+        if ($user->id === $openOffer->creator_id) {
+            return true;
+        }
+
+        // Allow a user who has placed a bid to see the list
+        return $openOffer->bids()->where('bidder_id', $user->id)->exists();
+    }
+
+    /**
+     * Determine whether the user can view the model.
+     */
+    public function view(User $user, OpenOfferBid $bid): bool
+    {
+        return $user->id === $bid->bidder_id || $user->id === $bid->openOffer->creator_id;
+    }
+
+    /**
+     * Determine whether the user can create models.
+     */
+    public function create(User $user, OpenOffer $openOffer): bool
+    {
+        return $user->id !== $openOffer->creator_id;
+    }
+
+    /**
+     * Determine whether the user can update the model.
+     */
+    public function update(User $user, OpenOfferBid $bid): bool
+    {
+        return $user->id === $bid->bidder_id;
+    }
+
+    /**
+     * Determine whether the user can delete the model.
+     */
+    public function delete(User $user, OpenOfferBid $bid): bool
+    {
+        return $user->id === $bid->bidder_id;
+    }
+
+    /**
+     * Determine whether the user can accept the bid.
+     */
+    public function accept(User $user, OpenOfferBid $bid): bool
+    {
+        return $user->id === $bid->openOffer->creator_id;
+    }
+
+    /**
+     * Determine whether the user can reject the bid.
+     */
+    public function reject(User $user, OpenOfferBid $bid): bool
+    {
+        return $user->id === $bid->openOffer->creator_id;
+    }
+}
+----
+--app/Domains/Listings/Services/OpenOfferBidService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Listings\Models\OpenOfferBid;
+use App\Domains\Users\Models\User;
+use Illuminate\Support\Facades\DB;
+use App\Enums\OpenOfferStatus;
+
+class OpenOfferBidService
+{
+    public function createBid(User $bidder, OpenOffer $openOffer, array $data): OpenOfferBid
+    {
+        return DB::transaction(function () use ($bidder, $openOffer, $data) {
+            // Ensure the user hasn't already bid on this offer
+            if ($openOffer->bids()->where('bidder_id', $bidder->id)->exists()) {
+                throw new \Exception('You have already placed a bid on this offer.');
+            }
+
+            // Ensure the offer is still open
+            if ($openOffer->status !== OpenOfferStatus::OPEN) {
+                throw new \Exception('This offer is no longer open for bids.');
+            }
+
+            $bid = $openOffer->bids()->create([
+                'bidder_id' => $bidder->id,
+                'service_id' => $data['service_id'],
+                'amount' => $data['amount'],
+                'message' => $data['message'] ?? null,
+            ]);
+
+            // Optionally, send a notification to the offer creator
+            // Notification::send($openOffer->creator, new BidPlacedNotification($bid));
+
+            return $bid;
+        });
+    }
+
+    public function acceptBid(OpenOfferBid $bid): OpenOfferBid
+    {
+        return DB::transaction(function () use ($bid) {
+            // Ensure the bid is still pending
+            if ($bid->status !== 'pending') {
+                throw new \Exception('This bid cannot be accepted.');
+            }
+
+            // Accept the bid
+            $bid->update(['status' => 'accepted']);
+
+            // Close the open offer
+            $bid->openOffer->update(['status' => OpenOfferStatus::CLOSED]);
+
+            // Reject all other bids for this offer
+            $bid->openOffer->bids()
+                ->where('id', '!=', $bid->id)
+                ->where('status', 'pending')
+                ->update(['status' => 'rejected']);
+
+            // Optionally, create an order here
+            // OrderService::createOrder($bid);
+
+            // Optionally, send notifications
+            // Notification::send($bid->bidder, new BidAcceptedNotification($bid));
+            // Notification::send($bid->openOffer->creator, new BidAcceptedNotification($bid));
+
+            return $bid;
+        });
+    }
+
+    public function rejectBid(OpenOfferBid $bid): OpenOfferBid
+    {
+        return DB::transaction(function () use ($bid) {
+            // Ensure the bid is still pending
+            if ($bid->status !== 'pending') {
+                throw new \Exception('This bid cannot be rejected.');
+            }
+
+            $bid->update(['status' => 'rejected']);
+
+            // Optionally, send notification to the bidder
+            // Notification::send($bid->bidder, new BidRejectedNotification($bid));
+
+            return $bid;
+        });
+    }
+
+    public function updateBid(OpenOfferBid $bid, array $data): OpenOfferBid
+    {
+        return DB::transaction(function () use ($bid, $data) {
+            // Ensure the bid is still pending
+            if ($bid->status !== 'pending') {
+                throw new \Exception('This bid cannot be updated.');
+            }
+
+            $bid->update([
+                'amount' => $data['amount'] ?? $bid->amount,
+                'message' => $data['message'] ?? $bid->message,
+            ]);
+
+            return $bid;
+        });
+    }
+
+    public function deleteBid(OpenOfferBid $bid): void
+    {
+        DB::transaction(function () use ($bid) {
+            // Ensure the bid is still pending
+            if ($bid->status !== 'pending') {
+                throw new \Exception('This bid cannot be deleted.');
+            }
+            $bid->delete();
+        });
+    }
+}
+----
+--app/Livewire/BidForm.php
+<?php
+
+namespace App\Livewire;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Listings\Services\OpenOfferBidService;
+use Livewire\Component;
+use Illuminate\Support\Facades\Auth;
+
+class BidForm extends Component
+{
+    public OpenOffer $openOffer;
+    public ?float $amount = null;
+    public ?string $message = null;
+    public ?int $service_id = null;
+    public $services;
+
+    protected $rules = [
+        'amount' => 'required|numeric|min:0',
+        'message' => 'nullable|string|max:1000',
+        'service_id' => 'required|exists:services,id',
+    ];
+
+    public function mount(OpenOffer $openOffer)
+    {
+        $this->openOffer = $openOffer;
+        $this->services = Auth::user()->services;
+    }
+
+    public function save(OpenOfferBidService $openOfferBidService)
+    {
+        $this->validate();
+
+        try {
+            $openOfferBidService->createBid(
+                Auth::user(),
+                $this->openOffer,
+                [
+                    'amount' => $this->amount,
+                    'message' => $this->message,
+                    'service_id' => $this->service_id,
+                ]
+            );
+
+            $this->reset(['amount', 'message', 'service_id']);
+            $this->dispatch('bid-placed'); // Emit event to refresh bid list
+            session()->flash('success', 'Your bid has been placed successfully!');
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.bid-form');
+    }
+}
+----
+--app/Livewire/BidList.php
+<?php
+
+namespace App\Livewire;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Listings\Models\OpenOfferBid;
+use App\Domains\Listings\Services\OpenOfferBidService;
+use Livewire\Component;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
+class BidList extends Component
+{
+    use AuthorizesRequests;
+
+    public OpenOffer $openOffer;
+    public $bids;
+    public $services;
+    public ?int $editingBidId = null;
+    public ?float $editingBidAmount = null;
+    public ?string $editingBidMessage = null;
+    public ?int $editingBidServiceId = null;
+
+    protected $listeners = ['bid-placed' => 'loadBids'];
+
+    public function mount(OpenOffer $openOffer)
+    {
+        $this->openOffer = $openOffer;
+        $this->loadBids();
+        
+        // Only load services if user is authenticated
+        if (Auth::check()) {
+            $this->services = Auth::user()->services;
+        }
+    }
+
+    public function loadBids()
+    {
+        $this->bids = $this->openOffer->bids()->with('bidder', 'service')->latest()->get();
+    }
+
+    public function acceptBid(OpenOfferBidService $openOfferBidService, int $bidId)
+    {
+        try {
+            $bid = OpenOfferBid::findOrFail($bidId);
+            $this->authorize('accept', $bid);
+
+            $openOfferBidService->acceptBid($bid);
+            $this->loadBids();
+            
+            session()->flash('success', 'Bid accepted successfully! Offer closed.');
+            
+            // Refresh the page to show updated status
+            return redirect()->route('offers.show', $this->openOffer);
+            
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            session()->flash('error', 'You are not authorized to accept this bid.');
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
+    public function rejectBid(OpenOfferBidService $openOfferBidService, int $bidId)
+    {
+        try {
+            $bid = OpenOfferBid::findOrFail($bidId);
+            $this->authorize('reject', $bid);
+
+            $openOfferBidService->rejectBid($bid);
+            $this->loadBids();
+            
+            session()->flash('success', 'Bid rejected.');
+            
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            session()->flash('error', 'You are not authorized to reject this bid.');
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
+    public function editBid(int $bidId)
+    {
+        try {
+            $bid = OpenOfferBid::findOrFail($bidId);
+            $this->authorize('update', $bid);
+            
+            $this->editingBidId = $bid->id;
+            $this->editingBidAmount = $bid->amount;
+            $this->editingBidMessage = $bid->message;
+            $this->editingBidServiceId = $bid->service_id;
+            
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            session()->flash('error', 'You are not authorized to edit this bid.');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Unable to load bid for editing.');
+        }
+    }
+
+    public function cancelEditing()
+    {
+        $this->reset(['editingBidId', 'editingBidAmount', 'editingBidMessage', 'editingBidServiceId']);
+        $this->resetValidation();
+    }
+
+    public function updateBid(OpenOfferBidService $openOfferBidService)
+    {
+        try {
+            if (!$this->editingBidId) {
+                throw new \Exception('No bid selected for editing.');
+            }
+
+            $bid = OpenOfferBid::findOrFail($this->editingBidId);
+            $this->authorize('update', $bid);
+
+            $this->validate([
+                'editingBidAmount' => 'required|numeric|min:0',
+                'editingBidMessage' => 'nullable|string|max:1000',
+                'editingBidServiceId' => 'required|exists:services,id',
+            ]);
+
+            $openOfferBidService->updateBid($bid, [
+                'amount' => $this->editingBidAmount,
+                'message' => $this->editingBidMessage,
+                'service_id' => $this->editingBidServiceId,
+            ]);
+
+            $this->cancelEditing();
+            $this->loadBids();
+            
+            session()->flash('success', 'Bid updated successfully!');
+            
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            session()->flash('error', 'You are not authorized to update this bid.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Let Livewire handle validation errors
+            throw $e;
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
+    public function deleteBid(OpenOfferBidService $openOfferBidService, int $bidId)
+    {
+        try {
+            $bid = OpenOfferBid::findOrFail($bidId);
+            $this->authorize('delete', $bid);
+
+            $openOfferBidService->deleteBid($bid);
+            $this->loadBids();
+            
+            session()->flash('success', 'Bid deleted successfully!');
+            
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            session()->flash('error', 'You are not authorized to delete this bid.');
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.bid-list');
+    }
+}
+----
+--resources/views/livewire/bid-form.blade.php
+<div>
+    @if (session()->has('success'))
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span class="block sm:inline">{{ session('success') }}</span>
+        </div>
+    @endif
+
+    @if (session()->has('error'))
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span class="block sm:inline">{{ session('error') }}</span>
+        </div>
+    @endif
+
+    @can('create', [\App\Domains\Listings\Models\OpenOfferBid::class, $openOffer])
+        <div class="bg-gray-100 p-4 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold mb-3">Place Your Bid</h3>
+            <form wire:submit.prevent="save">
+                <div class="mb-4">
+                    <label for="amount" class="block text-sm font-medium text-gray-700">Bid Amount</label>
+                    <input type="number" step="0.01" id="amount" wire:model.defer="amount"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    @error('amount') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="mb-4">
+                    <label for="service_id" class="block text-sm font-medium text-gray-700">Select Your Service</label>
+                    <select id="service_id" wire:model.defer="service_id"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <option value="">-- Select a service --</option>
+                        @if($services)
+                            @foreach($services as $service)
+                                <option value="{{ $service->id }}">{{ $service->title }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                    @error('service_id') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="mb-4">
+                    <label for="message" class="block text-sm font-medium text-gray-700">Message (optional)</label>
+                    <textarea id="message" wire:model.defer="message" rows="3"
+                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                    @error('message') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Submit Bid
+                </button>
+            </form>
+        </div>
+    @endcan
+</div>
+----
+--resources/views/livewire/bid-list.blade.php
+<div x-data="{ showModal: false }">
+    <div class="bg-white rounded-xl shadow-md border">
+        <div class="p-6 border-b">
+            <h2 class="text-xl font-bold text-gray-800">Bids on this Offer</h2>
+            <p class="text-sm text-gray-500">Total bids: {{ $bids->count() }}</p>
+        </div>
+
+        @if (session()->has('success'))
+            <div class="p-4 bg-green-50 border-b border-green-200">
+                <p class="text-green-700 text-sm font-medium">{{ session('success') }}</p>
+            </div>
+        @endif
+
+        @if (session()->has('error'))
+            <div class="p-4 bg-red-50 border-b border-red-200">
+                <p class="text-red-700 text-sm font-medium">{{ session('error') }}</p>
+            </div>
+        @endif
+
+        @if ($bids->isEmpty())
+            <div class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No bids yet</h3>
+                <p class="mt-1 text-sm text-gray-500">When a provider places a bid, it will appear here.</p>
+            </div>
+        @else
+            <div class="divide-y divide-gray-200">
+                @foreach ($bids as $bid)
+                    <div class="p-6 group hover:bg-gray-50 transition-colors duration-200">
+                        <div class="flex items-start justify-between">
+                            {{-- Bidder Info --}}
+                            <div class="flex items-start">
+                                <img class="h-12 w-12 rounded-full object-cover" src="{{ $bid->bidder->profile_photo_url }}" alt="{{ $bid->bidder->name }}">
+                                <div class="ml-4">
+                                    <p class="text-md font-bold text-gray-900">{{ $bid->bidder->name }}</p>
+                                    <p class="text-xs text-gray-500">Bidded on: {{ $bid->created_at->format('M d, Y, h:i A') }}</p>
+                                    @if ($bid->service)
+                                        <div class="mt-2 text-xs text-gray-600 bg-gray-100 p-2 rounded-md">
+                                            <p class="font-semibold">Proposing Service:</p>
+                                            <a href="{{route('services.show', $bid->service)}}" class="text-cyan-600 hover:underline">{{ $bid->service->title }}</a>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                            
+                            {{-- Amount and Status --}}
+                            <div class="text-right flex-shrink-0 ml-4">
+                                <p class="text-2xl font-bold text-gray-800">₱{{ number_format($bid->amount, 2) }}</p>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                    @switch($bid->status)
+                                        @case('pending') bg-yellow-100 text-yellow-800 @break
+                                        @case('accepted') bg-green-100 text-green-800 @break
+                                        @case('rejected') bg-red-100 text-red-800 @break
+                                    @endswitch">
+                                    {{ ucfirst($bid->status) }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        {{-- Message --}}
+                        @if ($bid->message)
+                            <div class="mt-4 pl-16">
+                                <p class="text-sm text-gray-700 bg-gray-100 p-3 rounded-lg">{{ $bid->message }}</p>
+                            </div>
+                        @endif
+
+                        {{-- Actions --}}
+                        <div class="mt-4 pl-16 flex items-center space-x-4">
+                            @can('accept', $bid)
+                                <button wire:click="acceptBid({{ $bid->id }})"
+                                        onclick="return confirm('Are you sure? This will close the offer to other bids.');"
+                                        class="btn-secondary-outline-sm">
+                                    Accept
+                                </button>
+                            @endcan
+                             @can('reject', $bid)
+                                <button wire:click="rejectBid({{ $bid->id }})"
+                                        onclick="return confirm('Are you sure?');"
+                                        class="text-sm font-medium text-red-600 hover:text-red-800">
+                                    Reject
+                                </button>
+                            @endcan
+                            @can('update', $bid)
+                                <button wire:click="editBid({{ $bid->id }})"
+                                        @click="showModal = true"
+                                        class="btn-secondary-sm">
+                                    Edit Bid
+                                </button>
+                            @endcan
+                            @can('delete', $bid)
+                                <button wire:click="deleteBid({{ $bid->id }})"
+                                        onclick="return confirm('Are you sure you want to remove this bid?');"
+                                        class="text-sm font-medium text-red-600 hover:text-red-800">
+                                    Remove
+                                </button>
+                            @endcan
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
+    {{-- Edit Bid Modal --}}
+    <div x-show="showModal" 
+         class="fixed inset-0 z-50 flex items-center justify-center bg-gray-800 bg-opacity-75"
+         style="display: none;">
+        <div @click.away="showModal = false" 
+             class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Edit Your Bid</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="editingBidAmount" class="block text-sm font-medium text-gray-700">Bid Amount</label>
+                    <input type="number" step="0.01" id="editingBidAmount" wire:model.defer="editingBidAmount"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    @error('editingBidAmount') <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span> @enderror
+                </div>
+                
+                <div>
+                    <label for="editingBidServiceId" class="block text-sm font-medium text-gray-700">Change Attached Service</label>
+                    <select id="editingBidServiceId" wire:model.defer="editingBidServiceId"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        @if($services)
+                            @foreach ($services as $service)
+                                <option value="{{ $service->id }}">{{ $service->title }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                    @error('editingBidServiceId') <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span> @enderror
+                </div>
+                
+                <div>
+                    <label for="editingBidMessage" class="block text-sm font-medium text-gray-700">Message (optional)</label>
+                    <textarea id="editingBidMessage" wire:model.defer="editingBidMessage" rows="3"
+                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
+                    @error('editingBidMessage') <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span> @enderror
+                </div>
+                
+                <div class="flex justify-end items-center space-x-3 pt-4">
+                    <button wire:click="cancelEditing" 
+                            @click="showModal = false" 
+                            type="button" 
+                            class="btn-secondary-md">
+                        Cancel
+                    </button>
+                    <button wire:click="updateBid" 
+                            @click="showModal = false"
+                            type="button" 
+                            class="btn-primary-md">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+----
+--resources/views/offers/show.blade.php
+<x-app-layout :jsFiles="['app.js', 'swiper-listings.js']">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="lg:grid lg:grid-cols-3 lg:gap-8 max-w-7xl mx-auto">
+
+            {{-- Left Column: Offer Details --}}
+            <div class="lg:col-span-2 space-y-6">
+                
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <!-- Image Carousel -->
+                    <div class="relative h-64 md:h-96 bg-gray-200">
+                        @if($offer->media->isNotEmpty())
+                            <div class="swiper serviceSwiper h-full">
+                                <div class="swiper-wrapper">
+                                    @foreach($offer->media as $media)
+                                        <div class="swiper-slide bg-gray-100 flex items-center justify-center">
+                                            <img src="{{ $media->getUrl() }}" alt="{{ $offer->title }}" 
+                                                class="w-full h-full object-contain">
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div class="swiper-button-prev text-white"></div>
+                                <div class="swiper-button-next text-white"></div>
+                                <div class="swiper-pagination"></div>
+                            </div>
+                        @else
+                            <div class="flex items-center justify-center h-full">
+                                <span class="text-gray-400 text-lg">No images available</span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Management Banner for Owner --}}
+                @can('update', $offer)
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-blue-700">
+                                    You are the creator of this offer. 
+                                    <a href="{{ route('creator.openoffers.edit', $offer) }}" class="font-medium underline text-blue-700 hover:text-blue-600">Manage bids and settings here.</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                @endcan
+
+                <div class="bg-white rounded-lg shadow-md p-6 space-y-6">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider">{{ $offer->category->name }}</p>
+                        <h1 class="text-3xl font-bold text-gray-900 mt-2">{{ $offer->title }}</h1>
+                        
+                        @if ($offer->deadline)
+                            <p class="text-sm text-gray-500 mt-2">
+                                Offer closes on: <span class="font-medium text-gray-700">{{ $offer->deadline->format('M d, Y') }}</span>
+                            </p>
+                        @endif
+                    </div>
+
+                    <div class="pt-4 border-t">
+                        <h3 class="font-semibold text-gray-800 mb-2">Description</h3>
+                        <p class="text-gray-600 leading-relaxed">{{ $offer->description }}</p>
+                    </div>
+
+                    @include('listings.partials.workflow-steps', ['workflowTemplate' => $offer->workflowTemplate])
+                </div>
+            </div>
+
+            {{-- Right Column: Bidding and Info --}}
+            <div class="lg:col-span-1 space-y-6">
+                 <div class="sticky top-20 mt-5">
+                    {{-- Budget Card --}}
+                    <div class="bg-white rounded-lg shadow-lg border p-6">
+                        <p class="text-sm text-gray-500">Proposed Budget</p>
+                        <p class="text-3xl font-bold text-green-600 mt-1">
+                            ₱{{ number_format($offer->budget, 2) }}
+                        </p>
+                        <div class="mt-1 text-sm text-gray-500">
+                            Status: <span class="font-medium text-gray-900">{{ ucfirst($offer->status->value) }}</span>
+                        </div>
+                    </div>
+
+                    {{-- Bidding Section --}}
+                    <div class="mt-6">
+                        @php
+                            $hasBid = auth()->check() && $offer->bids()->where('bidder_id', auth()->id())->exists();
+                        @endphp
+
+                        @if ($hasBid)
+                             <div class="bg-green-50 text-center p-6 rounded-lg shadow-inner">
+                                <h3 class="text-lg font-semibold text-green-800">You've placed a bid!</h3>
+                                <p class="text-sm text-green-700 mt-1">The creator will be notified of your proposal.</p>
+                            </div>
+                        @else
+                            @can('create', [App\Domains\Listings\Models\OpenOfferBid::class, $offer])
+                                <h3 class="text-xl font-semibold mb-4">Place Your Bid</h3>
+                                <livewire:bid-form :open-offer="$offer" />
+                            @else
+                                @guest
+                                    <div class="bg-gray-100 border-l-4 border-gray-400 p-4">
+                                        <p class="font-bold">Want to place a bid?</p>
+                                        <p>Please <a href="{{ route('login') }}" class="text-blue-600 hover:underline">log in</a> or <a href="{{ route('register') }}" class="text-blue-600 hover:underline">create an account</a> to get started.</p>
+                                    </div>
+                                @endguest
+                            @endcan
+                        @endif
+                    </div>
+                 </div>
+            </div>
+            
+            {{-- Bid List (Full Width Below) --}}
+            @can('viewAny', [App\Domains\Listings\Models\OpenOfferBid::class, $offer])
+                <div class="lg:col-span-3 mt-8">
+                    <livewire:bid-list :open-offer="$offer" />
+                </div>
+            @endcan
+
+        </div>
+    </div>
+</x-app-layout>
+----
+--SUMMARY
+Text:8 Binary:0 Skipped:2228

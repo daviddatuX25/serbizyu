@@ -1,5 +1,5 @@
 {{-- resources/views/creator/offers/edit.blade.php --}}
-<x-app-layout>
+<x-creator-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800">
             Edit Open Offer
@@ -11,4 +11,4 @@
             <livewire:open-offer-form :offer="$offer" :addresses="$addresses" />
         </div>
     </div>
-</x-app-layout>
+</x-creator-layout>

@@ -11,7 +11,8 @@
         
         <div class="mt-3 text-sm text-gray-600">
             <p x-show="!expanded" class="line-clamp-2">
-                {{ $workflowTemplate->workTemplates->pluck('name')->implode(', ') }}
+                {{ $workflowTemplate->workTemplates->pluck('name')->take(3)->implode(', ') }}
+                {{ $workflowTemplate->workTemplates->count() > 3 ? '…' : '' }}
             </p>
         </div>
 

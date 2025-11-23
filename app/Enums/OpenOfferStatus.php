@@ -9,4 +9,5 @@ enum OpenOfferStatus: string
     case CLOSED = 'closed';
     case FULFILLED = 'fulfilled';
     case CANCELLED = 'cancelled';
+    case EXPIRED = 'expired';
 }

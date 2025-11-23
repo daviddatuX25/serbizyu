@@ -62,7 +62,14 @@ class OpenOfferController extends Controller
     public function show(OpenOffer $openoffer)
     {
         $openoffer->load(['address', 'media']);
-        return view('offers.show', ['offer' => $openoffer]);
+        $bids = $openoffer->bids()->with('bidder')->latest()->paginate(10);
+        $userServices = Auth::check() ? Auth::user()->services : collect();
+
+        return view('offers.show', [
+            'offer' => $openoffer,
+            'bids' => $bids,
+            'userServices' => $userServices
+        ]);
     }
 
     /**
@@ -112,5 +119,16 @@ class OpenOfferController extends Controller
 
         return back()->with('success', 'Open Offer closed successfully!');
     }
-}
 
+    /**
+     * Renew the specified open offer.
+     */
+    public function renew(OpenOffer $openoffer)
+    {
+        $this->authorize('renew', $openoffer);
+
+        $this->openOfferService->renewOpenOffer($openoffer);
+
+        return back()->with('success', 'Open Offer renewed successfully!');
+    }
+}

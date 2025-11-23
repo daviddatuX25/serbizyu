@@ -1,8 +1,6 @@
-<x-app-layout>
+<x-creator-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('dashboard') }}
-        </h2>
+        {{ __('Dashboard') }}
     </x-slot>
 
     <div class="py-12">
@@ -27,4 +25,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-creator-layout>

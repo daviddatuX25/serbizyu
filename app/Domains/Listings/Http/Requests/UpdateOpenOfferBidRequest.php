@@ -13,8 +13,8 @@ class UpdateOpenOfferBidRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $openOfferBid = $this->route('openOfferBid'); // Assuming route model binding
-        return Auth::user()->can('update', $openOfferBid);
+        $bid = $this->route('bid'); // Assuming route model binding
+        return Auth::user()->can('update', $bid);
     }
 
     /**

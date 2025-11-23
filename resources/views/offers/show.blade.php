@@ -7,7 +7,8 @@
                 
                 <div class="bg-white rounded-lg shadow-md overflow-hidden">
                     <!-- Image Carousel -->
-                    <div class="relative h-64 md:h-96 bg-gray-200">
+                    <div class="relative h-64 md:h-96 bg-gray-200" 
+                         data-loop="{{ $offer->media->count() > 1 ? 'true' : 'false' }}">
                         @if($offer->media->isNotEmpty())
                             <div class="swiper serviceSwiper h-full">
                                 <div class="swiper-wrapper">
@@ -72,7 +73,7 @@
 
             {{-- Right Column: Bidding and Info --}}
             <div class="lg:col-span-1 space-y-6">
-                 <div class="sticky top-20">
+                 <div class="sticky top-20 mt-5">
                     {{-- Budget Card --}}
                     <div class="bg-white rounded-lg shadow-lg border p-6">
                         <p class="text-sm text-gray-500">Proposed Budget</p>
@@ -86,27 +87,53 @@
 
                     {{-- Bidding Section --}}
                     <div class="mt-6">
-                        @php
-                            $hasBid = auth()->check() && $offer->bids()->where('bidder_id', auth()->id())->exists();
-                        @endphp
-
-                        @if ($hasBid)
-                             <div class="bg-green-50 text-center p-6 rounded-lg shadow-inner">
-                                <h3 class="text-lg font-semibold text-green-800">You've placed a bid!</h3>
-                                <p class="text-sm text-green-700 mt-1">The creator will be notified of your proposal.</p>
+                        @if (in_array($offer->status, [\App\Enums\OpenOfferStatus::CLOSED, \App\Enums\OpenOfferStatus::FULFILLED, \App\Enums\OpenOfferStatus::CANCELLED]))
+                            <div class="bg-gray-100 text-center p-6 rounded-lg shadow-inner">
+                                <h3 class="text-lg font-semibold text-gray-800">This offer is closed.</h3>
+                                <p class="text-sm text-gray-700 mt-1">No new bids are being accepted.</p>
+                            </div>
+                        @elseif ($offer->status === \App\Enums\OpenOfferStatus::EXPIRED)
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+                                <h3 class="text-lg font-semibold text-yellow-800">This offer has expired.</h3>
+                                @can('renew', $offer)
+                                    <form action="{{ route('creator.openoffers.renew', $offer) }}" method="POST" class="mt-2">
+                                        @csrf
+                                        <button type="submit" class="w-full btn-primary">Renew Offer</button>
+                                    </form>
+                                @endcan
                             </div>
                         @else
-                            @can('create', [App\Domains\Listings\Models\OpenOfferBid::class, $offer])
-                                <h3 class="text-xl font-semibold mb-4">Place Your Bid</h3>
-                                <livewire:bid-form :open-offer="$offer" />
-                            @else
-                                @guest
-                                    <div class="bg-gray-100 border-l-4 border-gray-400 p-4">
-                                        <p class="font-bold">Want to place a bid?</p>
-                                        <p>Please <a href="{{ route('login') }}" class="text-blue-600 hover:underline">log in</a> or <a href="{{ route('register') }}" class="text-blue-600 hover:underline">create an account</a> to get started.</p>
+                            @php
+                                $userBid = auth()->check() ? $offer->bids()->where('bidder_id', auth()->id())->where('status', '!=', \App\Enums\BidStatus::REJECTED)->first() : null;
+                            @endphp
+
+                            @if ($userBid)
+                                <div class="bg-white p-6 rounded-lg shadow-md">
+                                    <h3 class="text-lg font-semibold text-gray-800">Your Bid Status</h3>
+                                    <div class="mt-2 flex items-center justify-between">
+                                        <p class="text-2xl font-bold">₱{{ number_format($userBid->amount, 2) }}</p>
+                                        <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full 
+                                            @switch($userBid->status)
+                                                @case(\App\Enums\BidStatus::PENDING) bg-yellow-100 text-yellow-800 @break
+                                                @case(\App\Enums\BidStatus::ACCEPTED) bg-green-100 text-green-800 @break
+                                            @endswitch">
+                                            {{ ucfirst($userBid->status->value) }}
+                                        </span>
                                     </div>
-                                @endguest
-                            @endcan
+                                    <p class="mt-4 text-sm text-gray-600">You have an active bid on this offer. You can edit your bid from your dashboard.</p>
+                                </div>
+                            @else
+                                @can('create', [App\Domains\Listings\Models\OpenOfferBid::class, $offer])
+                                    @include('listings.partials.bid-form', ['openoffer' => $offer])
+                                @else
+                                    @guest
+                                        <div class="bg-gray-100 border-l-4 border-gray-400 p-4">
+                                            <p class="font-bold">Want to place a bid?</p>
+                                            <p>Please <a href="{{ route('auth.signin') }}" class="text-blue-600 hover:underline">log in</a> or <a href="{{ route('register') }}" class="text-blue-600 hover:underline">create an account</a> to get started.</p>
+                                        </div>
+                                    @endguest
+                                @endcan
+                            @endif
                         @endif
                     </div>
                  </div>
@@ -115,7 +142,7 @@
             {{-- Bid List (Full Width Below) --}}
             @can('viewAny', [App\Domains\Listings\Models\OpenOfferBid::class, $offer])
                 <div class="lg:col-span-3 mt-8">
-                    <livewire:bid-list :open-offer="$offer" />
+                    @include('listings.partials.bid-list', ['bids' => $bids, 'openoffer' => $offer])
                 </div>
             @endcan
 
