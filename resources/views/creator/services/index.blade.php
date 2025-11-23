@@ -28,81 +28,79 @@
             @endif
 
             @if ($services->isNotEmpty())
-                <!-- Card Grid Layout (Mobile First) -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    @foreach($services as $service)
-                        <div class="bg-white rounded-2xl border border-gray-300 shadow-md overflow-hidden hover:shadow-xl transition-shadow">
-                            <!-- Service Image -->
-                            <div class="relative h-48 bg-gray-200">
-                                @if($service->media->isNotEmpty())
-                                    <img src="{{ $service->media->first()->getUrl() }}" 
-                                        alt="{{ $service->title }}" 
-                                        class="w-full h-full object-cover">
-                                @else
-                                    <div class="flex items-center justify-center h-full">
-                                        <svg class="h-16 w-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                    </div>
-                                @endif
-
-                                <!-- Status Badge -->
-                                <div class="absolute top-2 right-2">
-                                    <span class="px-3 py-1 text-xs font-semibold rounded-full shadow {{ $service->is_active ? 'bg-green-500 text-white' : 'bg-gray-500 text-white' }}">
-                                        {{ $service->is_active ? 'Active' : 'Inactive' }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- Service Details -->
-                            <div class="p-4 space-y-3">
-                                <h3 class="text-lg font-bold text-gray-800 line-clamp-2">{{ $service->title }}</h3>
-                                
-                                <div class="flex items-center justify-between text-sm">
-                                    <span class="text-gray-600">{{ $service->category->name ?? 'N/A' }}</span>
-                                    <span class="font-bold text-gray-800">${{ number_format($service->price, 2) }}</span>
-                                </div>
-
-                                <!-- Quick Stats -->
-                                <div class="grid grid-cols-3 gap-2 pt-2 border-t text-center">
-                                    <div>
-                                        <p class="text-xs text-gray-500">Orders</p>
-                                        <p class="text-lg font-semibold">0</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs text-gray-500">Views</p>
-                                        <p class="text-lg font-semibold">0</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs text-gray-500">Rating</p>
-                                        <p class="text-lg font-semibold">-</p>
-                                    </div>
-                                </div>
-
-                                <!-- Action Buttons -->
-                                <div class="flex space-x-2 pt-3 border-t">
-                                    <a href="{{ route('creator.services.manage', $service) }}" 
-                                        class="flex-1 bg-gray-100 hover:bg-gray-200 text-center py-2 rounded-lg text-sm font-medium transition">
-                                        Manage
-                                    </a>
-                                    <a href="{{ route('creator.services.edit', $service) }}" 
-                                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 rounded-lg text-sm font-medium transition">
-                                        Edit
-                                    </a>
-                                    <form action="{{ route('creator.services.destroy', $service) }}" method="POST" class="flex-1" 
-                                        onsubmit="return confirm('Are you sure you want to delete this service?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" 
-                                            class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-sm font-medium transition">
-                                            Delete
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
+            <div class="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 bg-white border-b border-gray-200">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Title
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Price
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Category
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Status
+                                    </th>
+                                    <th scope="col" class="relative px-6 py-3">
+                                        <span class="sr-only">Actions</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @foreach($services as $service)
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-medium text-gray-900">{{ $service->title }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900">₱{{ number_format($service->price, 2) }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900">{{ $service->category->name ?? 'N/A' }}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $service->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                {{ $service->is_active ? 'Active' : 'Inactive' }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <a href="{{ route('services.show', $service) }}" class="text-blue-600 hover:text-blue-900">View</a>
+                                            <a href="{{ route('creator.services.edit', $service) }}" class="text-indigo-600 hover:text-indigo-900 ml-4">Edit</a>
+                                            <form action="{{ route('creator.services.destroy', $service) }}" method="POST" class="inline-block ml-4" onsubmit="return confirm('Are you sure you want to delete this service?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+            </div>
+            <div class="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-6">
+                @foreach($services as $service)
+                    <x-resource-card
+                        :title="$service->title"
+                        :status="$service->is_active ? 'Active' : 'Inactive'"
+                        :statusClass="$service->is_active ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'"
+                        :details="[
+                            'Category' => $service->category->name ?? 'N/A',
+                            'Price' => '₱' . number_format($service->price, 2),
+                        ]"
+                        :actions="[
+                            ['label' => 'Manage', 'url' => route('creator.services.manage', $service), 'class' => 'bg-gray-100 hover:bg-gray-200'],
+                            ['label' => 'Edit', 'url' => route('creator.services.edit', $service), 'class' => 'bg-blue-600 hover:bg-blue-700 text-white'],
+                        ]"
+                    />
+                @endforeach
+            </div>
             @else
                 <div class="bg-white rounded-2xl border border-gray-300 shadow-md p-12 text-center">
                     <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -128,4 +126,3 @@
         </div>
     </div>
 </x-creator-layout>
-

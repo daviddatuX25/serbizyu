@@ -30,7 +30,7 @@ class ServiceController extends Controller
      */
     public function index(Request $request)
     {
-        $services = $this->serviceService->getPaginatedServices($request->all());
+        $services = $this->serviceService->getServicesForCreator(Auth::id(), $request->all());
         return view('creator.services.index', compact('services'));
     }   
 

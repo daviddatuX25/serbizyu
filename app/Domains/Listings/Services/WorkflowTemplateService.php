@@ -22,7 +22,6 @@ class WorkflowTemplateService
     public function getWorkflowTemplatesByCreator(int $creatorId, array $filters = []): Collection
     {
         $query = WorkflowTemplate::where('creator_id', $creatorId)
-            ->orWhere('is_public', true)
             ->orderBy('name');
 
         if (isset($filters['search'])) {
