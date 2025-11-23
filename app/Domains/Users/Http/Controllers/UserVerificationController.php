@@ -19,7 +19,7 @@ class UserVerificationController extends Controller
             return redirect()->route('verification.status');
         }
 
-        return view('verification.submit');
+        return view('creator.verification.submit');
     }
 
     public function store(Request $request, MediaUploader $uploader)
@@ -77,7 +77,7 @@ class UserVerificationController extends Controller
         // debugger
         $idBackMedia = $verification ? $verification->getMedia('verification-id-back')->first() : null;
 
-        return view('verification.status', [
+        return view('creator.verification.status', [
             'verification' => $verification,
             'idFrontMedia' => $idFrontMedia,
             'idBackMedia' => $idBackMedia,

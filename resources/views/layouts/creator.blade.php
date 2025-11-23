@@ -39,7 +39,7 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="h-full bg-gray-50 text-gray-800 font-sans antialiased overflow-x-hidden">
+<body class="h-full bg-green-50 text-gray-700 font-sans antialiased overflow-x-hidden">
 
     <aside 
         x-data="{ 
@@ -48,7 +48,7 @@
             togglePopover(id) { this.activePopover = this.activePopover === id ? null : id; }
         }"
         @open-mobile-menu.window="mobileMenuOpen = true"
-        class="fixed top-0 bottom-0 left-0 z-50 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col overflow-visible"
+        class="fixed top-0 bottom-0 left-0 z-50 bg-white border-r border-green-200 transition-all duration-300 ease-in-out flex flex-col overflow-visible"
         :class="{
             'translate-x-0 w-64': mobileMenuOpen,
             '-translate-x-full w-64': !mobileMenuOpen,
@@ -57,19 +57,19 @@
         
         <div x-show="mobileMenuOpen"
              x-transition.opacity
-             class="fixed inset-0 bg-gray-900/80 z-[-1] lg:hidden"
+             class="fixed inset-0z-[-1] lg:hidden"
              @click="mobileMenuOpen = false" x-cloak></div>
 
-        <div class="h-20 flex items-center justify-between px-6 md:px-0 md:justify-center lg:justify-start lg:px-6 border-b border-gray-100 md:border-none">
+        <div class="h-20 flex items-center justify-between px-6 md:px-0 md:justify-center lg:justify-start lg:px-6 border-b border-green-100 md:border-none">
             <div class="flex items-center gap-2">
                 <a href="{{ route('creator.dashboard') }}" class="flex items-center gap-2">
-                    <div class="w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center shrink-0">
-                        <div class="w-6 h-6 bg-gray-800 rounded-full"></div>
+                    <div class="w-10 h-10 rounded-full border-2 border-green-800 flex items-center justify-center shrink-0">
+                        <div class="w-6 h-6 bg-green-800 rounded-full"></div>
                     </div>
                     <span class="font-bold text-xl tracking-tight md:hidden lg:block">Serbizyu</span>
                 </a>
             </div>
-            <button @click="mobileMenuOpen = false" class="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-full">
+            <button @click="mobileMenuOpen = false" class="md:hidden p-2 text-gray-500 hover:bg-green-100 rounded-full">
                 <i data-lucide="x"></i>
             </button>
         </div>
@@ -79,7 +79,7 @@
                 @php $isActive = request()->routeIs($item['route']); @endphp
                 <a href="{{ route($item['route']) }}" 
                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group md:justify-center lg:justify-start
-                   {{ $isActive ? 'bg-gray-900 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
+                   {{ $isActive ? 'bg-green-800 text-white shadow-md' : 'text-gray-600 hover:bg-green-100 hover:text-gray-900' }}">
                     
                     <i data-lucide="{{ $item['icon'] }}" 
                        class="w-5 h-5 shrink-0 {{ $isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-900' }}"></i>
@@ -91,17 +91,17 @@
             @endforeach
         </nav>
 
-        <div class="p-4 border-t border-gray-100 md:border-none lg:border-t md:p-2 lg:p-4 relative group">
+        <div class="p-4 border-t border-green-100 md:border-none lg:border-t md:p-2 lg:p-4 relative group">
             <div @click="togglePopover('profile')"
-                 class="flex items-center gap-3 md:justify-center lg:justify-start p-2 rounded-xl hover:bg-gray-50 cursor-pointer border border-gray-200 md:border-0 lg:border transition-all relative z-10"
-                 :class="{'bg-gray-50 border-gray-300': activePopover === 'profile'}">
-                <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden shrink-0">
-                      <svg class="w-full h-full text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                 class="flex items-center gap-3 md:justify-center lg:justify-start p-2 rounded-xl hover:bg-green-50 cursor-pointer border border-green-200 md:border-0 lg:border transition-all relative z-10"
+                 :class="{'bg-green-50 border-green-300': activePopover === 'profile'}">
+                <div class="w-10 h-10 rounded-full bg-green-200 overflow-hidden shrink-0">
+                      <svg class="w-full h-full text-green-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
                       </svg>
                 </div>
                 <div class="flex flex-col md:hidden lg:flex whitespace-nowrap">
-                    <span class="text-sm font-bold text-gray-900">{{ Auth::user()->name ?? 'Guest' }}</span>
+                    <span class="text-sm font-bold text-gray-900">{{ Auth::user()->firstname ?? 'Guest' }}</span>
                     <span class="text-xs text-gray-500">Greetings</span>
                 </div>
             </div>
@@ -111,19 +111,19 @@
                 x-transition:enter="transition ease-out duration-200"
                 x-transition:enter-start="opacity-0 translate-y-2"
                 x-transition:enter-end="opacity-100 translate-y-0"
-                class="absolute z-[100] bg-white border border-gray-200 shadow-xl rounded-2xl p-1 w-full bottom-[calc(100%+0.5rem)] left-0 right-0 md:bottom-2 md:left-[4.5rem] md:w-48 lg:bottom-[calc(100%+0.5rem)] lg:left-0 lg:w-full" x-cloak>
+                class="absolute z-[100] bg-white border border-green-200 shadow-xl rounded-2xl p-1 w-full bottom-[calc(100%+0.5rem)] left-0 right-0 md:bottom-2 md:left-[4.5rem] md:w-48 lg:bottom-[calc(100%+0.5rem)] lg:left-0 lg:w-full" x-cloak>
                 
                 <div class="flex flex-col gap-1">
                     
                     {{-- DYNAMIC PROFILE LINKS --}}
                     @foreach($creatorProfileMenu as $item)
-                        <a href="{{ route($item['route']) }}" class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded-xl text-sm font-medium text-gray-700 transition-colors">
+                        <a href="{{ route($item['route']) }}" class="flex items-center gap-3 px-3 py-2 hover:bg-green-50 rounded-xl text-sm font-medium text-gray-700 transition-colors">
                             <i data-lucide="{{ $item['icon'] }}" class="w-4 h-4 text-gray-500"></i>
                             {{ $item['label'] }}
                         </a>
                     @endforeach
 
-                    <div class="h-px bg-gray-100 my-0.5"></div>
+                    <div class="h-px bg-green-100 my-0.5"></div>
 
                     {{-- LOGOUT (Kept manual because it needs a form) --}}
                     <form method="POST" action="{{ route('logout') }}">
@@ -139,10 +139,10 @@
     </aside>
 
 
-    <main class="min-h-screen transition-all duration-300 ease-in-out md:ml-20 lg:ml-72 bg-gray-50">
+    <main class="min-h-screen transition-all duration-300 ease-in-out md:ml-20 lg:ml-72 bg-green-50">
         
         <header x-data="{ searchActive: false, mobileNavOpen: false }"
-                class="sticky top-0 z-30 bg-white/90 backdrop-blur-sm px-4 py-4 md:px-8 md:py-6 border-b border-gray-100 md:border-none">
+                class="sticky top-0 z-30 bg-green-50/90 backdrop-blur-sm px-4 py-4 md:px-8 md:py-6 border-b border-green-100 md:border-none">
             <div class="flex items-center justify-between relative h-14">
 
                 <div class="flex flex-shrink-1 sm:flex-shrink-0 items-center gap-3 min-w-0 transition-opacity duration-300" :class="{'opacity-0 pointer-events-none': searchActive}">
@@ -158,27 +158,26 @@
                      :class="{'w-[95%] justify-end': searchActive, 'w-auto justify-end': !searchActive}">
                     
                     <div class="relative flex items-center transition-all duration-500 ease-out shrink-0"
-                        :class="{'flex-1 h-12 bg-white border-2 border-gray-800 rounded-full px-4 shadow-sm': searchActive, 'bg-white border-2 border-gray-800 rounded-full px-1 py-1': !searchActive}">
+                        :class="{'flex-1 h-12 bg-white border-2 border-green-800 rounded-full px-4 shadow-sm': searchActive, 'bg-white border-2 border-green-800 rounded-full px-1 py-1': !searchActive}">
 
                         <button x-show="!searchActive"
                                 @click="searchActive = true; mobileNavOpen = false; $nextTick(() => $refs.searchInput.focus())"
-                                class="p-2 hover:bg-gray-100 rounded-full transition-colors shrink-0">
-                            <i data-lucide="sparkles" class="w-5 h-5 md:w-6 md:h-6 text-gray-900"></i>
+                                class="p-2 hover:bg-green-100 rounded-full transition-colors shrink-0">
+                            <i data-lucide="sparkles" class="w-5 h-5 md:w-6 md:h-6 text-green-900"></i>
                         </button>
 
                         <button x-show="!searchActive"
                                 @click="mobileNavOpen = !mobileNavOpen"
-                                class="p-2 hover:bg-gray-100 rounded-full transition-colors shrink-0 sm:hidden ml-1">
+                                class="p-2 hover:bg-green-100 rounded-full transition-colors shrink-0 sm:hidden ml-1">
                             <i data-lucide="layout-grid" class="w-5 h-5 text-gray-600"></i>
                         </button>
 
                         <div x-show="searchActive" x-cloak class="flex-1 flex items-center h-full overflow-hidden w-full">
-                            <i data-lucide="sparkles" class="w-5 h-5 text-gray-800 mr-3 shrink-0"></i>
+                            <i data-lucide="sparkles" class="w-5 h-5 text-green-800 mr-3 shrink-0"></i>
                             <div class="flex-1 flex flex-col justify-center h-full">
-                                <input x-ref="searchInput" type="text" placeholder="Generate insight..." class="w-full bg-transparent outline-none text-gray-700 placeholder-gray-500 font-medium h-full">
-                                <span class="text-[10px] text-gray-400 leading-none pb-1 hidden md:block">See the sales in this year</span>
+                                <input x-ref="searchInput" type="text" placeholder="Generate insight..." class="w-full bg-transparent focus:outline-none focus:ring-0 border-none text-gray-700 placeholder-gray-500 font-medium h-full">
                             </div>
-                            <button @click.stop="searchActive = false" class="ml-2 p-1 rounded-full hover:bg-gray-100 text-gray-500">
+                            <button @click.stop="searchActive = false" class="ml-2 p-1 rounded-full hover:bg-green-100 text-gray-500">
                                 <i data-lucide="x" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -187,7 +186,7 @@
                             @foreach($mainMenu as $item)
                                 <a href="{{ route($item['route']) }}" 
                                    class="px-5 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ml-1
-                                   {{ request()->routeIs($item['route']) ? 'bg-gray-800 text-white' : 'hover:bg-gray-100 text-gray-600' }}">
+                                   {{ request()->routeIs($item['route']) ? 'bg-green-800 text-white' : 'hover:bg-green-100 text-gray-600' }}">
                                     {{ $item['label'] }}
                                 </a>
                             @endforeach
@@ -198,19 +197,41 @@
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 translate-y-2"
                              x-transition:enter-end="opacity-100 translate-y-0"
-                             class="absolute top-full right-0 mt-3 w-56 bg-white border border-gray-200 shadow-xl rounded-2xl p-2 z-50 sm:hidden" x-cloak>
+                             class="absolute top-full right-0 mt-3 w-56 bg-white border border-green-200 shadow-xl rounded-2xl p-2 z-50 sm:hidden" x-cloak>
                             
                             <div class="flex flex-col gap-1">
                                 @foreach($mainMenu as $item)
                                     <a href="{{ route($item['route']) }}" 
                                        class="px-4 py-2.5 rounded-xl text-sm font-medium
-                                       {{ request()->routeIs($item['route']) ? 'bg-gray-800 text-white' : 'hover:bg-gray-50 text-gray-600' }}">
+                                       {{ request()->routeIs($item['route']) ? 'bg-green-800 text-white' : 'hover:bg-green-50 text-gray-600' }}">
                                         {{ $item['label'] }}
                                     </a>
                                 @endforeach
                             </div>
                         </div>
                     </div>
+                </div>
+                <!-- AI Prompt Suggestions (Dropdown) -->
+                <div x-show="searchActive" 
+                     x-transition:enter="transition ease-out duration-300 delay-100"
+                     x-transition:enter-start="opacity-0 -translate-y-2"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     class="absolute top-20 left-1/2 transform -translate-x-1/2 bg-white border border-gray-200 shadow-xl rounded-2xl p-6 w-[90%] md:w-[600px] z-20" x-cloak>
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Suggested Prompts</h4>
+                    <ul class="space-y-3">
+                        <li class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer group">
+                            <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100">
+                                <i data-lucide="trending-up" class="w-4 h-4 text-blue-600"></i>
+                            </div>
+                            <span class="text-sm text-gray-700">Show me sales trends for Q3</span>
+                        </li>
+                        <li class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer group">
+                            <div class="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center group-hover:bg-purple-100">
+                                <i data-lucide="users" class="w-4 h-4 text-purple-600"></i>
+                            </div>
+                            <span class="text-sm text-gray-700">Analyze new user acquisition</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </header>
