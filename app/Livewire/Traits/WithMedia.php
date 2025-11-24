@@ -7,129 +7,134 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
-/**
- * Trait for Non-Destructive Media Handling in Livewire Components.
- *
- * This trait provides functionality to manage file uploads, and the removal of existing media
- * in a non-destructive manner. It queues changes (new uploads, removals) and provides
- * methods to get this data, which can then be passed to a service layer for processing.
- */
 trait WithMedia
 {
     use WithFileUploads;
 
-    // New uploads from user, stored as TemporaryUploadedFile objects.
+    // Temporary property for new uploads via wire:model
+    public $newFileUploads;
+
+    // Accumulates all new file uploads for the session
     public array $newFiles = [];
     
-    // An array of media IDs that the user has marked for deletion.
+    // Media IDs that user explicitly removed (marked for deletion)
     public array $imagesToRemove = [];
     
-    // An array of existing media currently attached to the model, formatted for display.
+    // Existing media currently attached to model
     public array $existingImages = [];
     
-    // This can be used if you need to manage a selection of images, but is not central to the non-destructive approach.
+    // Not used in non-destructive approach, but kept for compatibility
     public array $selectedImages = [];
 
     /**
-     * Load existing media from a model and format it for display.
-     * This should be called in the component's mount method.
+     * Livewire hook to accumulate new file uploads instead of replacing them.
      */
-    protected function loadExistingMedia(Model $model): void
+    public function updatedNewFileUploads()
     {
-        if ($model->exists && $model->relationLoaded('media')) {
+        if (!$this->newFileUploads) {
+            return;
+        }
+
+        $filesToMerge = is_array($this->newFileUploads)
+            ? $this->newFileUploads
+            : [$this->newFileUploads];
+        
+        // You might want to add a check here to prevent adding duplicate files
+        // For now, we'll just merge them.
+        $this->newFiles = array_merge($this->newFiles, $filesToMerge);
+
+        // Validate all accumulated files
+        $this->validate([
+            'newFiles.*' => 'image|max:2048', // Adjust as needed
+        ]);
+
+        // Clear the temporary property
+        $this->newFileUploads = null;
+
+        Log::info('New files added', ['count' => count($filesToMerge), 'total' => count($this->newFiles)]);
+    }
+
+    /**
+     * Load existing media from a model
+     */
+    protected function loadExistingMedia(Model $model)
+    {
+        // Ensure the relation is loaded to avoid N+1 issues if called in a loop
+        if ($model->exists && !$model->relationLoaded('media')) {
+            $model->load('media');
+        }
+
+        if ($model->exists) {
             $this->existingImages = $model->media->map(fn($m) => [
                 'id' => $m->id,
                 'url' => $m->getUrl(),
                 'filename' => $m->filename,
                 'created_at' => $m->created_at->format('M d, Y'),
             ])->toArray();
+
+            Log::info('Loaded existing media', [
+                'model' => class_basename($model),
+                'count' => count($this->existingImages)
+            ]);
         }
     }
 
     /**
-     * Livewire lifecycle hook that validates newly uploaded files.
+     * Remove a newly added file (not yet saved)
      */
-    public function updatedNewFiles(): void
-    {
-        $this->validate([
-            'newFiles.*' => 'image|max:5120', // 5MB max, adjust as needed.
-        ]);
-    }
-
-    /**
-     * Remove a new file from the upload queue before it is saved.
-     */
-    public function removeNewFile(int $index): void
+    public function removeNewFile(int $index)
     {
         if (isset($this->newFiles[$index])) {
             array_splice($this->newFiles, $index, 1);
-            session()->flash('info', 'New upload removed.');
+            
+            Log::info('Removed new file', ['index' => $index]);
+            session()->flash('info', 'New upload removed');
         }
     }
 
     /**
-     * Mark an existing, saved image for removal upon saving the form.
-     * This does not delete the file immediately.
+     * Mark an existing image for removal
      */
-    public function removeExistingImage(int $id): void
+    public function removeExistingImage(int $id)
     {
         if (!in_array($id, $this->imagesToRemove)) {
             $this->imagesToRemove[] = $id;
+            Log::info('Marked media for removal', ['media_id' => $id]);
         }
-
-        // Cosmetically remove from the display list.
-        $this->existingImages = array_values(
-            array_filter($this->existingImages, fn($img) => $img['id'] !== $id)
-        );
-
-        session()->flash('info', 'Image marked for removal.');
     }
 
     /**
-     * Restore an image that was previously marked for removal.
-     * This requires the original model to reload the media relationship.
+     * Restore an image that was marked for removal
      */
-    public function restoreExistingImage(int $id, Model $model): void
+    public function restoreExistingImage(int $id)
     {
         $this->imagesToRemove = array_filter(
             $this->imagesToRemove,
             fn($mediaId) => $mediaId !== $id
         );
-
-        // Reload all existing images to bring the restored one back into the display.
-        $this->loadExistingMedia($model);
         
-        session()->flash('success', 'Image restored.');
+        Log::info('Restored media from removal', ['media_id' => $id]);
+        session()->flash('success', 'Image restored');
     }
 
     /**
-     * Filter the $newFiles array to get only the actual uploaded file objects.
+     * Get uploaded files ready for processing
      */
     protected function getUploadedFiles(): array
     {
         return array_filter($this->newFiles, fn($file) => $file instanceof TemporaryUploadedFile);
     }
-
+    
     /**
-     * A helper to get a structured array of media changes to pass to a service.
+     * Reset media form state after save
      */
-    protected function getMediaData(): array
-    {
-        return [
-            'newFiles' => $this->getUploadedFiles(),
-            'imagesToRemove' => $this->imagesToRemove,
-        ];
-    }
-
-    /**
-     * Reset the media-related properties of the form.
-     * Call this after a successful save operation.
-     */
-    protected function resetMediaForm(): void
+    protected function resetMediaForm()
     {
         $this->newFiles = [];
         $this->imagesToRemove = [];
         $this->selectedImages = [];
-        $this->reset('newFiles'); // Clears the file input visually for the user.
+        $this->newFileUploads = null;
+        
+        Log::info('Media form reset');
     }
 }

@@ -5,16 +5,18 @@ namespace App\Livewire;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Services\ServiceService;
 use App\Domains\Common\Services\AddressService;
+use Livewire\Component;
 use Livewire\Attributes\On;
-use App\Livewire\Traits\Addressable; // Import the trait
-use App\Livewire\Traits\Workflowable; // Import the trait
-
+use App\Livewire\Traits\Addressable;
+use App\Livewire\Traits\Workflowable;
+use App\Livewire\Traits\WithMedia;
 use App\Domains\Common\Interfaces\AddressProviderInterface;
 
-class ServiceForm extends FormWithMedia
+class ServiceForm extends Component
 {
-    use Addressable; // Use the trait
-    use Workflowable; // Use the trait
+    use Addressable;
+    use Workflowable;
+    use WithMedia;
 
     public ?Service $service = null;
 
@@ -30,7 +32,7 @@ class ServiceForm extends FormWithMedia
 
     public function boot(AddressProviderInterface $addressProvider)
     {
-        $this->bootAddressable($addressProvider); // Call the trait's boot method
+        $this->bootAddressable($addressProvider);
     }
 
     protected function rules()
@@ -47,7 +49,7 @@ class ServiceForm extends FormWithMedia
         ];
 
         if ($this->showAddressModal) {
-            $rules = array_merge($rules, $this->addressValidationRules()); // Merge address rules
+            $rules = array_merge($rules, $this->addressValidationRules());
         }
 
         return $rules;
@@ -60,10 +62,9 @@ class ServiceForm extends FormWithMedia
     ) {
         $this->service = $service;
         $this->categories = collect($categories);
-        $this->mountAddressable(collect($addresses)); // Call mountAddressable
-        $this->mountWorkflowable($service); // Call mountWorkflowable
+        $this->mountAddressable(collect($addresses));
+        $this->mountWorkflowable($service);
 
-        // Default values
         $this->title = '';
         $this->description = '';
         $this->price = '';
@@ -72,7 +73,6 @@ class ServiceForm extends FormWithMedia
         $this->address_id = $this->addresses->firstWhere('pivot.is_primary', true)->id ?? null;
 
         if ($service && $service->exists) {
-            // Edit mode – populate with existing data
             $this->title = $service->title;
             $this->description = $service->description;
             $this->price = $service->price;
@@ -80,26 +80,13 @@ class ServiceForm extends FormWithMedia
             $this->pay_first = $service->pay_first ?? false;
             $this->address_id = $service->address_id;
 
-            // IMPORTANT: Load existing media for display
-            // This captures current state without destructive behavior
             $this->loadExistingMedia($this->service);
         } else {
-            // Create mode – set default primary address if exists
             $primary = $this->addresses->firstWhere('pivot.is_primary', true);
             $this->address_id = $primary?->id ?? null;
         }
     }
 
-    /**
-     * Save service with non-destructive media handling
-     * 
-     * Workflow:
-     * 1. Validate all form data
-     * 2. Prepare service data (excluding media info)
-     * 3. Prepare media data (uploads + removals)
-     * 4. Call service layer
-     * 5. Reset and redirect
-     */
     public function save(ServiceService $serviceService)
     {
         if (empty($this->address_id) && !$this->showAddressModal) {
@@ -113,7 +100,6 @@ class ServiceForm extends FormWithMedia
             throw $e;
         }
 
-        // Step 2: Prepare service data (media handled separately)
         $data = [
             'title' => $this->title,
             'description' => $this->description,
@@ -125,27 +111,22 @@ class ServiceForm extends FormWithMedia
             'creator_id' => auth()->id(),
         ];
 
-        // Step 3: Get uploaded files and removal list
         $uploadedFiles = $this->getUploadedFiles();
         $imagesToRemove = $this->imagesToRemove;
 
-        // Step 4: Include media instructions in data array
         $data['images_to_remove'] = $imagesToRemove;
 
         try {
             if ($this->service && $this->service->exists) {
-                // UPDATE: Pass both uploads and removals
                 $serviceService->updateService(
                     $this->service,
                     $data,
                     $uploadedFiles
                 );
             } else {
-                // CREATE: Pass uploads (no removals on create)
                 $serviceService->createService($data, $uploadedFiles);
             }
 
-            // Step 5: Success
             $this->resetMediaForm();
             session()->flash('success', 'Service saved successfully!');
             return redirect()->route('creator.services.index');
@@ -155,9 +136,6 @@ class ServiceForm extends FormWithMedia
         }
     }
 
-    /**
-     * Restore removed image (user changed their mind)
-     */
     public function restoreImage(int $mediaId)
     {
         $this->restoreExistingImage($mediaId, $this->service);

@@ -21,7 +21,7 @@
             <div class="flex-shrink-0 flex items-center justify-center w-24 h-24 border-2 border-dashed border-gray-300 rounded-md hover:border-blue-400 transition cursor-pointer">
                 <label for="file-upload" class="cursor-pointer">
                     <span class="text-4xl text-gray-400">+</span>
-                    <input id="file-upload" type="file" wire:model="newFiles" multiple class="sr-only" accept="image/*">
+                    <input id="file-upload" type="file" wire:model="newFileUploads" multiple class="sr-only" accept="image/*">
                 </label>
             </div>
 
@@ -55,11 +55,11 @@
         <div class="mt-2 flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-md hover:border-blue-400 transition cursor-pointer">
             <label for="file-upload-empty" class="cursor-pointer">
                 <span class="text-4xl text-gray-400">+</span>
-                <input id="file-upload-empty" type="file" wire:model="newFiles" multiple class="sr-only" accept="image/*">
+                <input id="file-upload-empty" type="file" wire:model="newFileUploads" multiple class="sr-only" accept="image/*">
             </label>
         </div>
     @endif
 
-    @error('newFiles.*') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+    @error('newFileUploads.*') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
     <p class="text-xs text-gray-500 mt-2">PNG, JPG, GIF up to 2MB</p>
 </div>

@@ -4,22 +4,19 @@ namespace App\Livewire;
 
 use App\Domains\Listings\Models\OpenOffer;
 use Livewire\Component;
-use Livewire\WithFileUploads;
-use Illuminate\Support\Facades\Storage;
-use Plank\Mediable\MediaUploader;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Collection;
 use App\Domains\Common\Interfaces\AddressProviderInterface;
 use App\Domains\Common\Services\AddressService;
-use App\Livewire\Traits\Addressable; // Import the trait
-use App\Livewire\Traits\Workflowable; // Import the trait
+use App\Livewire\Traits\Addressable;
+use App\Livewire\Traits\Workflowable;
+use App\Livewire\Traits\WithMedia;
 
-class OpenOfferForm extends FormWithMedia
+class OpenOfferForm extends Component
 {
-    use WithFileUploads;
-    use Addressable; // Use the trait
-    use Workflowable; // Use the trait
+    use Addressable;
+    use Workflowable;
+    use WithMedia;
 
     public ?OpenOffer $offer = null;
 
@@ -32,12 +29,11 @@ class OpenOfferForm extends FormWithMedia
     public ?string $deadline = null;
     public string $deadline_option = '7';
 
-    // For lists (categories) loaded for select inputs
     public array $categories = [];
     
     public function boot(AddressProviderInterface $addressProvider)
     {
-        $this->bootAddressable($addressProvider); // Call the trait's boot method
+        $this->bootAddressable($addressProvider);
     }
 
     protected function rules(): array
@@ -51,14 +47,14 @@ class OpenOfferForm extends FormWithMedia
             'pay_first' => 'nullable|boolean',
             'address_id' => 'nullable|integer|exists:addresses,id',
             'deadline_option' => 'required|in:1,3,7,14,30',
-            'newFiles' => 'nullable|array',
+            'newFiles.*' => 'nullable|array',
             'newFiles.*' => 'file|max:5120',
             'imagesToRemove' => 'nullable|array',
             'imagesToRemove.*' => 'integer',
         ];
 
         if ($this->showAddressModal) {
-            $rules = array_merge($rules, $this->addressValidationRules()); // Merge address rules
+            $rules = array_merge($rules, $this->addressValidationRules());
         }
 
         return $rules;
@@ -71,10 +67,9 @@ class OpenOfferForm extends FormWithMedia
     public function mount(?OpenOffer $offer = null, ?Collection $addresses = null)
     {
         $this->offer = $offer;
-        $this->mountAddressable($addresses ?? new Collection()); // Call mountAddressable
-        $this->mountWorkflowable($offer); // Call mountWorkflowable
+        $this->mountAddressable($addresses ?? new Collection());
+        $this->mountWorkflowable($offer);
 
-        // Load selects (you can replace with services or inject them)
         $this->categories = app(\App\Domains\Listings\Services\CategoryService::class)->listAllCategories()->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->toArray();
             
         if ($this->offer && $this->offer->exists) {
