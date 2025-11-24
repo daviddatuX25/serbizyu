@@ -47,10 +47,6 @@ class OpenOfferForm extends Component
             'pay_first' => 'nullable|boolean',
             'address_id' => 'nullable|integer|exists:addresses,id',
             'deadline_option' => 'required|in:1,3,7,14,30',
-            'newFiles.*' => 'nullable|array',
-            'newFiles.*' => 'file|max:5120',
-            'imagesToRemove' => 'nullable|array',
-            'imagesToRemove.*' => 'integer',
         ];
 
         if ($this->showAddressModal) {

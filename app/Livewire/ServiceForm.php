@@ -21,14 +21,14 @@ class ServiceForm extends Component
     public ?Service $service = null;
 
     // Livewire properties for Service
-    public ?string $title = null;
-    public ?string $description = null;
+    public ?string $title = '';
+    public ?string $description = '';
     public float|string|null $price = null;
     public int|string|null $category_id = null;
-    public ?bool $pay_first = null;
+    public ?bool $pay_first = false;
     public ?int $address_id = null;
 
-    public $categories;
+    public $categories = [];
 
     public function boot(AddressProviderInterface $addressProvider)
     {
@@ -45,7 +45,6 @@ class ServiceForm extends Component
             'workflow_template_id' => 'required|integer|exists:workflow_templates,id',
             'address_id' => 'nullable|exists:addresses,id',
             'pay_first' => 'boolean',
-            'newFiles.*' => 'nullable|image|max:2048',
         ];
 
         if ($this->showAddressModal) {
@@ -55,33 +54,24 @@ class ServiceForm extends Component
         return $rules;
     }
 
-    public function mount(
-        ?Service $service = null,
-        $categories = [],
-        $addresses = []
-    ) {
+    public function mount(?Service $service = null, $categories = [], $addresses = [])
+    {
         $this->service = $service;
         $this->categories = collect($categories);
         $this->mountAddressable(collect($addresses));
         $this->mountWorkflowable($service);
 
-        $this->title = '';
-        $this->description = '';
-        $this->price = '';
-        $this->category_id = '';
-        $this->pay_first = false;
-        $this->address_id = $this->addresses->firstWhere('pivot.is_primary', true)->id ?? null;
-
-        if ($service && $service->exists) {
-            $this->title = $service->title;
-            $this->description = $service->description;
-            $this->price = $service->price;
-            $this->category_id = $service->category_id;
-            $this->pay_first = $service->pay_first ?? false;
-            $this->address_id = $service->address_id;
-
+        if ($this->service && $this->service->exists) {
+            // Edit mode – populate with existing data
+            $this->title = $this->service->title;
+            $this->description = $this->service->description;
+            $this->price = $this->service->price;
+            $this->category_id = $this->service->category_id;
+            $this->pay_first = $this->service->pay_first ?? false;
+            $this->address_id = $this->service->address_id;
             $this->loadExistingMedia($this->service);
         } else {
+            // Create mode – set default primary address if exists
             $primary = $this->addresses->firstWhere('pivot.is_primary', true);
             $this->address_id = $primary?->id ?? null;
         }

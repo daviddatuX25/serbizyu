@@ -11,7 +11,8 @@ use App\Domains\Listings\Http\Controllers\WorkCatalogController;
 use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
 use App\Domains\Listings\Http\Controllers\WorkTemplateController;
 use App\Domains\Listings\Http\Controllers\OpenOfferController;
-use App\Domains\Listings\Http\Controllers\OpenOfferBidController; // Added
+use App\Domains\Listings\Http\Controllers\OpenOfferBidController;
+use App\Domains\Listings\Http\Controllers\PublicWorkflowController; // Added
 
 // Authentication routes
 require __DIR__.'/auth.php';
@@ -75,6 +76,13 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     Route::patch('workflows/{workflow}', [WorkflowTemplateController::class, 'update'])->name('workflows.update');
     Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
     Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
+
+    // Public Workflow Browsing and Bookmarking
+    Route::prefix('workflows')->name('workflows.')->group(function () {
+        Route::get('public', [PublicWorkflowController::class, 'index'])->name('public.index');
+        Route::post('{workflowTemplate}/bookmark', [PublicWorkflowController::class, 'bookmark'])->name('bookmark');
+        Route::delete('{workflowTemplate}/bookmark', [PublicWorkflowController::class, 'unbookmark'])->name('unbookmark');
+    });
 });
 
 // User Verification

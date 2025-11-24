@@ -3,7 +3,9 @@
 namespace App\Livewire\Traits;
 
 use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Domains\Listings\Services\WorkflowBookmarkService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 trait Workflowable
 {
@@ -28,18 +30,24 @@ trait Workflowable
      */
     public function mountWorkflowable(?object $model = null): void
     {
-        $this->workflowTemplates = app(WorkflowTemplateService::class)
-            ->getWorkflowTemplatesByCreator(Auth::id())
-            ->map(fn($w) => [
-                'id' => $w->id,
-                'name' => $w->name,
-                'description' => $w->description,
-                'workTemplates' => $w->workTemplates->map(fn($wt) => [
-                    'id' => $wt->id,
-                    'name' => $wt->name,
-                ])->toArray(),
-            ])
-            ->toArray();
+        // Ensure user is authenticated before trying to get their workflows
+        if (Auth::check()) {
+            $user = Auth::user();
+            $this->workflowTemplates = app(WorkflowTemplateService::class)
+                ->getAvailableWorkflowTemplatesForUser($user)
+                ->map(fn($w) => [
+                    'id' => $w->id,
+                    'name' => $w->name,
+                    'description' => $w->description,
+                    'workTemplates' => $w->workTemplates->map(fn($wt) => [
+                        'id' => $wt->id,
+                        'name' => $wt->name,
+                    ])->toArray(),
+                ])
+                ->toArray();
+        } else {
+            $this->workflowTemplates = []; // No authenticated user, no workflows
+        }
 
         if ($model && $model->exists) {
             $this->workflow_template_id = $model->workflow_template_id;

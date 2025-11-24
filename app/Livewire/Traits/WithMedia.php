@@ -35,20 +35,19 @@ trait WithMedia
             return;
         }
 
+        // First, validate the newly uploaded files.
+        $this->validate([
+            'newFileUploads.*' => 'image|max:2048', // Adjust as needed
+        ]);
+
         $filesToMerge = is_array($this->newFileUploads)
             ? $this->newFileUploads
             : [$this->newFileUploads];
         
-        // You might want to add a check here to prevent adding duplicate files
-        // For now, we'll just merge them.
+        // Merge the new valid files into the main array
         $this->newFiles = array_merge($this->newFiles, $filesToMerge);
 
-        // Validate all accumulated files
-        $this->validate([
-            'newFiles.*' => 'image|max:2048', // Adjust as needed
-        ]);
-
-        // Clear the temporary property
+        // Clear the temporary property so the file input is reset
         $this->newFileUploads = null;
 
         Log::info('New files added', ['count' => count($filesToMerge), 'total' => count($this->newFiles)]);
