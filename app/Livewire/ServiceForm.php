@@ -7,12 +7,14 @@ use App\Domains\Listings\Services\ServiceService;
 use App\Domains\Common\Services\AddressService;
 use Livewire\Attributes\On;
 use App\Livewire\Traits\Addressable; // Import the trait
+use App\Livewire\Traits\Workflowable; // Import the trait
 
 use App\Domains\Common\Interfaces\AddressProviderInterface;
 
 class ServiceForm extends FormWithMedia
 {
     use Addressable; // Use the trait
+    use Workflowable; // Use the trait
 
     public ?Service $service = null;
 
@@ -21,12 +23,10 @@ class ServiceForm extends FormWithMedia
     public ?string $description = null;
     public float|string|null $price = null;
     public int|string|null $category_id = null;
-    public int|string|null $workflow_template_id = null;
     public ?bool $pay_first = null;
     public ?int $address_id = null;
 
     public $categories;
-    public $workflowTemplates;
 
     public function boot(AddressProviderInterface $addressProvider)
     {
@@ -56,20 +56,18 @@ class ServiceForm extends FormWithMedia
     public function mount(
         ?Service $service = null,
         $categories = [],
-        $workflowTemplates = [],
         $addresses = []
     ) {
         $this->service = $service;
         $this->categories = collect($categories);
-        $this->workflowTemplates = collect($workflowTemplates);
         $this->mountAddressable(collect($addresses)); // Call mountAddressable
+        $this->mountWorkflowable($service); // Call mountWorkflowable
 
         // Default values
         $this->title = '';
         $this->description = '';
         $this->price = '';
         $this->category_id = '';
-        $this->workflow_template_id = null;
         $this->pay_first = false;
         $this->address_id = $this->addresses->firstWhere('pivot.is_primary', true)->id ?? null;
 
@@ -79,7 +77,6 @@ class ServiceForm extends FormWithMedia
             $this->description = $service->description;
             $this->price = $service->price;
             $this->category_id = $service->category_id;
-            $this->workflow_template_id = $service->workflow_template_id;
             $this->pay_first = $service->pay_first ?? false;
             $this->address_id = $service->address_id;
 

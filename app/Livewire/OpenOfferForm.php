@@ -13,11 +13,13 @@ use Illuminate\Database\Eloquent\Collection;
 use App\Domains\Common\Interfaces\AddressProviderInterface;
 use App\Domains\Common\Services\AddressService;
 use App\Livewire\Traits\Addressable; // Import the trait
+use App\Livewire\Traits\Workflowable; // Import the trait
 
 class OpenOfferForm extends FormWithMedia
 {
     use WithFileUploads;
     use Addressable; // Use the trait
+    use Workflowable; // Use the trait
 
     public ?OpenOffer $offer = null;
 
@@ -25,15 +27,13 @@ class OpenOfferForm extends FormWithMedia
     public ?string $description = null;
     public ?float $budget = null;
     public ?int $category_id = null;
-    public ?int $workflow_template_id = null;
     public bool $pay_first = false;
     public ?int $address_id = null;
     public ?string $deadline = null;
     public string $deadline_option = '7';
 
-    // For lists (categories, workflows) loaded for select inputs
+    // For lists (categories) loaded for select inputs
     public array $categories = [];
-    public array $workflowTemplates = [];
     
     public function boot(AddressProviderInterface $addressProvider)
     {
@@ -72,20 +72,16 @@ class OpenOfferForm extends FormWithMedia
     {
         $this->offer = $offer;
         $this->mountAddressable($addresses ?? new Collection()); // Call mountAddressable
+        $this->mountWorkflowable($offer); // Call mountWorkflowable
 
         // Load selects (you can replace with services or inject them)
         $this->categories = app(\App\Domains\Listings\Services\CategoryService::class)->listAllCategories()->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->toArray();
-
-        $this->workflowTemplates = app(\App\Domains\Listings\Services\WorkflowTemplateService::class)
-            ->getWorkflowTemplatesByCreator(auth()->id())
-            ->map(fn($w) => ['id' => $w->id, 'name' => $w->name])->toArray();
             
         if ($this->offer && $this->offer->exists) {
             $this->title = $this->offer->title;
             $this->description = $this->offer->description;
             $this->budget = $this->offer->budget;
             $this->category_id = $this->offer->category_id;
-            $this->workflow_template_id = $this->offer->workflow_template_id;
             $this->pay_first = (bool)$this->offer->pay_first;
             $this->address_id = $this->offer->address_id;
             $this->deadline = $this->offer->deadline ? $this->offer->deadline->format('Y-m-d') : null;

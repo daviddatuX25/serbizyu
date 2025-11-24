@@ -11,7 +11,6 @@
             <livewire:service-form 
                 :service="$service"
                 :categories="$categories"
-                :workflowTemplates="$workflowTemplates"
                 :addresses="$addresses"
                 :key="'service-form-'.$service->id"
             />
