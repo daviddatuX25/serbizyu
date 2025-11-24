@@ -16,7 +16,7 @@
             @endif
             {{-- Type Badge --}}
             <div class="absolute top-2 right-2">
-                <span class="px-2 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">
+                <span class="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
                     SERVICE
                 </span>
             </div>
@@ -26,14 +26,19 @@
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ $service->category->name }}</p>
             
             {{-- Title --}}
-            <h3 class="mt-2 text-lg font-bold text-gray-800 line-clamp-2 h-14 group-hover:text-blue-600 transition-colors">
+            <h3 class="mt-2 text-lg font-bold text-gray-800 line-clamp-2 h-14 group-hover:text-green-600 transition-colors">
                 {{ $service->title }}
             </h3>
 
             {{-- Creator Info --}}
             <div class="flex items-center mt-3 text-sm text-gray-600">
-                <img src="{{ $service->creator->profile_photo_url }}" alt="{{ $service->creator->name }}" class="w-6 h-6 rounded-full mr-2">
-                <span>by {{ $service->creator->name }}</span>
+                <img src="{{ $service->creator->profile_photo_url }}" alt="{{ $service->creator->firstname }}" class="w-6 h-6 rounded-full mr-2">
+                <span>by {{ $service->creator->firstname }}</span>
+                @if($service->creator->verification && $service->creator->verification->status === 'approved')
+                    <span class="ml-1.5 text-green-500" title="Verified Creator">
+                        <x-icons.shield-check class="h-4 w-4" />
+                    </span>
+                @endif
             </div>
 
             {{-- Meta Info --}}
@@ -56,8 +61,8 @@
 
             {{-- Price --}}
             <div class="mt-4 pt-4 border-t">
-                <p class="text-xs text-gray-500">Starting at</p>
-                <p class="text-2xl font-bold text-blue-600">
+                <p class="text-xs text-gray-500">Quoted at</p>
+                <p class="text-2xl font-bold text-green-600">
                     ₱{{ number_format($service->price, 2) }}
                 </p>
             </div>

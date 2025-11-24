@@ -35,8 +35,13 @@
 
             {{-- Creator Info --}}
             <div class="flex items-center mt-3 text-sm text-gray-600">
-                <img src="{{ $offer->creator->profile_photo_url }}" alt="{{ $offer->creator->name }}" class="w-6 h-6 rounded-full mr-2">
-                <span>by {{ $offer->creator->name }}</span>
+                <img src="{{ $offer->creator->profile_photo_url }}" alt="{{ $offer->creator->firstname }}" class="w-6 h-6 rounded-full mr-2">
+                <span>by {{ $offer->creator->firstname }}</span>
+                @if($offer->creator->verification && $offer->creator->verification->status === 'approved')
+                    <span class="ml-1.5 text-green-500" title="Verified Creator">
+                        <x-icons.shield-check class="h-4 w-4" />
+                    </span>
+                @endif
             </div>
 
             {{-- Meta Info --}}

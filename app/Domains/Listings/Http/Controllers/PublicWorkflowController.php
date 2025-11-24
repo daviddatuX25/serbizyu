@@ -9,7 +9,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use App\Domains\Listings\Models\WorkflowTemplate;
 use App\Domains\Listings\Services\WorkflowBookmarkService;
+use App\Domains\Listings\Services\CategoryService;
 use App\Domains\Users\Models\User;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class PublicWorkflowController extends Controller
 {
@@ -18,9 +20,43 @@ class PublicWorkflowController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function index()
+    public function index(Request $request, CategoryService $categoryService)
     {
-        return view('creator.workflows.public.index');
+        $filters = $request->all();
+        $perPage = 12;
+        $currentPage = $request->input('page', 1);
+
+        $workflowsQuery = WorkflowTemplate::where('is_public', true)
+            ->with(['category', 'creator']);
+
+        if (isset($filters['search'])) {
+            $workflowsQuery->where(function ($query) use ($filters) {
+                $query->where('name', 'like', '%' . $filters['search'] . '%')
+                      ->orWhere('description', 'like', '%' . $filters['search'] . '%');
+            });
+        }
+
+        if (isset($filters['category'])) {
+            $workflowsQuery->where('category_id', $filters['category']);
+        }
+
+        $workflows = $workflowsQuery->orderBy('name')->get();
+        
+        $paginatedWorkflows = new LengthAwarePaginator(
+            $workflows->forPage($currentPage, $perPage),
+            $workflows->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        return view('workflows.public.index', [
+            'workflows' => $paginatedWorkflows,
+            'categories' => $categoryService->listAllCategories(),
+        ]);
     }
 
     /**
@@ -30,25 +66,17 @@ class PublicWorkflowController extends Controller
      * @param WorkflowBookmarkService $bookmarkService
      * @return RedirectResponse|JsonResponse
      */
-    public function bookmark(WorkflowTemplate $workflowTemplate, WorkflowBookmarkService $bookmarkService): RedirectResponse|JsonResponse
+    public function bookmark(WorkflowTemplate $workflowTemplate, WorkflowBookmarkService $bookmarkService): RedirectResponse
     {
         /** @var User $user */
         $user = Auth::user();
 
         // Authorization: Ensure the workflow is public and not owned by the current user
         if (!$workflowTemplate->is_public || $workflowTemplate->creator_id === $user->id) {
-            return request()->expectsJson()
-                ? response()->json(['message' => 'Cannot bookmark this workflow.'], 403)
-                : back()->with('error', 'Cannot bookmark this workflow.');
+            return back()->with('error', 'Cannot bookmark this workflow.');
         }
 
         $bookmarked = $bookmarkService->bookmarkWorkflow($user, $workflowTemplate);
-
-        if (request()->expectsJson()) {
-            return $bookmarked
-                ? response()->json(['message' => 'Workflow bookmarked successfully.'])
-                : response()->json(['message' => 'Workflow already bookmarked.'], 200);
-        }
 
         return $bookmarked
             ? back()->with('success', 'Workflow bookmarked successfully.')
@@ -62,18 +90,12 @@ class PublicWorkflowController extends Controller
      * @param WorkflowBookmarkService $bookmarkService
      * @return RedirectResponse|JsonResponse
      */
-    public function unbookmark(WorkflowTemplate $workflowTemplate, WorkflowBookmarkService $bookmarkService): RedirectResponse|JsonResponse
+    public function unbookmark(WorkflowTemplate $workflowTemplate, WorkflowBookmarkService $bookmarkService): RedirectResponse
     {
         /** @var User $user */
         $user = Auth::user();
 
         $unbookmarked = $bookmarkService->unbookmarkWorkflow($user, $workflowTemplate);
-
-        if (request()->expectsJson()) {
-            return $unbookmarked
-                ? response()->json(['message' => 'Workflow unbookmarked successfully.'])
-                : response()->json(['message' => 'Workflow was not bookmarked.'], 200);
-        }
 
         return $unbookmarked
             ? back()->with('success', 'Workflow unbookmarked successfully.')

@@ -267,7 +267,7 @@ class ServiceService
      */
     public function getFilteredServices(array $filters = [])
     {
-        $query = Service::with(['creator.media', 'address', 'media']);
+        $query = Service::with(['creator.verification', 'creator.media', 'address', 'media']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -279,6 +279,13 @@ class ServiceService
 
         if (!empty($filters['category'])) {
             $query->where('category_id', $filters['category']);
+        }
+        
+        if (!empty($filters['location_code'])) {
+            $locationCode = $filters['location_code'];
+            $query->whereHas('address', function ($q) use ($locationCode) {
+                $q->where('api_id', 'like', "{$locationCode}%");
+            });
         }
 
         $sortable = ['created_at', 'price', 'title'];

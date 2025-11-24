@@ -5,6 +5,7 @@ return [
     'main' => [
         ['label' => 'Home', 'route' => 'home'],
         ['label' => 'Browse', 'route' => 'browse'],
+        ['label' => 'Workflows', 'route' => 'workflows'], // Added
         ['label' => 'FAQ', 'route' => 'faq'],
         ['label' => 'About', 'route' => 'about'],
     ],

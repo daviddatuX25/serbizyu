@@ -11,7 +11,7 @@ class WorkflowTemplate extends Model
 {
     use hasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'description', 'creator_id', 'is_public'];
+    protected $fillable = ['name', 'description', 'creator_id', 'is_public', 'category_id'];
 
     // casts
     protected $casts = [
@@ -23,6 +23,10 @@ class WorkflowTemplate extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
 
     public function services()
     {

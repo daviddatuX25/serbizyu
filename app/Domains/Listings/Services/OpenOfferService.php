@@ -107,7 +107,7 @@ class OpenOfferService
      */
     public function getFilteredOffers(array $filters = [])
     {
-        $query = OpenOffer::whereHas('creator')->with(['creator', 'address', 'media', 'bids']);
+        $query = OpenOffer::whereHas('creator')->with(['creator.verification', 'creator.media', 'address', 'media', 'bids']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -119,6 +119,13 @@ class OpenOfferService
 
         if (!empty($filters['category'])) {
             $query->where('category_id', $filters['category']);
+        }
+
+        if (!empty($filters['location_code'])) {
+            $locationCode = $filters['location_code'];
+            $query->whereHas('address', function ($q) use ($locationCode) {
+                $q->where('api_id', 'like', "{$locationCode}%");
+            });
         }
 
         $sortable = ['created_at', 'budget_from', 'budget_to', 'title'];

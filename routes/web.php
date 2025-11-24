@@ -42,6 +42,9 @@ Route::get('/services/{service}', [ServiceController::class, 'show'])->name('ser
 // Public-facing open offer page
 Route::get('/openoffers/{openoffer}', [OpenOfferController::class, 'show'])->name('openoffers.show');
 
+// Public Workflow Browsing
+Route::get('/workflows', [PublicWorkflowController::class, 'index'])->name('workflows');
+
 // Creator space
 Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
     Route::get('/', function () {
@@ -76,13 +79,13 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     Route::patch('workflows/{workflow}', [WorkflowTemplateController::class, 'update'])->name('workflows.update');
     Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
     Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
+});
 
-    // Public Workflow Browsing and Bookmarking
-    Route::prefix('workflows')->name('workflows.')->group(function () {
-        Route::get('public', [PublicWorkflowController::class, 'index'])->name('public.index');
-        Route::post('{workflowTemplate}/bookmark', [PublicWorkflowController::class, 'bookmark'])->name('bookmark');
-        Route::delete('{workflowTemplate}/bookmark', [PublicWorkflowController::class, 'unbookmark'])->name('unbookmark');
-    });
+// Authenticated user actions (e.g., bookmarking)
+Route::middleware(['auth'])->group(function () {
+    // Workflow Bookmarking
+    Route::post('/workflows/{workflowTemplate}/bookmark', [PublicWorkflowController::class, 'bookmark'])->name('workflows.bookmark');
+    Route::delete('/workflows/{workflowTemplate}/bookmark', [PublicWorkflowController::class, 'unbookmark'])->name('workflows.unbookmark');
 });
 
 // User Verification
