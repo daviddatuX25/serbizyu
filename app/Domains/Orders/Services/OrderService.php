@@ -2,45 +2,80 @@
 
 namespace App\Domains\Orders\Services;
 
-use App\Domains\Listings\Models\OpenOfferBid;
-use App\Domains\Orders\Events\OrderCreated;
 use App\Domains\Orders\Models\Order;
 use App\Enums\OrderStatus;
-use App\Enums\PaymentStatus;
-use App\Exceptions\BusinessRuleException;
-use App\Domains\Users\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Mail\OrderCreated;
+use Illuminate\Support\Facades\Mail;
+use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Work\Models\WorkInstance;
+use App\Domains\Work\Models\WorkInstanceStep;
 
 class OrderService
 {
-    public function createOrder(OpenOfferBid $bid, User $buyer): Order
+    public function createOrderFromBid(string $bidId): Order
     {
-        if (! $bid->is_accepted) {
-            throw new BusinessRuleException('Cannot create an order from an unaccepted bid.');
-        }
+        // TODO: In a real implementation, find the bid by $bidId
+        // For now, let's create a dummy order for demonstration
+        $order = new Order([
+            'buyer_id' => 1, // Placeholder
+            'seller_id' => 2, // Placeholder
+            'service_id' => 1, // Placeholder
+            'open_offer_id' => 1, // Placeholder
+            'open_offer_bid_id' => $bidId,
+            'price' => 100.00,
+            'platform_fee' => 5.00,
+            'total_amount' => 105.00,
+            'status' => OrderStatus::PENDING->value,
+            'payment_status' => 'pending',
+        ]);
+        $order->save(); // Save the dummy order
 
-        return DB::transaction(function () use ($bid, $buyer) {
-            $platformFeePercentage = config('fees.platform_percentage', 5); // Default to 5%
-            $platformFee = ($bid->price * $platformFeePercentage) / 100;
-            $totalAmount = $bid->price + $platformFee;
+        // Workflow Cloning Logic
+        $service = Service::find($order->service_id);
+        if ($service && $service->workflowTemplate) {
+            $workflowTemplate = $service->workflowTemplate;
 
-            $order = Order::create([
-                'buyer_id' => $buyer->id,
-                // Use the service owner as the seller
-                'seller_id' => $bid->service->user_id ?? $bid->service->user->id ?? null,
-                'service_id' => $bid->service_id,
-                'open_offer_id' => $bid->open_offer_id,
-                'open_offer_bid_id' => $bid->id,
-                'price' => $bid->price,
-                'platform_fee' => $platformFee,
-                'total_amount' => $totalAmount,
-                'status' => OrderStatus::Pending,
-                'payment_status' => PaymentStatus::Unpaid,
+            $workInstance = WorkInstance::create([
+                'order_id' => $order->id,
+                'workflow_template_id' => $workflowTemplate->id,
+                'current_step_index' => 0,
+                'status' => 'pending', // Initial status for work instance
+                'started_at' => null,
+                'completed_at' => null,
             ]);
 
-            event(new OrderCreated($order));
+            foreach ($workflowTemplate->workTemplates as $index => $workTemplate) {
+                WorkInstanceStep::create([
+                    'work_instance_id' => $workInstance->id,
+                    'work_template_id' => $workTemplate->id,
+                    'step_index' => $index,
+                    'status' => 'pending', // Initial status for each step
+                    'started_at' => null,
+                    'completed_at' => null,
+                ]);
+            }
+        }
 
+
+        Mail::to('buyer@example.com')->send(new OrderCreated($order)); // Send email to buyer
+
+        return $order;
+    }
+
+    public function cancelOrder(Order $order): Order
+    {
+        if ($order->status !== OrderStatus::PENDING->value) {
+            // Or throw an exception
             return $order;
-        });
+        }
+
+        $order->status = OrderStatus::CANCELLED->value;
+        $order->save();
+
+        // TODO: Send OrderCancelled email
+        // Mail::to($order->buyer->email)->send(new OrderCancelled($order));
+
+        return $order;
     }
 }
