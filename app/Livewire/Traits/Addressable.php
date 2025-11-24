@@ -115,7 +115,7 @@ trait Addressable
 
     public function updatedNewSelectedCity(?string $value): void
     {
-        $this.reset(['new_selectedBarangay', 'barangays']);
+        $this->reset(['new_selectedBarangay', 'barangays']);
         if ($value) {
             $this->loadingBarangays = true;
             $this->barangays = $this->addressProvider->getBarangays($value);

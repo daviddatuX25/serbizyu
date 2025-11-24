@@ -27,7 +27,6 @@ class ServiceForm extends FormWithMedia
 
     public $categories;
     public $workflowTemplates;
-    public $addresses;
 
     public function boot(AddressProviderInterface $addressProvider)
     {

@@ -34,7 +34,6 @@ class OpenOfferForm extends FormWithMedia
     // For lists (categories, workflows) loaded for select inputs
     public array $categories = [];
     public array $workflowTemplates = [];
-    public Collection $addresses;
     
     public function boot(AddressProviderInterface $addressProvider)
     {
