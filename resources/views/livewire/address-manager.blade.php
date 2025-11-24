@@ -11,8 +11,8 @@
         @forelse ($addresses as $address)
             <div class="p-4 border rounded-lg flex justify-between items-center">
                 <div>
-                    <p class="font-semibold">{{ $address->house_no }} {{ $address->street }}, {{ $address->barangay }}</p>
-                    <p class="text-sm text-gray-600">{{ $address->town }}, {{ $address->province }}, {{ $address->country }}</p>
+                    {{-- Display the full address --}}
+                    <p class="font-semibold">{{ $address->full_address }}</p>
                     @if ($address->pivot && $address->pivot->is_primary)
                         <span class="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full">Primary</span>
                     @endif
@@ -43,37 +43,71 @@
                                 {{ $addressId ? 'Edit Address' : 'Add New Address' }}
                             </h3>
                             <div class="mt-4 space-y-4">
-                                <!-- Form Fields -->
+                                {{-- Label Field --}}
                                 <div>
-                                    <label for="house_no" class="block text-sm font-medium text-gray-700">House/Unit/Building No.</label>
-                                    <input type="text" wire:model.defer="house_no" id="house_no" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    @error('house_no') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <label for="label" class="block text-sm font-medium text-gray-700">Address Label (e.g., Home, Office)</label>
+                                    <input type="text" wire:model.defer="label" id="label" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    @error('label') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                                 </div>
+
+                                {{-- Region Dropdown --}}
                                 <div>
-                                    <label for="street" class="block text-sm font-medium text-gray-700">Street</label>
-                                    <input type="text" wire:model.defer="street" id="street" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    @error('street') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <label for="selectedRegion" class="block text-sm font-medium text-gray-700">Region</label>
+                                    <select wire:model.live="selectedRegion" id="selectedRegion" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                        <option value="">Select Region</option>
+                                        @foreach ($regions as $region)
+                                            <option value="{{ $region['code'] }}">{{ $region['name'] }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('selectedRegion') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <div wire:loading wire:target="selectedRegion" class="text-sm text-gray-500">Loading provinces...</div>
                                 </div>
+
+                                {{-- Province Dropdown --}}
                                 <div>
-                                    <label for="barangay" class="block text-sm font-medium text-gray-700">Barangay</label>
-                                    <input type="text" wire:model.defer="barangay" id="barangay" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    @error('barangay') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <label for="selectedProvince" class="block text-sm font-medium text-gray-700">Province</label>
+                                    <select wire:model.live="selectedProvince" id="selectedProvince" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" {{ is_null($selectedRegion) || empty($provinces) ? 'disabled' : '' }}>
+                                        <option value="">Select Province</option>
+                                        @foreach ($provinces as $province)
+                                            <option value="{{ $province['code'] }}">{{ $province['name'] }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('selectedProvince') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <div wire:loading wire:target="selectedProvince" class="text-sm text-gray-500">Loading cities...</div>
                                 </div>
+
+                                {{-- City/Municipality Dropdown --}}
                                 <div>
-                                    <label for="town" class="block text-sm font-medium text-gray-700">Town/City</label>
-                                    <input type="text" wire:model.defer="town" id="town" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    @error('town') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <label for="selectedCity" class="block text-sm font-medium text-gray-700">City/Municipality</label>
+                                    <select wire:model.live="selectedCity" id="selectedCity" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" {{ is_null($selectedProvince) || empty($cities) ? 'disabled' : '' }}>
+                                        <option value="">Select City/Municipality</option>
+                                        @foreach ($cities as $city)
+                                            <option value="{{ $city['code'] }}">{{ $city['name'] }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('selectedCity') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <div wire:loading wire:target="selectedCity" class="text-sm text-gray-500">Loading barangays...</div>
                                 </div>
+
+                                {{-- Barangay Dropdown --}}
                                 <div>
-                                    <label for="province" class="block text-sm font-medium text-gray-700">Province</label>
-                                    <input type="text" wire:model.defer="province" id="province" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    @error('province') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <label for="selectedBarangay" class="block text-sm font-medium text-gray-700">Barangay</label>
+                                    <select wire:model.live="selectedBarangay" id="selectedBarangay" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" {{ is_null($selectedCity) || empty($barangays) ? 'disabled' : '' }}>
+                                        <option value="">Select Barangay</option>
+                                        @foreach ($barangays as $barangay)
+                                            <option value="{{ $barangay['code'] }}">{{ $barangay['name'] }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('selectedBarangay') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                                 </div>
+
+                                {{-- Street Address Input --}}
                                 <div>
-                                    <label for="country" class="block text-sm font-medium text-gray-700">Country</label>
-                                    <input type="text" wire:model.defer="country" id="country" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    @error('country') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                    <label for="street_address" class="block text-sm font-medium text-gray-700">House No., Street Name, Subdivision, etc.</label>
+                                    <input type="text" wire:model.defer="street_address" id="street_address" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    @error('street_address') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                                 </div>
+                                
                                 <div class="flex items-center">
                                     <input type="checkbox" wire:model.defer="is_primary" id="is_primary" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
                                     <label for="is_primary" class="ml-2 block text-sm text-gray-900">Set as primary address</label>

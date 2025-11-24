@@ -1,38 +1,28 @@
 @props([
-  'navItems' => [
-    ['label' => 'Home', 'route' => 'home'],
-    ['label' => 'Browse', 'route' => 'browse'],
-    ['label' => 'FAQ', 'route' => 'faq'],
-    ['label' => 'About', 'route' => 'about']
-  ]
+  'navItems' => config('navigation.main'),
+  'authProfileData' => Auth::user()
 ])
 
 <header class="navbar" x-data="{ open: false }">
   <div class="navbar-inner">
     
-    <!-- Brand -->
     <a href="{{ route('home') }}" class="navbar-brand">
-      <span class="navbar-brand-text">Serbizyu</span>
-      <span class="navbar-brand-accent">.</span>
+        <img src="{{ asset('img/logo.png') }}" alt="Serbizyu" class="h-8 w-auto">
     </a>
 
-    <!-- Desktop Nav -->
     <nav class="navbar-nav">
       @foreach($navItems as $item)
-        @php $route = $item['route']; @endphp
         <a 
-          href="{{ $route ? route($route) : '#' }}" 
-          class="navbar-link {{ request()->routeIs($route) ? 'active' : '' }}"
+          href="{{ $item['route'] ? route($item['route']) : '#' }}" 
+          class="navbar-link {{ request()->routeIs($item['route']) ? 'active' : '' }}"
         >
           {{ $item['label'] }}
         </a>
       @endforeach
 
-      {{-- show only when on auth check else show profile bar with logout button --}}
       <div class="navbar-auth">
         @guest
-            <a href="{{ route('auth.signin') }}" 
-              class="navbar-auth-link {{ request()->routeIs('auth.signin') ? 'active' : '' }}">
+            <a href="{{ route('auth.signin') }}" class="navbar-auth-link {{ request()->routeIs('auth.signin') ? 'active' : '' }}">
                 Sign In
             </a>
             <a href="{{ route('auth.join') }}">
@@ -40,38 +30,34 @@
             </a>
         @endguest
 
-       @auth
-            <x-nav.profile-dropdown :authProfileData="$authProfileData" />
+        @auth
+          @if(!Str::startsWith(request()->route()->getName(), 'creator.'))
+            <a href="{{ route('creator.dashboard') }}" class="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-full hover:bg-green-700 transition-all duration-300 ease-in-out transform hover:scale-105">
+              Creator Space
+            </a>
+          @endif
+          <x-nav.profile-dropdown :authProfileData="$authProfileData" />
         @endauth
-
-
       </div>
     </nav>
 
-    <!-- Mobile Hamburger -->
     <button @click="open = !open" class="navbar-toggle text-2xl">
       <span x-show="!open">☰</span>
       <span x-show="open">✕</span>
     </button>
   </div>
 
-  <!-- Mobile Menu -->
-  <div
-    x-show="open"
-    x-transition:enter="transition ease-out duration-300"
-    x-transition:enter-start="opacity-0 -translate-y-full"
-    x-transition:enter-end="opacity-100 translate-y-0"
-    x-transition:leave="transition ease-in duration-200"
-    x-transition:leave-start="opacity-100 translate-y-0"
-    x-transition:leave-end="opacity-0 -translate-y-full"
-    class="navbar-mobile"
-  >
+  <div x-show="open" x-cloak
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 -translate-y-full"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       class="navbar-mobile dark:bg-background">
+       
     <nav class="flex flex-col space-y-2">
       @foreach($navItems as $item)
-        @php $route = $item['route']; @endphp
         <a 
-          href="{{ $route ? route($route) : '#' }}" 
-          class="navbar-mobile-link {{ request()->routeIs($route) ? 'active' : '' }}"
+          href="{{ $item['route'] ? route($item['route']) : '#' }}" 
+          class="navbar-mobile-link {{ request()->routeIs($item['route']) ? 'active' : '' }}"
         >
           {{ $item['label'] }}
         </a>
@@ -79,18 +65,26 @@
 
       <div class="navbar-mobile-auth">
         @guest
-            <a href="{{ route('auth.signin') }}" 
-              class="block text-center navbar-mobile-link {{ request()->routeIs('auth.signin') ? 'active' : '' }}">
-                Sign In
-            </a>
+            <a href="{{ route('auth.signin') }}" class="block text-center navbar-mobile-link">Sign In</a>
             <a href="{{ route('auth.join') }}">
-                <button class="navbar-mobile-button">Join</button>
+                <button class="navbar-mobile-button w-full">Join</button>
             </a>
         @endguest
-
-       @auth
-          <x-nav.profile-dropdown :authProfileData="$authProfileData"/>
-      @endauth
+        
+        @auth
+           @if(!Str::startsWith(request()->route()->getName(), 'creator.'))
+           {{-- better style this: --}}
+            <a href="{{ route('creator.dashboard') }}" class="block text-center navbar-mobile-link bg-green-600 text-white hover:bg-green-700  px-3 py-2 rounded-full ">Creator Space</a>
+           @endif
+           <div class="border-t pt-2">
+               <span class="block px-3 py-2 text-sm text-gray-500">{{ $authProfileData->name ?? 'User' }}</span>
+               
+               <form method="POST" action="{{ route('logout') }}">
+                   @csrf
+                   <button type="submit" class="w-full text-left px-3 py-2 text-red-600">Logout</button>
+               </form>
+           </div>
+        @endauth
       </div>
     </nav>
   </div>

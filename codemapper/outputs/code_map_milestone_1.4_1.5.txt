@@ -1,0 +1,1894 @@
+MAP: Generated 2025-11-17 09:34:33
+--app/Domains/Listings/Http/Controllers/OpenOfferBidController.php
+<?php
+
+namespace App\Domains\Listings\Http\Controllers;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Listings\Models\OpenOfferBid;
+use App\Domains\Listings\Services\OpenOfferBidService;
+use App\Domains\Listings\Http\Requests\StoreOpenOfferBidRequest;
+use App\Domains\Listings\Http\Requests\UpdateOpenOfferBidRequest;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class OpenOfferBidController extends Controller
+{
+    protected $openOfferBidService;
+
+    public function __construct(OpenOfferBidService $openOfferBidService)
+    {
+        $this->openOfferBidService = $openOfferBidService;
+        // No authorizeResource here as actions are specific
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StoreOpenOfferBidRequest $request, OpenOffer $openOffer)
+    {
+        try {
+            $bid = $this->openOfferBidService->createBid(
+                Auth::user(),
+                $openOffer,
+                $request->validated()
+            );
+            return back()->with('success', 'Bid placed successfully!');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(UpdateOpenOfferBidRequest $request, OpenOfferBid $openOfferBid)
+    {
+        $this->authorize('update', $openOfferBid);
+
+        try {
+            $bid = $this->openOfferBidService->updateBid(
+                $openOfferBid,
+                $request->validated()
+            );
+            return back()->with('success', 'Bid updated successfully!');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(OpenOfferBid $openOfferBid)
+    {
+        $this->authorize('delete', $openOfferBid);
+
+        try {
+            $this->openOfferBidService->deleteBid($openOfferBid);
+            return back()->with('success', 'Bid deleted successfully!');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Accept the specified bid.
+     */
+    public function accept(OpenOfferBid $openOfferBid)
+    {
+        $this->authorize('accept', $openOfferBid);
+
+        try {
+            $this->openOfferBidService->acceptBid($openOfferBid);
+            return back()->with('success', 'Bid accepted successfully! Offer closed.');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Reject the specified bid.
+     */
+    public function reject(OpenOfferBid $openOfferBid)
+    {
+        $this->authorize('reject', $openOfferBid);
+
+        try {
+            $this->openOfferBidService->rejectBid($openOfferBid);
+            return back()->with('success', 'Bid rejected.');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+}
+----
+--app/Domains/Listings/Http/Controllers/OpenOfferController.php
+<?php
+
+namespace App\Domains\Listings\Http\Controllers;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Listings\Services\OpenOfferService;
+use App\Domains\Listings\Http\Requests\StoreOpenOfferRequest;
+use App\Domains\Listings\Http\Requests\UpdateOpenOfferRequest;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class OpenOfferController extends Controller
+{
+    protected $openOfferService;
+
+    public function __construct(OpenOfferService $openOfferService)
+    {
+        $this->openOfferService = $openOfferService;
+        $this->authorizeResource(OpenOffer::class, 'openOffer');
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $openOffers = OpenOffer::latest()->paginate(10); // Example: paginate offers
+        return view('offers.index', compact('openOffers'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        return view('offers.create');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StoreOpenOfferRequest $request)
+    {
+        $openOffer = $this->openOfferService->createOpenOffer(
+            Auth::user(),
+            $request->validated(),
+            $request->file('images') ?? []
+        );
+
+        return redirect()->route('creator.offers.show', $openOffer)
+            ->with('success', 'Open Offer created successfully!');
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(OpenOffer $openOffer)
+    {
+        return view('offers.show', compact('openOffer'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(OpenOffer $openOffer)
+    {
+        return view('offers.edit', compact('openOffer'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(UpdateOpenOfferRequest $request, OpenOffer $openOffer)
+    {
+        $openOffer = $this->openOfferService->updateOpenOffer(
+            $openOffer,
+            $request->validated(),
+            $request->file('images') ?? []
+        );
+
+        return redirect()->route('creator.offers.show', $openOffer)
+            ->with('success', 'Open Offer updated successfully!');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(OpenOffer $openOffer)
+    {
+        $this->openOfferService->deleteOpenOffer($openOffer);
+
+        return redirect()->route('creator.offers.index')
+            ->with('success', 'Open Offer deleted successfully!');
+    }
+
+    /**
+     * Close the specified open offer.
+     */
+    public function close(OpenOffer $openOffer)
+    {
+        $this->authorize('close', $openOffer);
+
+        $this->openOfferService->closeOpenOffer($openOffer);
+
+        return back()->with('success', 'Open Offer closed successfully!');
+    }
+}
+----
+--app/Domains/Listings/Http/Requests/StoreOpenOfferBidRequest.php
+<?php
+
+namespace App\Domains\Listings\Http\Requests;
+
+use App\Domains\Listings\Models\OpenOffer;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
+
+class StoreOpenOfferBidRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        $openOffer = $this->route('openOffer'); // Assuming route model binding
+        return Auth::user()->can('create', OpenOffer::class, $openOffer);
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'amount' => ['required', 'numeric', 'min:0'],
+            'message' => ['nullable', 'string', 'max:1000'],
+        ];
+    }
+}
+----
+--app/Domains/Listings/Http/Requests/StoreOpenOfferRequest.php
+<?php
+
+namespace App\Domains\Listings\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
+
+class StoreOpenOfferRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return Auth::check(); // Only authenticated users can create open offers
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string'],
+            'budget' => ['required', 'numeric', 'min:0'],
+            'category_id' => ['required', 'exists:categories,id'],
+            'deadline' => ['nullable', 'date', 'after_or_equal:today'],
+            'images' => ['array'],
+            'images.*' => ['nullable', 'image', 'max:2048'], // Max 2MB per image
+        ];
+    }
+}
+----
+--app/Domains/Listings/Http/Requests/UpdateOpenOfferBidRequest.php
+<?php
+
+namespace App\Domains\Listings\Http\Requests;
+
+use App\Domains\Listings\Models\OpenOfferBid;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
+
+class UpdateOpenOfferBidRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        $openOfferBid = $this->route('openOfferBid'); // Assuming route model binding
+        return Auth::user()->can('update', $openOfferBid);
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'message' => ['nullable', 'string', 'max:1000'],
+        ];
+    }
+}
+----
+--app/Domains/Listings/Http/Requests/UpdateOpenOfferRequest.php
+<?php
+
+namespace App\Domains\Listings\Http\Requests;
+
+use App\Domains\Listings\Models\OpenOffer;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
+
+class UpdateOpenOfferRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        $openOffer = $this->route('offer'); // Assuming route model binding
+        return Auth::user()->can('update', $openOffer);
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'title' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'budget' => ['sometimes', 'required', 'numeric', 'min:0'],
+            'category_id' => ['sometimes', 'required', 'exists:categories,id'],
+            'deadline' => ['nullable', 'date', 'after_or_equal:today'],
+            'images' => ['array'],
+            'images.*' => ['nullable', 'image', 'max:2048'], // Max 2MB per image
+        ];
+    }
+}
+----
+--app/Domains/Listings/Models/OpenOffer.php
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Domains\Users\Models\User;
+use App\Domains\Listings\Models\Category;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Common\Models\Address;
+use Plank\Mediable\Mediable;
+use Plank\Mediable\MediableInterface;
+use Plank\Mediable\Media;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Enums\OpenOfferStatus; // Added OpenOfferStatus enum
+
+class OpenOffer extends Model implements MediableInterface
+{
+    use HasFactory;
+    use SoftDeletes;
+    use Mediable;
+
+    protected $table = 'open_offers';
+    
+    protected $fillable = [
+        'title',
+        'description',
+        'budget',
+        'pay_first',
+        'fulfilled',
+        'category_id',
+        'creator_id',
+        'workflow_template_id',
+        'address_id',
+        'deadline', // Added deadline
+        'status',   // Added status
+    ];
+
+    // casts
+    protected $casts = [
+        'fulfilled' => 'boolean',
+        'deadline' => 'datetime', // Added deadline cast
+        'status' => OpenOfferStatus::class, // Added status cast
+    ];
+
+
+    public function thumbnail()
+    {
+        return $this->belongsTo(Media::class, 'thumbnail_id');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'creator_id'); // Explicitly define foreign key
+    }
+    
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'creator_id'); // Alias for creator
+    }
+
+    public function workflowTemplate()
+    {
+        return $this->belongsTo(WorkflowTemplate::class);
+    }
+
+    public function bids()
+    
+    {
+        return $this->hasMany(OpenOfferBid::class);
+    }
+
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\OpenOfferFactory::new();
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
+    }
+}
+----
+--app/Domains/Listings/Policies/BidPolicy.php
+<?php
+
+namespace App\Domains\Listings\Policies;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Listings\Models\OpenOfferBid;
+use App\Domains\Users\Models\User;
+use Illuminate\Auth\Access\Response;
+
+class BidPolicy
+{
+    /**
+     * Determine whether the user can view any models.
+     */
+    public function viewAny(User $user): bool
+    {
+        return $user !== null; // Any authenticated user can view bids
+    }
+
+    /**
+     * Determine whether the user can view the model.
+     */
+    public function view(User $user, OpenOfferBid $openOfferBid): bool
+    {
+        return $user !== null; // Any authenticated user can view a bid
+    }
+
+    /**
+     * Determine whether the user can create models.
+     */
+    public function create(User $user, OpenOffer $openOffer): bool
+    {
+        // A user can bid on an offer if they are not the owner and are a "creator/seller"
+        return $user->id !== $openOffer->creator_id && $user->hasRole('creator');
+    }
+
+    /**
+     * Determine whether the user can update the model.
+     */
+    public function update(User $user, OpenOfferBid $openOfferBid): bool
+    {
+        return $user->id === $openOfferBid->bidder_id; // Only the bidder can update their bid
+    }
+
+    /**
+     * Determine whether the user can delete the model.
+     */
+    public function delete(User $user, OpenOfferBid $openOfferBid): bool
+    {
+        return $user->id === $openOfferBid->bidder_id; // Only the bidder can delete their bid
+    }
+
+    /**
+     * Determine whether the user can accept a bid.
+     */
+    public function accept(User $user, OpenOfferBid $openOfferBid): bool
+    {
+        // Only the owner of the offer can accept a bid
+        return $user->id === $openOfferBid->openOffer->creator_id;
+    }
+
+    /**
+     * Determine whether the user can reject a bid.
+     */
+    public function reject(User $user, OpenOfferBid $openOfferBid): bool
+    {
+        // Only the owner of the offer can reject a bid
+        return $user->id === $openOfferBid->openOffer->creator_id;
+    }
+
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, OpenOfferBid $openOfferBid): bool
+    {
+        return $user->id === $openOfferBid->bidder_id;
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, OpenOfferBid $openOfferBid): bool
+    {
+        return $user->id === $openOfferBid->bidder_id;
+    }
+}
+----
+--app/Domains/Listings/Policies/OpenOfferPolicy.php
+<?php
+
+namespace App\Domains\Listings\Policies;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Users\Models\User;
+use Illuminate\Auth\Access\Response;
+
+class OpenOfferPolicy
+{
+    /**
+     * Determine whether the user can view any models.
+     */
+    public function viewAny(?User $user): bool
+    {
+        return true; // Any user can view any open offers
+    }
+
+    /**
+     * Determine whether the user can view the model.
+     */
+    public function view(?User $user, OpenOffer $openOffer): bool
+    {
+        return true; // Any user can view a single open offer
+    }
+
+    /**
+     * Determine whether the user can create models.
+     */
+    public function create(User $user): bool
+    {
+        return $user !== null; // Any authenticated user can create an offer
+    }
+
+    /**
+     * Determine whether the user can update the model.
+     */
+    public function update(User $user, OpenOffer $openOffer): bool
+    {
+        return $user->id === $openOffer->user_id; // Only the offer owner can update it
+    }
+
+    /**
+     * Determine whether the user can delete the model.
+     */
+    public function delete(User $user, OpenOffer $openOffer): bool
+    {
+        return $user->id === $openOffer->user_id; // Only the offer owner can delete it
+    }
+
+    /**
+     * Determine whether the user can close the model.
+     */
+    public function close(User $user, OpenOffer $openOffer): bool
+    {
+        return $user->id === $openOffer->user_id; // Only the offer owner can close it
+    }
+
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, OpenOffer $openOffer): bool
+    {
+        return $user->id === $openOffer->user_id;
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, OpenOffer $openOffer): bool
+    {
+        return $user->id === $openOffer->user_id;
+    }
+}
+----
+--app/Domains/Listings/Services/OpenOfferBidService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Listings\Models\OpenOfferBid;
+use App\Domains\Users\Models\User;
+use Illuminate\Support\Facades\DB;
+use App\Enums\OpenOfferStatus;
+
+class OpenOfferBidService
+{
+    public function createBid(User $bidder, OpenOffer $openOffer, array $data): OpenOfferBid
+    {
+        return DB::transaction(function () use ($bidder, $openOffer, $data) {
+            // Ensure the user hasn't already bid on this offer
+            if ($openOffer->bids()->where('bidder_id', $bidder->id)->exists()) {
+                throw new \Exception('You have already placed a bid on this offer.');
+            }
+
+            // Ensure the offer is still open
+            if ($openOffer->status !== OpenOfferStatus::OPEN) {
+                throw new \Exception('This offer is no longer open for bids.');
+            }
+
+            $bid = $openOffer->bids()->create([
+                'bidder_id' => $bidder->id,
+                'amount' => $data['amount'],
+                'message' => $data['message'] ?? null,
+            ]);
+
+            // Optionally, send a notification to the offer creator
+            // Notification::send($openOffer->creator, new BidPlacedNotification($bid));
+
+            return $bid;
+        });
+    }
+
+    public function acceptBid(OpenOfferBid $bid): OpenOfferBid
+    {
+        return DB::transaction(function () use ($bid) {
+            // Ensure the bid is still pending
+            if ($bid->status !== 'pending') {
+                throw new \Exception('This bid cannot be accepted.');
+            }
+
+            // Accept the bid
+            $bid->update(['status' => 'accepted']);
+
+            // Close the open offer
+            $bid->openOffer->update(['status' => OpenOfferStatus::CLOSED]);
+
+            // Reject all other bids for this offer
+            $bid->openOffer->bids()
+                ->where('id', '!=', $bid->id)
+                ->where('status', 'pending')
+                ->update(['status' => 'rejected']);
+
+            // Optionally, create an order here
+            // OrderService::createOrder($bid);
+
+            // Optionally, send notifications
+            // Notification::send($bid->bidder, new BidAcceptedNotification($bid));
+            // Notification::send($bid->openOffer->creator, new BidAcceptedNotification($bid));
+
+            return $bid;
+        });
+    }
+
+    public function rejectBid(OpenOfferBid $bid): OpenOfferBid
+    {
+        return DB::transaction(function () use ($bid) {
+            // Ensure the bid is still pending
+            if ($bid->status !== 'pending') {
+                throw new \Exception('This bid cannot be rejected.');
+            }
+
+            $bid->update(['status' => 'rejected']);
+
+            // Optionally, send notification to the bidder
+            // Notification::send($bid->bidder, new BidRejectedNotification($bid));
+
+            return $bid;
+        });
+    }
+
+    public function updateBid(OpenOfferBid $bid, array $data): OpenOfferBid
+    {
+        return DB::transaction(function () use ($bid, $data) {
+            // Ensure the bid is still pending
+            if ($bid->status !== 'pending') {
+                throw new \Exception('This bid cannot be updated.');
+            }
+
+            $bid->update([
+                'amount' => $data['amount'] ?? $bid->amount,
+                'message' => $data['message'] ?? $bid->message,
+            ]);
+
+            return $bid;
+        });
+    }
+
+    public function deleteBid(OpenOfferBid $bid): void
+    {
+        DB::transaction(function () use ($bid) {
+            // Ensure the bid is still pending
+            if ($bid->status !== 'pending') {
+                throw new \Exception('This bid cannot be deleted.');
+            }
+            $bid->delete();
+        });
+    }
+}
+----
+--app/Domains/Listings/Services/OpenOfferService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Users\Models\User;
+use Illuminate\Support\Facades\DB;
+use Plank\Mediable\MediaUploader;
+use Illuminate\Support\Facades\Storage;
+
+class OpenOfferService
+{
+    protected $mediaUploader;
+
+    public function __construct(MediaUploader $mediaUploader)
+    {
+        $this->mediaUploader = $mediaUploader;
+    }
+
+    public function createOpenOffer(User $user, array $data, array $newMedia = []): OpenOffer
+    {
+        return DB::transaction(function () use ($user, $data, $newMedia) {
+            $openOffer = $user->openOffers()->create([
+                'title' => $data['title'],
+                'description' => $data['description'],
+                'budget' => $data['budget'],
+                'category_id' => $data['category_id'],
+                'deadline' => $data['deadline'] ?? null,
+                'workflow_template_id' => $data['workflow_template_id'] ?? null,
+                'pay_first' => $data['pay_first'] ?? false,
+                'address_id' => $data['address_id'] ?? null,
+            ]);
+
+            if (!empty($newMedia)) {
+                foreach ($newMedia as $file) {
+                    // Assuming $file is a path to a temporary file stored by Livewire
+                    $this->mediaUploader->fromSource(Storage::disk('local')->path($file))
+                        ->toDirectory('open-offers')
+                        ->attachTo($openOffer, 'images');
+                    Storage::disk('local')->delete($file); // Clean up temp file
+                }
+            }
+
+            return $openOffer;
+        });
+    }
+
+    public function updateOpenOffer(OpenOffer $openOffer, array $data, array $newMedia = []): OpenOffer
+    {
+        return DB::transaction(function () use ($openOffer, $data, $newMedia) {
+            $openOffer->update([
+                'title' => $data['title'],
+                'description' => $data['description'],
+                'budget' => $data['budget'],
+                'category_id' => $data['category_id'],
+                'deadline' => $data['deadline'] ?? null,
+                'workflow_template_id' => $data['workflow_template_id'] ?? null,
+                'pay_first' => $data['pay_first'] ?? false,
+                'address_id' => $data['address_id'] ?? null,
+            ]);
+
+            // Handle images to remove
+            if (isset($data['images_to_remove']) && !empty($data['images_to_remove'])) {
+                $openOffer->media()->whereIn('id', $data['images_to_remove'])->delete();
+            }
+
+            // Attach new media
+            if (!empty($newMedia)) {
+                foreach ($newMedia as $file) {
+                    // Assuming $file is a path to a temporary file stored by Livewire
+                    $this->mediaUploader->fromSource(Storage::disk('local')->path($file))
+                        ->toDirectory('open-offers')
+                        ->attachTo($openOffer, 'images');
+                    Storage::disk('local')->delete($file); // Clean up temp file
+                }
+            }
+
+            return $openOffer;
+        });
+    }
+
+    public function deleteOpenOffer(OpenOffer $openOffer): void
+    {
+        DB::transaction(function () use ($openOffer) {
+            $openOffer->detachMedia('images');
+            $openOffer->delete();
+        });
+    }
+
+    public function closeOpenOffer(OpenOffer $openOffer): OpenOffer
+    {
+        $openOffer->update(['status' => 'closed']);
+        return $openOffer;
+    }
+}
+----
+--app/Domains/Users/Models/User.php
+<?php
+
+namespace App\Domains\Users\Models;
+
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Domains\Common\Models\Address;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
+use App\Domains\Common\Models\UserAddress;
+use Plank\Mediable\Mediable;
+use Plank\Mediable\MediableInterface;
+use Plank\Mediable\Media;
+
+use App\Domains\Common\Models\Image;
+
+class User extends Authenticatable implements MustVerifyEmail, MediableInterface
+{
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasFactory, Notifiable, HasRoles, Mediable;
+
+    protected $guard_name = 'web';
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = [
+        'firstname',
+        'lastname',
+        'username',
+        'phone',
+        'address_id',
+        'email',
+        'password',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * The addresses that belong to the user.
+     */
+    public function addresses()
+    {
+        return $this->belongsToMany(Address::class, 'user_addresses')
+                    ->withPivot('is_primary')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+
+    // Convenience method
+    /**
+     * Get the user's profile image (latest with tag 'profile_image')
+     */
+
+    public function getProfileImageAttribute()
+    {
+        return $this->media->where('tag', 'profile_image')->first();
+    }
+    protected static function newFactory()
+    {
+        return \Database\Factories\UserFactory::new();
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
+
+    public function verification()
+    {
+        return $this->hasOne(UserVerification::class);
+    }
+
+    public function openOffers()
+    {
+        return $this->hasMany(\App\Domains\Listings\Models\OpenOffer::class, 'creator_id');
+    }
+
+}
+----
+--app/Enums/OpenOfferStatus.php
+<?php
+
+namespace App\Enums;
+
+enum OpenOfferStatus: string
+{
+    case PENDING = 'pending';
+    case OPEN = 'open';
+    case CLOSED = 'closed';
+    case FULFILLED = 'fulfilled';
+    case CANCELLED = 'cancelled';
+}
+----
+--app/Livewire/BidForm.php
+<?php
+
+namespace App\Livewire;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Listings\Services\OpenOfferBidService;
+use Livewire\Component;
+use Illuminate\Support\Facades\Auth;
+
+class BidForm extends Component
+{
+    public OpenOffer $openOffer;
+    public ?float $amount = null;
+    public ?string $message = null;
+
+    protected $rules = [
+        'amount' => 'required|numeric|min:0',
+        'message' => 'nullable|string|max:1000',
+    ];
+
+    public function mount(OpenOffer $openOffer)
+    {
+        $this->openOffer = $openOffer;
+    }
+
+    public function save(OpenOfferBidService $openOfferBidService)
+    {
+        $this->validate();
+
+        try {
+            $openOfferBidService->createBid(
+                Auth::user(),
+                $this->openOffer,
+                ['amount' => $this->amount, 'message' => $this->message]
+            );
+
+            $this->reset(['amount', 'message']);
+            $this->dispatch('bid-placed'); // Emit event to refresh bid list
+            session()->flash('success', 'Your bid has been placed successfully!');
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.bid-form');
+    }
+}
+----
+--app/Livewire/BidList.php
+<?php
+
+namespace App\Livewire;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Listings\Models\OpenOfferBid;
+use App\Domains\Listings\Services\OpenOfferBidService;
+use Livewire\Component;
+use Illuminate\Support\Facades\Auth;
+
+class BidList extends Component
+{
+    public OpenOffer $openOffer;
+    public $bids;
+
+    protected $listeners = ['bid-placed' => 'loadBids'];
+
+    public function mount(OpenOffer $openOffer)
+    {
+        $this->openOffer = $openOffer;
+        $this->loadBids();
+    }
+
+    public function loadBids()
+    {
+        $this->bids = $this->openOffer->bids()->with('bidder')->latest()->get();
+    }
+
+    public function acceptBid(OpenOfferBidService $openOfferBidService, OpenOfferBid $bid)
+    {
+        $this->authorize('accept', $bid);
+
+        try {
+            $openOfferBidService->acceptBid($bid);
+            $this->loadBids();
+            session()->flash('success', 'Bid accepted successfully! Offer closed.');
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
+    public function rejectBid(OpenOfferBidService $openOfferBidService, OpenOfferBid $bid)
+    {
+        $this->authorize('reject', $bid);
+
+        try {
+            $openOfferBidService->rejectBid($bid);
+            $this->loadBids();
+            session()->flash('success', 'Bid rejected.');
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.bid-list');
+    }
+}
+----
+--app/Livewire/OpenOfferForm.php
+<?php
+
+namespace App\Livewire;
+
+use App\Domains\Listings\Models\OpenOffer;
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use Illuminate\Support\Facades\Storage;
+use Plank\Mediable\MediaUploader;
+use Illuminate\Http\UploadedFile;
+
+class OpenOfferForm extends FormWithMedia
+{
+    use WithFileUploads;
+
+    public ?OpenOffer $offer = null;
+
+    public string $title = '';
+    public ?string $description = null;
+    public ?float $budget = null;
+    public ?int $category_id = null;
+    public ?int $workflow_template_id = null;
+    public bool $pay_first = false;
+    public ?int $address_id = null;
+    public ?string $deadline = null;
+
+    /** @var array|UploadedFile[] */
+    public array $newFiles = []; // Renamed from new_images
+
+    /** @var int[] IDs of media to remove (when editing) */
+    public array $images_to_remove = [];
+
+    // For lists (categories, workflows) loaded for select inputs
+    public array $categories = [];
+    public array $workflowTemplates = [];
+
+    protected function rules(): array
+    {
+        return [
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'budget' => 'required|numeric|min:1',
+            'category_id' => 'required|integer|exists:categories,id',
+            'workflow_template_id' => 'nullable|integer|exists:workflow_templates,id',
+            'pay_first' => 'nullable|boolean',
+            'address_id' => 'nullable|integer',
+            'deadline' => 'nullable|date|after_or_equal:today',
+            'newFiles' => 'nullable|array', // Updated rule
+            'newFiles.*' => 'file|max:5120', // Updated rule
+            'images_to_remove' => 'nullable|array',
+            'images_to_remove.*' => 'integer',
+        ];
+    }
+
+    protected $listeners = [
+        // you can listen to custom events if needed
+    ];
+
+    public function mount(?OpenOffer $offer = null)
+    {
+        $this->offer = $offer;
+
+        // Load selects (you can replace with services or inject them)
+        $this->categories = app(\App\Domains\Listings\Services\CategoryService::class)->listAllCategories()->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->toArray();
+
+        $this->workflowTemplates = app(\App\Domains\Listings\Services\WorkflowTemplateService::class)
+            ->getWorkflowTemplatesByCreator(auth()->id())
+            ->map(fn($w) => ['id' => $w->id, 'name' => $w->name])->toArray();
+
+        if ($this->offer) {
+            $this->title = $this->offer->title;
+            $this->description = $this->offer->description;
+            $this->budget = $this->offer->budget;
+            $this->category_id = $this->offer->category_id;
+            $this->workflow_template_id = $this->offer->workflow_template_id;
+            $this->pay_first = (bool)$this->offer->pay_first;
+            $this->address_id = $this->offer->address_id;
+            $this->deadline = $this->offer->deadline ? $this->offer->deadline->format('Y-m-d') : null;
+        }
+    }
+
+    public function updatedNewFiles() // Renamed method
+    {
+        $this->validateOnly('newFiles'); // Updated validation
+    }
+
+    public function getExistingImagesProperty()
+    {
+        if (!$this->offer) {
+            return collect();
+        }
+
+        return $this->offer->getMedia('images')->map(function ($media) {
+            return [
+                'id' => $media->id,
+                'url' => route('media.serve', ['payload' => encrypt(json_encode(['media_id' => $media->id]))]),
+                'is_removed' => in_array($media->id, $this->images_to_remove),
+            ];
+        });
+    }
+
+    public function removeExistingMedia(int $mediaId)
+    {
+        if (in_array($mediaId, $this->images_to_remove)) {
+            $this->images_to_remove = array_diff($this->images_to_remove, [$mediaId]);
+        } else {
+            $this->images_to_remove[] = $mediaId;
+        }
+    }
+
+    public function removeNewFile(int $index)
+    {
+        array_splice($this->newFiles, $index, 1);
+    }
+
+    public function save()
+    {
+        $this->validate();
+
+        $openOfferService = app(\App\Domains\Listings\Services\OpenOfferService::class);
+
+        $data = [
+            'title' => $this->title,
+            'description' => $this->description,
+            'budget' => $this->budget,
+            'category_id' => $this->category_id,
+            'workflow_template_id' => $this->workflow_template_id,
+            'pay_first' => $this->pay_first,
+            'address_id' => $this->address_id,
+            'deadline' => $this->deadline,
+            'images_to_remove' => $this->images_to_remove,
+        ];
+
+        $tempPaths = [];
+        if (!empty($this->newFiles)) { // Updated property
+            foreach ($this->newFiles as $file) { // Updated property
+                if ($file instanceof UploadedFile) {
+                    $path = $file->store('livewire-temp/offers', 'local');
+                    $tempPaths[] = $path;
+                }
+            }
+        }
+
+        try {
+            if ($this->offer) {
+                $updated = $openOfferService->updateOpenOffer($this->offer, $data, $tempPaths);
+                $this->emit('openOfferSaved', $updated->id);
+                session()->flash('success', 'Open offer updated successfully!');
+                return redirect()->route('creator.offers.index');
+            } else {
+                $created = $openOfferService->createOpenOffer(auth()->user(), $data, $tempPaths);
+                $this->emit('openOfferSaved', $created->id);
+                session()->flash('success', 'Open offer created successfully!');
+                return redirect()->route('creator.offers.index');
+            }
+        } catch (\Throwable $e) {
+            foreach ($tempPaths as $p) {
+                Storage::disk('local')->delete($p);
+            }
+
+            \Log::error('OpenOfferForm save failed: ' . $e->getMessage(), ['exception' => $e]);
+            $this->addError('save', 'Failed to save open offer: ' . $e->getMessage());
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.open-offer-form');
+    }
+}
+----
+--app/Providers/AuthServiceProvider.php
+<?php
+
+namespace App\Providers;
+
+use App\Domains\Listings\Models\Category;
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Listings\Models\OpenOfferBid; // Added
+use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Listings\Policies\CategoryPolicy;
+use App\Domains\Listings\Policies\OpenOfferPolicy;
+use App\Domains\Listings\Policies\BidPolicy; // Added
+use App\Domains\Listings\Policies\ServicePolicy;
+use App\Domains\Listings\Policies\WorkflowPolicy;
+use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Plank\Mediable\Media;
+
+class AuthServiceProvider extends ServiceProvider
+{
+    /**
+     * The model to policy mappings for the application.
+     *
+     * @var array<class-string, class-string>
+     */
+    protected $policies = [
+        Category::class => CategoryPolicy::class,
+        Service::class => ServicePolicy::class,
+        WorkflowTemplate::class => WorkflowPolicy::class,
+        OpenOffer::class => OpenOfferPolicy::class,
+        OpenOfferBid::class => BidPolicy::class, // Added
+    ];
+
+    /**
+     * Register any authentication / authorization services.
+     */
+    public function boot(): void
+    {
+        //
+    }
+}
+----
+--database/migrations/2025_11_17_005808_add_deadline_and_status_to_open_offers_table.php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('open_offers', function (Blueprint $table) {
+            $table->timestamp('deadline')->nullable()->after('budget');
+            $table->enum('status', ['pending', 'open', 'closed', 'fulfilled', 'cancelled'])->default('open')->after('fulfilled');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('open_offers', function (Blueprint $table) {
+            $table->dropColumn('deadline');
+            $table->dropColumn('status');
+        });
+    }
+};
+----
+--resources/views/livewire/bid-form.blade.php
+<div>
+    @if (session()->has('success'))
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span class="block sm:inline">{{ session('success') }}</span>
+        </div>
+    @endif
+
+    @if (session()->has('error'))
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span class="block sm:inline">{{ session('error') }}</span>
+        </div>
+    @endif
+
+    @can('create', [\App\Domains\Listings\Models\OpenOfferBid::class, $openOffer])
+        <div class="bg-gray-100 p-4 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold mb-3">Place Your Bid</h3>
+            <form wire:submit.prevent="save">
+                <div class="mb-4">
+                    <label for="amount" class="block text-sm font-medium text-gray-700">Bid Amount</label>
+                    <input type="number" step="0.01" id="amount" wire:model.defer="amount"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    @error('amount') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="mb-4">
+                    <label for="message" class="block text-sm font-medium text-gray-700">Message (optional)</label>
+                    <textarea id="message" wire:model.defer="message" rows="3"
+                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                    @error('message') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Submit Bid
+                </button>
+            </form>
+        </div>
+    @else
+        @if (Auth::check() && Auth::user()->id === $openOffer->creator_id)
+            <p class="text-gray-600">You cannot bid on your own offer.</p>
+        @elseif (!Auth::check())
+            <p class="text-gray-600">Please <a href="{{ route('login') }}" class="text-indigo-600 hover:underline">log in</a> to place a bid.</p>
+        @else
+            <p class="text-gray-600">You are not authorized to place a bid on this offer.</p>
+        @endif
+    @endcan
+</div>
+----
+--resources/views/livewire/bid-list.blade.php
+<div>
+    @if (session()->has('success'))
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span class="block sm:inline">{{ session('success') }}</span>
+        </div>
+    @endif
+
+    @if (session()->has('error'))
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span class="block sm:inline">{{ session('error') }}</span>
+        </div>
+    @endif
+
+    <h3 class="text-lg font-semibold mb-3">Bids ({{ $bids->count() }})</h3>
+
+    @if ($bids->isEmpty())
+        <p class="text-gray-600">No bids yet.</p>
+    @else
+        <div class="space-y-4">
+            @foreach ($bids as $bid)
+                <div class="bg-white p-4 rounded-lg shadow-md border {{ $bid->status === 'accepted' ? 'border-green-500' : ($bid->status === 'rejected' ? 'border-red-500' : 'border-gray-200') }}">
+                    <div class="flex justify-between items-center mb-2">
+                        <div>
+                            <p class="text-gray-800 font-medium">Bidder: {{ $bid->bidder->username }}</p>
+                            <p class="text-xl font-bold text-indigo-600">${{ number_format($bid->amount, 2) }}</p>
+                        </div>
+                        <div>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                @if ($bid->status === 'accepted') bg-green-200 text-green-800
+                                @elseif ($bid->status === 'rejected') bg-red-200 text-red-800
+                                @else bg-blue-200 text-blue-800 @endif">
+                                {{ ucfirst($bid->status) }}
+                            </span>
+                        </div>
+                    </div>
+                    @if ($bid->message)
+                        <p class="text-gray-700 text-sm mb-2">{{ $bid->message }}</p>
+                    @endif
+                    <p class="text-gray-500 text-xs">Bidded on: {{ $bid->created_at->format('M d, Y H:i') }}</p>
+
+                    @if (Auth::check() && Auth::user()->id === $openOffer->creator_id && $openOffer->status === 'open' && $bid->status === 'pending')
+                        <div class="mt-3 flex space-x-2">
+                            <button wire:click="acceptBid({{ $bid->id }})"
+                                    onclick="return confirm('Are you sure you want to accept this bid? This will close the offer to other bids.');"
+                                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                Accept
+                            </button>
+                            <button wire:click="rejectBid({{ $bid->id }})"
+                                    onclick="return confirm('Are you sure you want to reject this bid?');"
+                                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                                Reject
+                            </button>
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    @endif
+</div>
+----
+--resources/views/livewire/open-offer-form.blade.php
+<div>
+    @if ($errors->has('save'))
+        <div class="text-red-600">{{ $errors->first('save') }}</div>
+    @endif
+
+    <form wire:submit.prevent="save">
+        <div>
+            <label for="title">Title</label>
+            <input id="title" wire:model.defer="title" type="text" />
+            @error('title') <div class="text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label for="description">Description</label>
+            <textarea id="description" wire:model.defer="description"></textarea>
+            @error('description') <div class="text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label for="budget">Budget</label>
+            <input id="budget" wire:model.defer="budget" type="number" step="0.01" />
+            @error('budget') <div class="text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label for="category_id">Category</label>
+            <select id="category_id" wire:model.defer="category_id">
+                <option value="">-- select --</option>
+                @foreach($categories as $c)
+                    <option value="{{ $c['id'] }}">{{ $c['name'] }}</option>
+                @endforeach
+            </select>
+            @error('category_id') <div class="text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label for="workflow_template_id">Workflow (optional)</label>
+            <select id="workflow_template_id" wire:model.defer="workflow_template_id">
+                <option value="">-- none --</option>
+                @foreach($workflowTemplates as $w)
+                    <option value="{{ $w['id'] }}">{{ $w['name'] }}</option>
+                @endforeach
+            </select>
+            @error('workflow_template_id') <div class="text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label>
+                <input type="checkbox" wire:model.defer="pay_first" />
+                Pay first
+            </label>
+        </div>
+
+        <div>
+            <label for="address_id">Address (optional)</label>
+            <input id="address_id" wire:model.defer="address_id" type="number" />
+            @error('address_id') <div class="text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        <div>
+            <label for="deadline">Deadline (optional)</label>
+            <input id="deadline" wire:model.defer="deadline" type="date" />
+            @error('deadline') <div class="text-red-600">{{ $message }}</div> @enderror
+        </div>
+
+        {{-- Media Upload Section --}}
+        @include('livewire.partials.media-upload', [
+            'newFiles' => $newFiles,
+            'existingImages' => $this->existingImages // Use computed property
+        ])
+
+        <div>
+            <button type="submit">{{ $offer ? 'Update Offer' : 'Create Offer' }}</button>
+        </div>
+    </form>
+</div>
+----
+--resources/views/livewire/partials/media-upload.blade.php
+<div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700">Service Images</label>
+
+    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+        <div class="space-y-1 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+
+            <div class="flex text-sm text-gray-600">
+                <label class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500">
+                    <span>Upload files</span>
+                    <input type="file" wire:model="newFiles" multiple class="sr-only">
+                </label>
+                <p class="pl-1">or drag and drop</p>
+            </div>
+
+            <p class="text-xs text-gray-500">PNG, JPG, GIF up to 2MB</p>
+        </div>
+    </div>
+
+    {{-- Existing Images --}}
+    @if(count($existingImages) > 0)
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+            @foreach($existingImages as $img)
+                <div class="relative {{ $img['is_removed'] ? 'opacity-50 grayscale' : '' }}">
+                    <img src="{{ $img['url'] }}" class="w-full h-32 object-cover rounded border border-gray-200">
+                    <button type="button" wire:click="removeExistingMedia({{ $img['id'] }})"
+                        class="absolute top-1 right-1 text-white px-2 py-1 text-xs rounded shadow-md
+                        {{ $img['is_removed'] ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700' }}">
+                        {{ $img['is_removed'] ? 'Undo' : '✕' }}
+                    </button>
+                    @if ($img['is_removed'])
+                        <span class="absolute bottom-1 left-1 bg-yellow-600 text-white px-2 py-0.5 text-xs rounded">
+                            Removed
+                        </span>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    @endif
+
+    {{-- New Files Preview --}}
+    @if(count($newFiles) > 0)
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+            @foreach($newFiles as $i => $file)
+                <div class="relative">
+                    <img src="{{ $file->temporaryUrl() }}" class="w-full h-32 object-cover rounded border border-green-200">
+                    <button type="button" wire:click="removeNewFile({{ $i }})"
+                        class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-xs rounded shadow-md">
+                        ✕
+                    </button>
+                    <span class="absolute bottom-1 left-1 bg-green-600 text-white px-2 py-0.5 text-xs rounded">
+                        New
+                    </span>
+                </div>
+            @endforeach
+        </div>
+    @endif
+</div>
+----
+--resources/views/offers/create.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Create Open Offer') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900">
+                    <livewire:open-offer-form />
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/offers/edit.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Edit Open Offer') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900">
+                    <livewire:open-offer-form :offer="$openOffer" />
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/offers/index.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('My Open Offers') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900">
+                    <div class="flex justify-end mb-4">
+                        <a href="{{ route('creator.offers.create') }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                            Create New Offer
+                        </a>
+                    </div>
+
+                    @if (session('success'))
+                        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                            <span class="block sm:inline">{{ session('success') }}</span>
+                        </div>
+                    @endif
+
+                    @if ($openOffers->isEmpty())
+                        <p>You haven't created any open offers yet.</p>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Title
+                                        </th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Budget
+                                        </th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Status
+                                        </th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Deadline
+                                        </th>
+                                        <th scope="col" class="relative px-6 py-3">
+                                            <span class="sr-only">Actions</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    @foreach ($openOffers as $offer)
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900">{{ $offer->title }}</div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900">${{ number_format($offer->budget, 2) }}</div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                    {{ ucfirst($offer->status) }}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {{ $offer->deadline ? $offer->deadline->format('M d, Y') : 'N/A' }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <a href="{{ route('creator.offers.show', $offer) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
+                                                <a href="{{ route('creator.offers.edit', $offer) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                                                <form action="{{ route('creator.offers.destroy', $offer) }}" method="POST" class="inline-block">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure you want to delete this offer?')">Delete</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4">
+                            {{ $openOffers->links() }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/offers/show.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ $openOffer->title }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold">Description</h3>
+                        <p>{{ $openOffer->description }}</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold">Budget</h3>
+                        <p>${{ number_format($openOffer->budget, 2) }}</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold">Category</h3>
+                        <p>{{ $openOffer->category->name }}</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="text-lg font-semibold">Status</h3>
+                        <p>{{ ucfirst($openOffer->status->value) }}</p> {{-- Access enum value --}}
+                    </div>
+
+                    @if ($openOffer->deadline)
+                        <div class="mb-4">
+                            <h3 class="text-lg font-semibold">Deadline</h3>
+                            <p>{{ $openOffer->deadline->format('M d, Y') }}</p>
+                        </div>
+                    @endif
+
+                    @if ($openOffer->workflowTemplate)
+                        <div class="mb-4">
+                            <h3 class="text-lg font-semibold">Workflow Template</h3>
+                            <p>{{ $openOffer->workflowTemplate->name }}</p>
+                        </div>
+                    @endif
+
+                    @if ($openOffer->address)
+                        <div class="mb-4">
+                            <h3 class="text-lg font-semibold">Address</h3>
+                            <p>{{ $openOffer->address->full_address }}</p>
+                        </div>
+                    @endif
+
+                    @if ($openOffer->getMedia('images')->count() > 0)
+                        <div class="mb-4">
+                            <h3 class="text-lg font-semibold">Images</h3>
+                            <div class="grid grid-cols-3 gap-4 mt-2">
+                                @foreach ($openOffer->getMedia('images') as $media)
+                                    <img src="{{ route('media.serve', ['payload' => encrypt(json_encode(['media_id' => $media->id]))]) }}" alt="{{ $media->alt }}" class="w-full h-32 object-cover rounded-lg shadow-md">
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="mt-6 flex space-x-4">
+                        @can('update', $openOffer)
+                            <a href="{{ route('creator.offers.edit', $openOffer) }}" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded">
+                                Edit Offer
+                            </a>
+                        @endcan
+
+                        @can('close', $openOffer)
+                            @if ($openOffer->status === \App\Enums\OpenOfferStatus::OPEN) {{-- Check enum value --}}
+                                <form action="{{ route('creator.offers.close', $openOffer) }}" method="POST" onsubmit="return confirm('Are you sure you want to close this offer? This cannot be undone.');">
+                                    @csrf
+                                    <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                                        Close Offer
+                                    </button>
+                                </form>
+                            @endif
+                        @endcan
+
+                        @can('delete', $openOffer)
+                            <form action="{{ route('creator.offers.destroy', $openOffer) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this offer? This cannot be undone.');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                                    Delete Offer
+                                </button>
+                            </form>
+                        @endcan
+                    </div>
+
+                    <div class="mt-8">
+                        <livewire:bid-form :openOffer="$openOffer" />
+                    </div>
+
+                    <div class="mt-8">
+                        <livewire:bid-list :openOffer="$openOffer" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+----
+--routes/web.php
+<?php
+use Illuminate\Support\Facades\Route;
+use App\Domains\Listings\Http\Controllers\ServiceController;
+use App\Domains\Users\Http\Controllers\ProfileController;
+use App\Domains\Users\Http\Controllers\UserVerificationController;
+use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
+use App\Domains\Listings\Http\Controllers\CategoryController;
+use App\Domains\Common\Http\Controllers\MediaServeController;
+use App\Domains\Listings\Http\Controllers\ListingController;
+use App\Domains\Listings\Http\Controllers\WorkCatalogController;
+use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
+use App\Domains\Listings\Http\Controllers\WorkTemplateController;
+use App\Domains\Listings\Http\Controllers\OpenOfferController;
+use App\Domains\Listings\Http\Controllers\OpenOfferBidController; // Added
+
+// Authentication routes
+require __DIR__.'/auth.php';
+
+// Home and static pages
+    Route::get('/', function () {
+        return view('home');
+    })->name('home');
+
+    Route::get('browse', [ListingController::class, 'index'])->name('browse');
+
+    Route::get('create', function () {
+        return view('create');
+    })->name('create');
+
+    Route::get('about', function () {
+        return view('about');
+    })->name('about');
+
+    Route::get('faq', function () {
+        return view('faq');
+    })->name('faq');
+
+// Public-facing service page
+Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
+
+// Creator space
+Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
+    Route::get('/', function () {
+        return view('dashboard');
+    })->name('dashboard');
+
+    // Service Management
+    Route::resource('services', ServiceController::class);
+    Route::get('services/{service}/manage', [ServiceController::class, 'manage'])->name('services.manage');
+
+    // Category Management
+    Route::resource('categories', CategoryController::class);
+
+    // Open Offer Management
+    Route::resource('offers', OpenOfferController::class);
+    Route::post('offers/{openOffer}/close', [OpenOfferController::class, 'close'])->name('offers.close');
+
+    // Bidding Management
+    Route::post('offers/{openOffer}/bids', [OpenOfferBidController::class, 'store'])->name('offers.bids.store');
+    Route::post('bids/{openOfferBid}/accept', [OpenOfferBidController::class, 'accept'])->name('bids.accept');
+    Route::post('bids/{openOfferBid}/reject', [OpenOfferBidController::class, 'reject'])->name('bids.reject');
+
+    // Workflow Management
+    Route::get('workflows', [WorkflowTemplateController::class, 'index'])->name('workflows.index');
+    Route::get('workflows/create', [WorkflowTemplateController::class, 'create'])->name('workflows.create');
+    Route::get('workflows/{workflow}/edit', [WorkflowTemplateController::class, 'edit'])->name('workflows.edit');
+    Route::patch('workflows/{workflow}', [WorkflowTemplateController::class, 'update'])->name('workflows.update');
+    Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
+    Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
+});
+
+// User Verification
+Route::middleware(['auth'])->prefix('verification')->name('verification.')->group(function () {
+    Route::get('/submit', [UserVerificationController::class, 'create'])->name('create');
+    Route::post('/', [UserVerificationController::class, 'store'])->name('store');
+    Route::get('/status', [UserVerificationController::class, 'status'])->name('status');
+});
+
+// Profile editor
+   Route::middleware(['auth'])->prefix('profile')->group(function () {
+        Route::get('/', [ProfileController::class, 'edit'])
+            ->name('profile.edit');
+
+        Route::patch('/', [ProfileController::class, 'update'])
+            ->name('profile.update');
+
+        Route::delete('/', [ProfileController::class, 'destroy'])
+            ->name('profile.destroy');
+});
+
+// Admin Routes
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/verifications', [AdminUserVerificationController::class, 'index'])->name('verifications.index');
+    Route::get('/verifications/{verification}', [AdminUserVerificationController::class, 'show'])->name('verifications.show');
+    Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
+    Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
+});
+
+Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
+    ->middleware('auth')
+    ->name('media.serve');
+
+----
+--SUMMARY
+Text:27 Binary:0 Skipped:428

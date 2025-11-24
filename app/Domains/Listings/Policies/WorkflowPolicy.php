@@ -53,7 +53,7 @@ class WorkflowPolicy
      */
     public function duplicate(User $user, WorkflowTemplate $workflowTemplate): bool
     {
-        return $user->id === $workflowTemplate->creator_id;
+        return $workflowTemplate->is_public;
     }
 
     /**

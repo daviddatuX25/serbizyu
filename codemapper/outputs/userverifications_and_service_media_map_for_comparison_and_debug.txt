@@ -1,0 +1,3034 @@
+MAP: Generated 2025-11-22 14:56:54
+--app/Domains/Common/Services/MediaService.php
+<?php
+
+namespace App\Domains\Common\Services;
+
+use App\Config\MediaConfig;
+use Plank\Mediable\MediaUploader;
+use Plank\Mediable\Media;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * MediaService
+ * 
+ * Abstraction layer for Plank\Mediable
+ * Decouples business logic from the media library implementation
+ * 
+ * Benefits:
+ * - Easy to swap Mediable for another solution later
+ * - Centralized media handling logic
+ * - Consistent error handling across all models (Service, OpenOffer, Messaging, Lobby, etc.)
+ * - Single source of truth for media operations
+ */
+class MediaService
+{
+    protected MediaConfig $config;
+    protected MediaUploader $uploader;
+
+    public function __construct()
+    {
+        $this->config = new MediaConfig();
+        $this->uploader = app(MediaUploader::class);
+    }
+
+    /**
+     * Upload files to a mediable model
+     * 
+     * @param Model $model The model to attach media to
+     * @param array $files Array of TemporaryUploadedFile instances
+     * @param string $tag Media tag (e.g., 'gallery', 'documents', 'avatars')
+     * @param bool $replaceExisting If true, removes all existing media before uploading
+     * 
+     * @return array ['success' => [], 'errors' => [], 'skipped' => []]
+     */
+    public function uploadToModel(
+        Model $model,
+        array $files,
+        string $tag = 'gallery',
+        bool $replaceExisting = false
+    ): array {
+        $result = [
+            'success' => [],
+            'errors' => [],
+            'skipped' => [],
+        ];
+
+        // Remove existing if requested
+        if ($replaceExisting) {
+            $this->removeAllMediaFromModel($model, $tag);
+        }
+
+        if (empty($files)) {
+            return $result;
+        }
+
+        foreach ($files as $file) {
+            if (!$file instanceof TemporaryUploadedFile) {
+                $result['skipped'][] = [
+                    'filename' => $file->getClientOriginalName() ?? 'unknown',
+                    'reason' => 'Invalid file type',
+                ];
+                continue;
+            }
+
+            $upload = $this->uploadFile($file, $tag);
+
+            if ($upload['success']) {
+                // Attach to model
+                try {
+                    $model->attachMedia($upload['media'], $tag);
+                    
+                    $result['success'][] = [
+                        'media_id' => $upload['media']->id,
+                        'filename' => $file->getClientOriginalName(),
+                        'url' => $upload['media']->getUrl(),
+                        'type' => $upload['type'],
+                    ];
+
+                    Log::info('Attached media to model', [
+                        'model' => class_basename($model),
+                        'model_id' => $model->id,
+                        'media_id' => $upload['media']->id,
+                        'tag' => $tag,
+                    ]);
+                } catch (\Exception $e) {
+                    $result['errors'][] = [
+                        'filename' => $file->getClientOriginalName(),
+                        'error' => 'Failed to attach media: ' . $e->getMessage(),
+                    ];
+                    Log::error('Failed to attach media', [
+                        'error' => $e->getMessage(),
+                        'media_id' => $upload['media']->id,
+                    ]);
+                }
+            } else {
+                $result['errors'][] = [
+                    'filename' => $file->getClientOriginalName(),
+                    'error' => $upload['error'],
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Upload a single file without attaching to model
+     * 
+     * Useful for services that handle attachment themselves
+     */
+    public function uploadFile(TemporaryUploadedFile $file, string $tag = 'gallery'): array
+    {
+        $filename = $file->getClientOriginalName();
+
+        try {
+            // Detect type
+            $mediaType = $this->detectMediaType($file);
+
+            // Validate size
+            $maxSizeKb = $this->config->getUploadLimit($mediaType);
+            $fileSizeKb = $file->getSize() / 1024;
+
+            if ($fileSizeKb > $maxSizeKb) {
+                return [
+                    'success' => false,
+                    'error' => "File exceeds maximum size of {$this->config->getUploadLimitDisplay($mediaType)}",
+                    'filename' => $filename,
+                ];
+            }
+
+            // Validate extension
+            $extension = strtolower($file->getClientOriginalExtension());
+            if (!$this->config->isExtensionAllowed($extension, $mediaType)) {
+                return [
+                    'success' => false,
+                    'error' => "File type '.{$extension}' is not allowed for {$mediaType}",
+                    'filename' => $filename,
+                ];
+            }
+
+            $sourcePath = $file->getRealPath();
+            $destination = $this->config->getDestination($mediaType);
+
+            $media = $this->uploader->fromSource($sourcePath)
+                ->toDestination('public', $destination)
+                ->upload();
+
+            Log::info('File uploaded successfully', [
+                'filename' => $filename,
+                'media_id' => $media->id,
+                'type' => $mediaType,
+                'destination' => $destination,
+                'size_kb' => $fileSizeKb,
+            ]);
+
+            return [
+                'success' => true,
+                'media' => $media,
+                'type' => $mediaType,
+                'filename' => $filename,
+            ];
+        } catch (\Exception $e) {
+            Log::error('File upload failed', [
+                'filename' => $filename,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Upload failed: ' . $e->getMessage(),
+                'filename' => $filename,
+            ];
+        }
+    }
+
+    /**
+     * Remove specific media from model
+     */
+    public function removeMediaFromModel(Model $model, int $mediaId): array
+    {
+        try {
+            $model->detachMedia($mediaId);
+
+            Log::info('Removed media from model', [
+                'model' => class_basename($model),
+                'model_id' => $model->id,
+                'media_id' => $mediaId,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Media removed successfully',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to remove media', [
+                'media_id' => $mediaId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Failed to remove media: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Remove multiple media IDs from model
+     */
+    public function removeMultipleMediaFromModel(Model $model, array $mediaIds): array
+    {
+        $result = [
+            'success' => [],
+            'errors' => [],
+        ];
+
+        foreach ($mediaIds as $mediaId) {
+            $removal = $this->removeMediaFromModel($model, $mediaId);
+            if ($removal['success']) {
+                $result['success'][] = $mediaId;
+            } else {
+                $result['errors'][] = [
+                    'media_id' => $mediaId,
+                    'error' => $removal['error'],
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Remove all media from model with specific tag
+     */
+    public function removeAllMediaFromModel(Model $model, string $tag = 'gallery'): array
+    {
+        try {
+            $mediaCollection = $model->getMedia($tag);
+            $count = $mediaCollection->count();
+
+            foreach ($mediaCollection as $media) {
+                $model->detachMedia($media->id);
+            }
+
+            Log::info('Removed all media from model', [
+                'model' => class_basename($model),
+                'model_id' => $model->id,
+                'tag' => $tag,
+                'count' => $count,
+            ]);
+
+            return [
+                'success' => true,
+                'count' => $count,
+                'message' => "{$count} media item(s) removed",
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to remove all media', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Failed to remove media: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get media from model
+     */
+    public function getModelMedia(Model $model, string $tag = 'gallery'): array
+    {
+        try {
+            return $model->getMedia($tag)->map(fn($m) => [
+                'id' => $m->id,
+                'url' => $m->getUrl(),
+                'filename' => $m->filename,
+                'mime_type' => $m->mime_type,
+                'size_bytes' => $m->size,
+                'created_at' => $m->created_at->format('M d, Y'),
+            ])->toArray();
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve model media', [
+                'model' => class_basename($model),
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Detect media type from file MIME type
+     */
+    private function detectMediaType(TemporaryUploadedFile $file): string
+    {
+        $mimeType = $file->getMimeType();
+
+        return match (true) {
+            str_starts_with($mimeType, 'image/') => 'images',
+            str_starts_with($mimeType, 'video/') => 'videos',
+            str_starts_with($mimeType, 'audio/') => 'audio',
+            str_contains($mimeType, 'pdf') => 'documents',
+            str_contains($mimeType, 'word') || str_contains($mimeType, 'document') => 'documents',
+            default => 'documents',
+        };
+    }
+
+    /**
+     * Validate files before upload (useful for form validation)
+     */
+    public function validateFiles(array $files, string $mediaType = 'images'): array
+    {
+        $errors = [];
+
+        foreach ($files as $index => $file) {
+            if (!$file instanceof TemporaryUploadedFile) {
+                $errors[$index] = 'Invalid file';
+                continue;
+            }
+
+            // Check size
+            $maxSizeKb = $this->config->getUploadLimit($mediaType);
+            $fileSizeKb = $file->getSize() / 1024;
+
+            if ($fileSizeKb > $maxSizeKb) {
+                $errors[$index] = "File exceeds {$this->config->getUploadLimitDisplay($mediaType)} limit";
+                continue;
+            }
+
+            // Check extension
+            $extension = strtolower($file->getClientOriginalExtension());
+            if (!$this->config->isExtensionAllowed($extension, $mediaType)) {
+                $errors[$index] = "File type '.{$extension}' not allowed";
+                continue;
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Get config instance (for views/forms)
+     */
+    public function getConfig(): MediaConfig
+    {
+        return $this->config;
+    }
+}
+----
+--app/Domains/Common/Services/SecureMediaService.php
+<?php
+
+namespace App\Domains\Common\Services;
+
+use Barryvdh\Debugbar\Facades\Debugbar;
+use Plank\Mediable\Media;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+/**
+ * SecureMediaService
+ * 
+ * Handles sensitive/secure media with:
+ * - User ownership validation
+ * - Access control checks
+ * - Encryption for storage paths
+ * - Audit logging
+ * 
+ * Used for: User verification documents, sensitive identity proofs, etc.
+ */
+class SecureMediaService
+{
+    public function __construct(private MediaService $mediaService) {}
+
+    /**
+     * Upload secure files with ownership validation
+     * 
+     * @param Model $model The model to attach media to (e.g., UserVerification)
+     * @param array $files Array of TemporaryUploadedFile instances
+     * @param string $tag Media tag for organization
+     * @param ?string $description Optional description for audit logs
+     * 
+     * @return array ['success' => [], 'errors' => [], 'skipped' => []]
+     */
+    public function uploadSecureFiles(
+        Model $model,
+        array $files,
+        string $tag = 'secure-documents',
+        ?string $description = null
+    ): array {
+        $user = Auth::user();
+
+        // Step 1: Validate ownership
+        try {
+            $this->validateModelOwnership($model, $user);
+        } catch (\Exception $e) {
+            Log::warning('Unauthorized secure upload attempt', [
+                'user_id' => $user->id,
+                'model' => class_basename($model),
+                'model_id' => $model->id,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return [
+                'success' => [],
+                'errors' => [['filename' => 'All', 'error' => 'Unauthorized: ' . $e->getMessage()]],
+                'skipped' => [],
+            ];
+        }
+
+        // Step 2: Use MediaService for core upload
+        $result = $this->mediaService->uploadToModel($model, $files, $tag);
+
+        // Step 3: Log secure upload for audit trail
+        if (!empty($result['success'])) {
+            $this->logSecureUpload($model, $result['success'], $user, $description);
+        }
+
+        if (!empty($result['errors'])) {
+            Debugbar::error($result['errors']);
+            $this->logSecureUploadErrors($model, $result['errors'], $user);
+        }
+
+        Log::info('Secure files uploaded', [
+            'model' => class_basename($model),
+            'model_id' => $model->id,
+            'user_id' => $user->id,
+            'files_uploaded' => count($result['success']),
+            'errors' => count($result['errors']),
+            'tag' => $tag,
+            'description' => $description,
+        ]);
+
+        return $result;
+    }
+
+    /**
+     * Get encrypted URL for secure media viewing
+     * 
+     * Used in Blade templates to generate safe URLs
+     * The URL contains encrypted media_id that's decrypted on serving
+     */
+    public function getSecureMediaUrl(int $mediaId): string
+    {
+        try {
+            $encryptedPayload = Crypt::encryptString(
+                json_encode(['media_id' => $mediaId])
+            );
+
+            return route('media.serve-secure', ['payload' => $encryptedPayload]);
+        } catch (\Exception $e) {
+            Log::error('Failed to generate secure media URL', [
+                'media_id' => $mediaId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return '#';
+        }
+    }
+
+    /**
+     * Serve secure media with authorization
+     * 
+     * This should be called by the controller handling the route
+     */
+    public function serveSecureMedia(string $encryptedPayload): StreamedResponse
+    {
+        $user = Auth::user();
+
+        try {
+            // Decrypt the payload
+            $payload = json_decode(
+                Crypt::decryptString($encryptedPayload),
+                true
+            );
+
+            if (!isset($payload['media_id'])) {
+                abort(400, 'Invalid payload');
+            }
+
+            $mediaId = $payload['media_id'];
+
+            // Get media
+            $media = Media::findOrFail($mediaId);
+
+            // Get the model this media is attached to
+            $mediable = $media->mediables()->first();
+
+            if (!$mediable) {
+                abort(404, 'Media not found');
+            }
+
+            // Authorize access
+            $this->authorizeMediaAccess($mediable->mediable, $user);
+
+            // Log access for audit trail
+            Log::info('Secure media accessed', [
+                'media_id' => $mediaId,
+                'user_id' => $user->id,
+                'model' => class_basename($mediable->mediable),
+                'model_id' => $mediable->mediable_id,
+            ]);
+
+            // Stream the file
+            return $this->streamSecureMedia($media);
+
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            Log::warning('Invalid secure media URL', [
+                'user_id' => $user->id,
+                'error' => 'Decryption failed',
+            ]);
+            abort(404);
+        }
+    }
+
+    /**
+     * Remove secure media with audit logging
+     */
+    public function removeSecureMedia(Model $model, int $mediaId): array
+    {
+        $user = Auth::user();
+
+        try {
+            // Validate ownership
+            $this->validateModelOwnership($model, $user);
+
+            // Use MediaService to remove
+            $result = $this->mediaService->removeMediaFromModel($model, $mediaId);
+
+            if ($result['success']) {
+                Log::warning('Secure media removed (audit)', [
+                    'model' => class_basename($model),
+                    'model_id' => $model->id,
+                    'media_id' => $mediaId,
+                    'user_id' => $user->id,
+                    'action' => 'SECURE_MEDIA_DELETED',
+                ]);
+            }
+
+            return $result;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to remove secure media', [
+                'media_id' => $mediaId,
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Failed to remove media: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Remove multiple secure media files
+     */
+    public function removeMultipleSecureMedia(Model $model, array $mediaIds): array
+    {
+        $user = Auth::user();
+
+        try {
+            $this->validateModelOwnership($model, $user);
+
+            $result = $this->mediaService->removeMultipleMediaFromModel($model, $mediaIds);
+
+            Log::warning('Multiple secure media removed (audit)', [
+                'model' => class_basename($model),
+                'model_id' => $model->id,
+                'media_ids' => $mediaIds,
+                'user_id' => $user->id,
+                'removed_count' => count($result['success']),
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            return [
+                'success' => [],
+                'errors' => [
+                    ['media_id' => 'all', 'error' => $e->getMessage()]
+                ],
+            ];
+        }
+    }
+
+    /**
+     * Get secure media for a model
+     */
+    public function getSecureMedia(Model $model, string $tag = 'secure-documents'): array
+    {
+        $user = Auth::user();
+
+        try {
+            // Validate ownership
+            $this->validateModelOwnership($model, $user);
+
+            // Get media from MediaService
+            return $this->mediaService->getModelMedia($model, $tag);
+
+        } catch (\Exception $e) {
+            Log::warning('Unauthorized attempt to view secure media', [
+                'user_id' => $user->id,
+                'model' => class_basename($model),
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Validate that the authenticated user owns this model
+     * 
+     * Throws exception if unauthorized
+     */
+    private function validateModelOwnership(Model $model, $user): void
+    {
+        // Check common ownership patterns
+        if ($model->user_id === $user->id) {
+            return;
+        }
+
+        if ($model->creator_id === $user->id) {
+            return;
+        }
+
+        // Check if user owns the parent model
+        if (method_exists($model, 'user') && $model->user->id === $user->id) {
+            return;
+        }
+
+        throw new \Illuminate\Auth\Access\AuthorizationException(
+            'You do not own this resource'
+        );
+    }
+
+    /**
+     * Authorize viewing of media
+     * 
+     * Owner can view their own media
+     * Admins can view any media
+     */
+    private function authorizeMediaAccess(Model $model, $user): void
+    {
+        // Owner can always access
+        if ($model->user_id === $user->id || $model->creator_id === $user->id) {
+            return;
+        }
+
+        // Admins can access
+        if ($user->hasRole('admin') || $user->hasRole('moderator')) {
+            return;
+        }
+
+        throw new \Illuminate\Auth\Access\AuthorizationException(
+            'Unauthorized to access this media'
+        );
+    }
+
+    /**
+     * Stream secure media with proper headers
+     */
+    private function streamSecureMedia(Media $media): StreamedResponse
+    {
+        return response()->streamDownload(
+            function () use ($media) {
+                try {
+                    $stream = $media->stream();
+                    while ($bytes = $stream->read(1024 * 8)) {
+                        echo $bytes;
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Error streaming secure media', [
+                        'media_id' => $media->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            },
+            $media->basename,
+            [
+                'Content-Type' => $media->mime_type,
+                'Content-Length' => $media->size,
+                'Content-Disposition' => 'inline; filename="' . $media->basename . '"',
+                // Prevent caching of sensitive docs
+                'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma' => 'no-cache',
+                'Expires' => '0',
+            ]
+        );
+    }
+
+    /**
+     * Log successful secure upload for audit trail
+     */
+    private function logSecureUpload(
+        Model $model,
+        array $uploadedFiles,
+        $user,
+        ?string $description = null
+    ): void {
+        foreach ($uploadedFiles as $file) {
+            Log::info('Secure media uploaded (audit)', [
+                'action' => 'SECURE_MEDIA_UPLOADED',
+                'model' => class_basename($model),
+                'model_id' => $model->id,
+                'media_id' => $file['media_id'],
+                'filename' => $file['filename'],
+                'type' => $file['type'],
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'description' => $description,
+                'timestamp' => now()->toIso8601String(),
+            ]);
+        }
+    }
+
+    /**
+     * Log secure upload errors for audit trail
+     */
+    private function logSecureUploadErrors(
+        Model $model,
+        array $errors,
+        $user
+    ): void {
+        foreach ($errors as $error) {
+            Log::warning('Secure media upload failed (audit)', [
+                'action' => 'SECURE_MEDIA_UPLOAD_FAILED',
+                'model' => class_basename($model),
+                'model_id' => $model->id,
+                'filename' => $error['filename'],
+                'error' => $error['error'],
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'timestamp' => now()->toIso8601String(),
+            ]);
+        }
+    }
+}
+----
+--app/Domains/Listings/Models/Service.php
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Domains\Users\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domains\Common\Models\Address;
+use App\Domains\Listings\Models\ListingReview;
+use Plank\Mediable\Mediable;
+use Plank\Mediable\MediableInterface;
+
+use App\Domains\Common\Models\Image;
+
+class Service extends Model implements MediableInterface
+{
+    use HasFactory;
+    use SoftDeletes;
+    use Mediable;
+
+    protected $table = 'services';
+    protected $fillable = ['title', 'description', 'price', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
+    protected $casts = [
+        'pay_first' => 'boolean',
+    ];
+
+    public function getGalleryImagesAttribute()
+    {
+        // Returns a Collection of Media objects tagged 'gallery'
+        return $this->getMedia('gallery');
+    }
+
+    public function getThumbnailAttribute()
+    {
+        // Returns the first media tagged 'gallery'
+        return $this->getMedia('gallery')->first();
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function workflowTemplate()
+    {
+        return $this->belongsTo(WorkflowTemplate::class);
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
+    }
+
+    public function reviews()
+    {
+        return $this->morphMany(ListingReview::class, 'listing');
+    }
+
+    public function getThumbnailUrlAttribute()
+    {
+        return $this->getFirstMediaUrl('gallery');
+    }
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\ServiceFactory::new();
+    }
+}
+----
+--app/Domains/Listings/Services/ServiceService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\Service;
+use App\Domains\Common\Services\MediaService;
+use Illuminate\Support\Facades\Log;
+
+class ServiceService
+{
+    protected MediaService $mediaService;
+
+    public function __construct(MediaService $mediaService)
+    {
+        $this->mediaService = $mediaService;
+    }
+
+    /**
+     * Create a new service with optional images
+     */
+    public function createService(array $data, array $uploadedFiles = []): Service
+    {
+        Log::info('Creating service', ['data_keys' => array_keys($data)]);
+
+        // Remove media-related keys from service data
+        $serviceData = collect($data)->except(['images_to_remove'])->toArray();
+
+        // Create service
+        $service = Service::create($serviceData);
+
+        // Handle uploads using MediaService
+        $uploadResult = $this->mediaService->uploadToModel($service, $uploadedFiles, 'gallery');
+
+        Log::info('Service created with media', [
+            'service_id' => $service->id,
+            'uploads_success' => count($uploadResult['success']),
+            'uploads_errors' => count($uploadResult['errors']),
+        ]);
+
+        return $service->load('media');
+    }
+
+    /**
+     * Update an existing service and manage images
+     */
+    public function updateService(Service $service, array $data, array $uploadedFiles = []): Service
+    {
+        // Update service info (NOT media)
+        $serviceData = collect($data)->except(['images_to_remove'])->toArray();
+        $service->update($serviceData);
+
+        // Extract images to remove list
+        $imagesToRemove = $data['images_to_remove'] ?? [];
+
+        // Remove explicitly requested media
+        if (!empty($imagesToRemove)) {
+            $removalResult = $this->mediaService->removeMultipleMediaFromModel($service, $imagesToRemove);
+            
+            Log::info('Media removed', [
+                'service_id' => $service->id,
+                'removed' => count($removalResult['success']),
+                'errors' => count($removalResult['errors']),
+            ]);
+        }
+
+        // Upload new files
+        $uploadResult = $this->mediaService->uploadToModel($service, $uploadedFiles, 'gallery');
+
+        Log::info('Service updated with media', [
+            'service_id' => $service->id,
+            'uploads_success' => count($uploadResult['success']),
+            'uploads_errors' => count($uploadResult['errors']),
+        ]);
+
+        return $service->load('media');
+    }
+
+    /**
+     * Delete a service
+     */
+    public function deleteService(Service $service): bool
+    {
+        return $service->delete();
+    }
+
+    /**
+     * Retrieve a single service
+     */
+    public function getService($id): Service
+    {
+        $service = Service::with(['creator', 'category', 'workflowTemplate', 'address', 'media'])->find($id);
+
+        if (!$service) {
+            throw new \App\Exceptions\ResourceNotFoundException('Service does not exist.');
+        }
+
+        if ($service->trashed()) {
+            throw new \App\Exceptions\ResourceNotFoundException('Service has been deleted.');
+        }
+
+        return $service;
+    }
+
+    /**
+     * Retrieve all services
+     */
+    public function getAllServices()
+    {
+        $services = Service::withMedia()->get();
+
+        if ($services->isEmpty()) {
+            throw new \App\Exceptions\ResourceNotFoundException('No services found.');
+        }
+
+        if ($services->every->trashed()) {
+            throw new \App\Exceptions\ResourceNotFoundException('Services have all been deleted.');
+        }
+
+        return $services;
+    }
+
+    /**
+     * Paginated services with filters
+     */
+    public function getPaginatedServices(array $filters = [])
+    {
+        $query = Service::with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * Get services by creator
+     */
+    public function getServicesForCreator(int $creatorId, array $filters = [])
+    {
+        $query = Service::where('creator_id', $creatorId)
+            ->with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * Get filtered services (collection)
+     */
+    public function getFilteredServices(array $filters = [])
+    {
+        $query = Service::with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->get();
+    }
+}
+----
+--app/Domains/Users/Http/Controllers/UserVerificationController.php
+<?php
+
+namespace App\Domains\Users\Http\Controllers;
+
+use App\Domains\Common\Services\SecureMediaService;
+use App\Domains\Users\Models\UserVerification;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+
+class UserVerificationController extends Controller
+{
+    public function __construct(private SecureMediaService $secureMediaService) {}
+
+    /**
+     * Show verification form
+     */
+    public function create()
+    {
+        $existingVerification = UserVerification::where('user_id', Auth::id())->first();
+
+        if ($existingVerification && in_array($existingVerification->status, ['pending', 'approved'])) {
+            return redirect()->route('verification.status');
+        }
+
+        return view('verification.submit');
+    }
+
+    /**
+     * Store verification documents
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'id_type' => ['required', 'string', 'in:national_id,drivers_license,passport'],
+            'id_front' => ['required', 'image', 'max:2048'],
+            'id_back' => ['required', 'image', 'max:2048'],
+        ]);
+
+        $user = Auth::user();
+
+        // Prevent re-submission if already pending or approved
+        $existingVerification = UserVerification::where('user_id', $user->id)->first();
+        if ($existingVerification && in_array($existingVerification->status, ['pending', 'approved'])) {
+            return redirect()->route('verification.status')
+                ->with('error', 'You already have a pending or approved verification request.');
+        }
+
+        try {
+            // Create or update the verification record
+            $verification = UserVerification::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'id_type' => $validated['id_type'],
+                    'status' => 'pending',
+                    'rejection_reason' => null,
+                    'reviewed_at' => null,
+                    'reviewed_by' => null,
+                ]
+            );
+
+            // Prepare files
+            $files = [
+                $request->file('id_front'),
+                $request->file('id_back'),
+            ];
+
+            // Upload using SecureMediaService
+            $result = $this->secureMediaService->uploadSecureFiles(
+                $verification,
+                $files,
+                'verification-documents',
+                "User verification upload - {$validated['id_type']}"
+            );
+
+            // Check for errors
+            if (!empty($result['errors'])) {
+                Log::error('Verification document upload errors', [
+                    'user_id' => $user->id,
+                    'errors' => $result['errors'],
+                ]);
+
+                return back()
+                    ->with('error', 'Some documents failed to upload. Please try again.')
+                    ->withInput();
+            }
+
+            Log::info('Verification documents submitted', [
+                'user_id' => $user->id,
+                'verification_id' => $verification->id,
+                'id_type' => $validated['id_type'],
+                'files_uploaded' => count($result['success']),
+            ]);
+
+            return redirect()->route('verification.status')
+                ->with('success', 'Your verification documents have been submitted successfully.');
+
+        } catch (\Exception $e) {
+            Log::error('Verification submission failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()
+                ->with('error', 'Failed to submit verification documents. Please try again.')
+                ->withInput();
+        }
+    }
+
+    /**
+     * Show verification status
+     */
+    public function status()
+    {
+        $user = Auth::user();
+        $verification = UserVerification::where('user_id', $user->id)->first();
+
+        if (!$verification) {
+            return redirect()->route('verification.create')
+                ->with('info', 'You have not submitted any verification documents yet.');
+        }
+
+        // Get secure media URLs
+        $media = $this->secureMediaService->getSecureMedia($verification, 'verification-documents');
+
+        return view('verification.status', [
+            'verification' => $verification,
+            'media' => $media,
+            'secureMediaService' => $this->secureMediaService,
+        ]);
+    }
+}
+----
+--app/Domains/Users/Models/UserVerification.php
+<?php
+
+namespace App\Domains\Users\Models;
+
+use Database\Factories\Domains\Users\Models\UserVerificationFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Plank\Mediable\Mediable;
+
+class UserVerification extends Model
+{
+    use HasFactory, Mediable;
+
+    protected $guarded = [];
+
+    /**
+     * Create a new factory instance for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    protected static function newFactory()
+    {
+        return UserVerificationFactory::new();
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+}
+----
+--app/Http/Controllers/MediaServeController.php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
+use Plank\Mediable\Media;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class MediaServeController extends Controller
+{
+    /**
+     * Handle the incoming request.
+     */
+    public function __invoke(Request $request, string $encryptedPath): StreamedResponse
+    {
+        try {
+            $path = Crypt::decryptString($encryptedPath);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            abort(404);
+        }
+
+        $media = Media::where('disk', 'local')->where('directory', dirname($path))->where('filename', basename($path))->firstOrFail();
+
+        // Ensure the user is authorized to view this media
+        // For now, we'll assume if it's a verification document, only the owner or admin can view it.
+        // This needs to be expanded with proper authorization logic (e.g., policies).
+        if ($media->getDisk() === 'local' && $media->getDiskPath() === $path) {
+            // Example: Check if the authenticated user is the owner of the media's associated model
+            // Or if the user has an 'admin' role.
+            // For now, we'll just serve it if it's a local file and the path matches.
+            // TODO: Implement proper authorization here.
+        } else {
+            abort(403, 'Unauthorized to access this media.');
+        }
+
+        return response()->streamDownload(
+            function () use ($media) {
+                $stream = $media->stream();
+                while ($bytes = $stream->read(1024)) {
+                    echo $bytes;
+                }
+            },
+            $media->basename,
+            [
+                'Content-Type' => $media->mime_type,
+                'Content-Length' => $media->size,
+                'Content-Disposition' => 'inline; filename="' . $media->basename . '"', // Display in browser
+            ]
+        );
+    }
+}
+----
+--app/Livewire/FormWithMedia.php
+<?php
+
+namespace App\Livewire;
+
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use App\Domains\Common\Services\MediaService;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * Non-Destructive Media Form Handler with Error Tracking
+ * 
+ * Keeps all existing media unless explicitly removed by user
+ * Appends new uploads to existing collection
+ * Tracks upload errors and successes for user feedback
+ */
+abstract class FormWithMedia extends Component
+{
+    use WithFileUploads;
+
+    // New uploads from user
+    public array $newFiles = [];
+    
+    // Media IDs that user explicitly removed
+    public array $imagesToRemove = [];
+    
+    // Existing media currently attached to model
+    public array $existingImages = [];
+    
+    // Upload result tracking
+    public array $uploadErrors = [];
+    public array $uploadSuccess = [];
+    public array $uploadSkipped = [];
+
+    protected MediaService $mediaService;
+
+    public function __construct()
+    {
+        $this->mediaService = app(MediaService::class);
+    }
+
+    /**
+     * Load existing media from a model
+     * 
+     * KEY FIX: Properly handles Plank\Mediable media loading
+     * Works with both 'gallery' tag and any other custom tag
+     */
+    protected function loadExistingMedia(Model $model, string $tag = 'gallery')
+    {
+        try {
+            // Step 1: Ensure model exists
+            if (!$model->exists) {
+                Log::info('Model does not exist, skipping media load', [
+                    'model' => class_basename($model),
+                ]);
+                $this->existingImages = [];
+                return;
+            }
+
+            // Step 2: Load media relationship if not already loaded
+            if (!$model->relationLoaded('media')) {
+                $model->load('media');
+                Log::debug('Loaded media relationship', [
+                    'model' => class_basename($model),
+                    'model_id' => $model->id,
+                ]);
+            }
+
+            // Step 3: Get media with specified tag
+            $media = $model->getMedia($tag);
+
+            // Step 4: Map to array format expected by view
+            $this->existingImages = $media->map(fn($m) => [
+                'id' => $m->id,
+                'url' => $m->getUrl(),
+                'filename' => $m->filename,
+                'mime_type' => $m->mime_type,
+                'size_bytes' => $m->size,
+                'created_at' => $m->created_at->format('M d, Y'),
+            ])->toArray();
+
+            Log::info('Loaded existing media', [
+                'model' => class_basename($model),
+                'model_id' => $model->id,
+                'tag' => $tag,
+                'count' => count($this->existingImages),
+                'media_ids' => array_column($this->existingImages, 'id'),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to load existing media', [
+                'model' => class_basename($model),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            $this->existingImages = [];
+        }
+    }
+
+    /**
+     * Validate new file uploads
+     */
+    public function updatedNewFiles()
+    {
+        $this->clearUploadMessages();
+
+        try {
+            $this->validate([
+                'newFiles.*' => 'image|max:2048',
+            ]);
+
+            Log::info('New files validated', [
+                'count' => count($this->newFiles),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('File validation failed', [
+                'errors' => $e->errors(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Remove a newly added file (not yet saved)
+     */
+    public function removeNewFile(int $index)
+    {
+        if (isset($this->newFiles[$index])) {
+            $removed = $this->newFiles[$index];
+            $filename = $removed->getClientOriginalName();
+            
+            array_splice($this->newFiles, $index, 1);
+            
+            Log::info('Removed new file', [
+                'index' => $index,
+                'filename' => $filename,
+            ]);
+            
+            session()->flash('info', "Removed {$filename}");
+        }
+    }
+
+    /**
+     * Mark an existing image for removal
+     */
+    public function removeExistingImage(int $id)
+    {
+        if (!in_array($id, $this->imagesToRemove)) {
+            $this->imagesToRemove[] = $id;
+            Log::info('Marked media for removal', ['media_id' => $id]);
+        }
+
+        // Remove from display
+        $this->existingImages = array_values(
+            array_filter($this->existingImages, fn($img) => $img['id'] !== $id)
+        );
+
+        session()->flash('info', 'Image marked for removal');
+    }
+
+    /**
+     * Restore an image that was marked for removal
+     */
+    public function restoreExistingImage(int $id, Model $model, string $tag = 'gallery')
+    {
+        $this->imagesToRemove = array_filter(
+            $this->imagesToRemove,
+            fn($mediaId) => $mediaId !== $id
+        );
+
+        $this->loadExistingMedia($model, $tag);
+        
+        Log::info('Restored media from removal', ['media_id' => $id]);
+        session()->flash('success', 'Image restored');
+    }
+
+    /**
+     * Get uploaded files ready for processing
+     */
+    protected function getUploadedFiles(): array
+    {
+        $filtered = [];
+        
+        foreach ($this->newFiles as $file) {
+            if ($file instanceof TemporaryUploadedFile) {
+                $filtered[] = $file;
+            }
+        }
+
+        Log::info('Preparing uploaded files', [
+            'total_newFiles' => count($this->newFiles),
+            'filtered_count' => count($filtered),
+        ]);
+
+        return $filtered;
+    }
+
+    /**
+     * Process upload results for display
+     */
+    public function setUploadResults(array $uploadResult): void
+    {
+        $this->uploadSuccess = $uploadResult['success'] ?? [];
+        $this->uploadErrors = $uploadResult['errors'] ?? [];
+        $this->uploadSkipped = $uploadResult['skipped'] ?? [];
+
+        Log::info('Upload results set', [
+            'success' => count($this->uploadSuccess),
+            'errors' => count($this->uploadErrors),
+            'skipped' => count($this->uploadSkipped),
+        ]);
+    }
+
+    /**
+     * Clear upload messages
+     */
+    public function clearUploadMessages(): void
+    {
+        $this->uploadErrors = [];
+        $this->uploadSuccess = [];
+        $this->uploadSkipped = [];
+    }
+
+    /**
+     * Check if there are any upload errors
+     */
+    public function hasUploadErrors(): bool
+    {
+        return !empty($this->uploadErrors);
+    }
+
+    /**
+     * Reset media form state after save
+     */
+    protected function resetMediaForm()
+    {
+        $this->newFiles = [];
+        $this->imagesToRemove = [];
+        $this->clearUploadMessages();
+        
+        Log::info('Media form reset');
+    }
+
+    /**
+     * Get error messages for display in view
+     */
+    public function getErrorMessages(): array
+    {
+        $messages = [];
+
+        foreach ($this->uploadErrors as $error) {
+            $messages[] = "{$error['filename']}: {$error['error']}";
+        }
+
+        return $messages;
+    }
+
+    /**
+     * Get success messages for display in view
+     */
+    public function getSuccessMessages(): array
+    {
+        return array_map(fn($item) => $item['filename'], $this->uploadSuccess);
+    }
+
+    /**
+     * Get skipped files messages
+     */
+    public function getSkippedMessages(): array
+    {
+        $messages = [];
+
+        foreach ($this->uploadSkipped as $skipped) {
+            $messages[] = "{$skipped['filename']}: {$skipped['reason']}";
+        }
+
+        return $messages;
+    }
+}
+----
+--app/Livewire/ServiceForm.php
+<?php
+
+namespace App\Livewire;
+
+use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Services\ServiceService;
+use App\Domains\Common\Services\MediaService;
+use Barryvdh\Debugbar\Facades\Debugbar;
+use Illuminate\Support\Facades\Log;
+
+class ServiceForm extends FormWithMedia
+{
+    public ?Service $service = null;
+
+    // Livewire properties
+    public ?string $title = null;
+    public ?string $description = null;
+    public float|string|null $price = null;
+    public int|string|null $category_id = null;
+    public int|string|null $workflow_template_id = null;
+    public ?bool $pay_first = null;
+    public ?int $address_id = null;
+
+    public $categories;
+    public $workflowTemplates;
+    public $addresses;
+
+    protected $rules = [
+        'title' => 'required|string|min:3|max:255',
+        'description' => 'nullable|string|min:10',
+        'price' => 'required|numeric|min:0.01',
+        'category_id' => 'required|exists:categories,id',
+        'workflow_template_id' => 'required|integer|exists:workflow_templates,id',
+        'address_id' => 'required|exists:addresses,id',
+        'pay_first' => 'boolean',
+        'newFiles.*' => 'nullable|image|max:2048',
+    ];
+
+    public function updatedWorkflowTemplateId($value)
+    {
+        Debugbar::info('updatedWorkflowTemplateId called', [
+            'value' => $value,
+            'type' => gettype($value)
+        ]);
+        
+        if (is_string($value) && is_numeric($value)) {
+            $this->workflow_template_id = (int) $value;
+            Debugbar::info('Casted to integer', ['new_value' => $this->workflow_template_id]);
+        }
+    }
+
+    public function mount(
+        ?Service $service = null,
+        $categories = [],
+        $workflowTemplates = [],
+        $addresses = []
+    ) {
+        $this->service = $service;
+        $this->categories = collect($categories);
+        $this->workflowTemplates = collect($workflowTemplates);
+        $this->addresses = collect($addresses)->map(function ($address) {
+            $address->is_primary = $address->pivot->is_primary ?? false;
+            return $address;
+        });
+
+        Debugbar::info('Addresses', ['addresses' => $this->addresses]);
+
+        // Default values
+        $this->title = '';
+        $this->description = '';
+        $this->price = '';
+        $this->category_id = '';
+        $this->workflow_template_id = null;
+        $this->pay_first = false;
+        $this->address_id = $this->addresses->firstWhere('pivot.is_primary', true)->id ?? null;
+
+        if ($service && $service->exists) {
+            // Edit mode – populate with existing data
+            $this->title = $service->title;
+            $this->description = $service->description;
+            $this->price = $service->price;
+            $this->category_id = $service->category_id;
+            $this->workflow_template_id = $service->workflow_template_id;
+            $this->pay_first = $service->pay_first ?? false;
+            $this->address_id = $service->address_id;
+
+            // DEBUG: Log what we're loading
+            Debugbar::info('Service Edit Mode - BEFORE loading media', [
+                'service_id' => $service->id,
+                'service_exists' => $service->exists,
+                'service_relations_loaded' => $service->relationLoaded('media'),
+                'service_media_count' => $service->media()->count(),
+            ]);
+
+            // CRITICAL FIX: Load media relationship if not already loaded
+            if (!$service->relationLoaded('media')) {
+                $service->load('media');
+                Debugbar::info('Loaded media relationship - was not loaded');
+            } else {
+                Debugbar::info('Media relationship already loaded');
+            }
+
+            // Now load existing media for display
+            $this->loadExistingMedia($service);
+
+            // DEBUG: Log what was loaded
+            Debugbar::info('Service Edit Mode - AFTER loading media', [
+                'service_id' => $service->id,
+                'existing_images_count' => count($this->existingImages),
+                'existing_images' => $this->existingImages,
+            ]);
+
+        } else {
+            // Create mode – set default primary address if exists
+            $primary = $this->addresses->firstWhere('pivot.is_primary', true);
+            $this->address_id = $primary?->id ?? null;
+            
+            Debugbar::info('Service Create Mode - no media to load');
+        }
+        
+        Debugbar::info('Mount completed', [
+            'service_exists' => $service->exists,
+            'existing_media_count' => count($this->existingImages),
+        ]);
+    }
+
+    /**
+     * Save service with non-destructive media handling
+     */
+    public function save(ServiceService $serviceService)
+    {
+        Debugbar::info('=== SAVE METHOD CALLED ===');
+
+        try {
+            $this->validate();
+            Debugbar::info('Validation passed');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Debugbar::error('Validation failed', $e->errors());
+            throw $e;
+        }
+
+        // Prepare service data
+        $data = [
+            'title' => $this->title,
+            'description' => $this->description,
+            'price' => $this->price,
+            'category_id' => $this->category_id,
+            'workflow_template_id' => $this->workflow_template_id,
+            'address_id' => $this->address_id,
+            'pay_first' => $this->pay_first,
+            'creator_id' => auth()->id(),
+            'images_to_remove' => $this->imagesToRemove,
+        ];
+
+        $uploadedFiles = $this->getUploadedFiles();
+
+        Debugbar::info('Prepared save data', [
+            'files_to_add' => count($uploadedFiles),
+            'files_to_remove' => count($this->imagesToRemove),
+            'total_existing' => count($this->existingImages),
+        ]);
+
+        try {
+            if ($this->service && $this->service->exists) {
+                // UPDATE
+                $updated = $serviceService->updateService(
+                    $this->service,
+                    $data,
+                    $uploadedFiles
+                );
+                
+                Debugbar::info('Service updated', ['id' => $this->service->id]);
+            } else {
+                // CREATE
+                $created = $serviceService->createService($data, $uploadedFiles);
+                Debugbar::info('Service created');
+            }
+
+            // Success
+            $this->resetMediaForm();
+            session()->flash('success', 'Service saved successfully!');
+            return redirect()->route('creator.services.index');
+
+        } catch (\Throwable $e) {
+            Debugbar::error('Service save failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            $this->addError('save', 'Failed to save service: ' . $e->getMessage());
+            
+            $this->uploadErrors[] = [
+                'filename' => 'General',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    public function restoreImage(int $mediaId)
+    {
+        $this->restoreExistingImage($mediaId, $this->service);
+    }
+
+    public function render()
+    {
+        return view('livewire.service-form', [
+            'uploadErrors' => $this->uploadErrors,
+            'uploadSuccess' => $this->uploadSuccess,
+            'uploadSkipped' => $this->uploadSkipped,
+            'existingImages' => $this->existingImages,
+            'newFiles' => $this->newFiles,
+        ]);
+    }
+}
+----
+--config/media-privacy.php
+<?php
+
+use App\Domains\Users\Models\UserVerification;
+use App\Domains\Listings\Models\OpenOffer;
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Media Privacy Settings
+    |--------------------------------------------------------------------------
+    |
+    | This array maps models to their default media privacy.
+    | Supported values: 'public', 'private'.
+    |
+    | - 'public': Media can be viewed by anyone. No authorization checks.
+    | - 'private': Media can only be viewed by authorized users.
+    |              This requires a policy to be defined for the Media model.
+    |
+    */
+
+    'default' => 'private',
+
+    'models' => [
+        UserVerification::class => 'private',
+        OpenOffer::class => 'public',
+        // Example of a public model
+        // \App\Domains\Listings\Models\Service::class => 'public',
+    ],
+];
+----
+--config/mediable.php
+<?php
+
+return [
+    /*
+     * The database connection name to use
+     *
+     * Set to `null` in order to use the default database connection
+     */
+    'connection_name' => null,
+
+    /*
+     * FQCN of the model to use for media
+     *
+     * Should extend `Plank\Mediable\Media`
+     */
+    'model' => Plank\Mediable\Media::class,
+
+    /*
+     * Name to be used for mediables joining table
+     */
+    'mediables_table' => 'mediables',
+
+    /*
+     * Filesystem disk to use if none is specified
+     */
+    'default_disk' => 'public',
+
+    /*
+     * Filesystems that can be used for media storage
+     *
+     * Uploader will throw an exception if a disk not in this list is selected
+     */
+    'allowed_disks' => [
+        'public',
+        'local',
+    ],
+
+    /*
+     * The maximum file size in bytes for a single uploaded file
+     */
+    'max_size' => 1024 * 1024 * 10,
+
+    /*
+     * What to do if a duplicate file is uploaded.
+     *
+     * Options include:
+     *
+     * * `'increment'`: the new file's name is given an incrementing suffix
+     * * `'replace'` : the old file and media model is deleted
+     * * `'error'`: an Exception is thrown
+     */
+    'on_duplicate' => Plank\Mediable\MediaUploader::ON_DUPLICATE_INCREMENT,
+
+    /*
+     * Reject files unless both their mime and extension are recognized and both match a single aggregate type
+     */
+    'strict_type_checking' => false,
+
+    /*
+     * Reject files whose mime type or extension is not recognized
+     * if true, files will be given a type of `'other'`
+     */
+    'allow_unrecognized_types' => false,
+
+    /**
+     * Prefer the client-provided MIME type over the one inferred from the file contents, if provided
+     * May be slightly faster to compute, but is not guaranteed to be accurate if the source is untrusted
+     */
+    'prefer_client_mime_type' => false,
+
+    /*
+     * Only allow files with specific MIME type(s) to be uploaded
+     */
+    'allowed_mime_types' => [],
+
+    /*
+     * Only allow files with specific file extension(s) to be uploaded
+     */
+    'allowed_extensions' => [],
+
+    /*
+     * Only allow files matching specific aggregate type(s) to be uploaded
+     */
+    'allowed_aggregate_types' => [],
+
+    /*
+     * List of aggregate types recognized by the application
+     *
+     * Each type should list the MIME types and extensions
+     * that should be recognized for the type
+     */
+    'aggregate_types' => [
+        Plank\Mediable\Media::TYPE_IMAGE => [
+            'mime_types' => [
+                'image/jpeg',
+                'image/png',
+                'image/gif',
+                'image/heic',
+            ],
+            'extensions' => [
+                'jpg',
+                'jpeg',
+                'png',
+                'gif',
+                'heic',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_IMAGE_VECTOR => [
+            'mime_types' => [
+                'image/svg+xml',
+            ],
+            'extensions' => [
+                'svg',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_PDF => [
+            'mime_types' => [
+                'application/pdf',
+            ],
+            'extensions' => [
+                'pdf',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_AUDIO => [
+            'mime_types' => [
+                'audio/aac',
+                'audio/ogg',
+                'audio/mpeg',
+                'audio/mp3',
+                'audio/mpeg',
+                'audio/wav'
+            ],
+            'extensions' => [
+                'aac',
+                'ogg',
+                'oga',
+                'mp3',
+                'wav',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_VIDEO => [
+            'mime_types' => [
+                'video/mp4',
+                'video/mpeg',
+                'video/ogg',
+                'video/webm'
+            ],
+            'extensions' => [
+                'mp4',
+                'm4v',
+                'mov',
+                'ogv',
+                'webm'
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_ARCHIVE => [
+            'mime_types' => [
+                'application/zip',
+                'application/x-compressed-zip',
+                'multipart/x-zip',
+            ],
+            'extensions' => [
+                'zip',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_DOCUMENT => [
+            'mime_types' => [
+                'text/plain',
+                'application/plain',
+                'text/xml',
+                'text/json',
+                'application/json',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ],
+            'extensions' => [
+                'doc',
+                'docx',
+                'txt',
+                'text',
+                'xml',
+                'json',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_SPREADSHEET => [
+            'mime_types' => [
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ],
+            'extensions' => [
+                'xls',
+                'xlsx',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_PRESENTATION => [
+            'mime_types' =>
+                [
+                    'application/vnd.ms-powerpoint',
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                    'application/vnd.openxmlformats-officedocument.presentationml.slideshow'
+                ],
+            'extensions' =>
+                [
+                    'ppt',
+                    'pptx',
+                    'ppsx',
+                ]
+        ],
+    ],
+
+    /*
+     * List of adapters to use for various source inputs
+     *
+     * Adapters can map either to a class or a pattern (regex)
+     */
+    'source_adapters' => [
+        'class' => [
+            Symfony\Component\HttpFoundation\File\UploadedFile::class => Plank\Mediable\SourceAdapters\UploadedFileAdapter::class,
+            Symfony\Component\HttpFoundation\File\File::class => Plank\Mediable\SourceAdapters\FileAdapter::class,
+            Psr\Http\Message\StreamInterface::class => Plank\Mediable\SourceAdapters\StreamAdapter::class,
+        ],
+        'pattern' => [
+            '^https?://' => Plank\Mediable\SourceAdapters\RemoteUrlAdapter::class,
+            '^/' => Plank\Mediable\SourceAdapters\LocalPathAdapter::class,
+            '^[a-zA-Z]:\\\\' => Plank\Mediable\SourceAdapters\LocalPathAdapter::class,
+            '^data:/?/?[^,]*,' => Plank\Mediable\SourceAdapters\DataUrlAdapter::class,
+        ],
+    ],
+
+    /*
+     * List of URL Generators to use for handling various filesystem drivers
+     *
+     */
+    'url_generators' => [
+        'local' => Plank\Mediable\UrlGenerators\LocalUrlGenerator::class,
+        's3' => Plank\Mediable\UrlGenerators\S3UrlGenerator::class,
+    ],
+
+    /**
+     * Should mediable instances automatically reload their media relationships after modification are made to a tag.
+     *
+     * If true, will automatically reload media the next time `getMedia()`, `getMediaMatchAll()` or `getAllMediaByTag()` are called.
+     */
+    'rehydrate_media' => true,
+
+    /**
+     * Detach associated media when mediable model is soft deleted.
+     */
+    'detach_on_soft_delete' => false,
+
+    /**
+     * Prevents loading migrations from the package.
+     *
+     * Use this if you are renaming the published migrations and want to prevent them from being loaded twice.
+     */
+    'ignore_migrations' => false,
+
+    /**
+     * Configuration for image optimization
+     */
+    'image_optimization' => [
+        /**
+         * Whether to apply image optimization after performing image manipulations by default
+         */
+        'enabled' => true,
+        /**
+         * array of optimizers to use, which should implement \Spatie\ImageOptimizer\Optimizer
+         * Each can be passed an array of command line arguments to be passed to the optimizer
+         */
+        'optimizers' => [
+            \Spatie\ImageOptimizer\Optimizers\Jpegoptim::class => [
+                '--max=85',
+                '--strip-all',
+                '--all-progressive',
+            ],
+            \Spatie\ImageOptimizer\Optimizers\Pngquant::class => [
+                '--quality=85',
+                '--force',
+                '--skip-if-larger',
+            ],
+            \Spatie\ImageOptimizer\Optimizers\Optipng::class => [
+                '-i0',
+                '-o2',
+                '-quiet',
+            ],
+            \Spatie\ImageOptimizer\Optimizers\Gifsicle::class => [
+                '-b',
+                '-O3',
+            ],
+            \Spatie\ImageOptimizer\Optimizers\Cwebp::class => [
+                '-q 80',
+                '-m 6',
+                '-pass 10',
+                '-mt',
+            ],
+            \Spatie\ImageOptimizer\Optimizers\Avifenc::class => [
+                '-a cq-level=23',
+                '-j all',
+                '--min 0',
+                '--max 63',
+                '--minalpha 0',
+                '--maxalpha 63',
+                '-a end-usage=q',
+                '-a tune=ssim',
+            ],
+        ],
+    ]
+];
+----
+--resources/views/admin/verifications/show.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            Review Verification for {{ $verification->user->firstname }} {{ $verification->user->lastname }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 bg-white border-b border-gray-200">
+                    <!-- User Details Section -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="text-lg font-bold mb-4">User Details</h3>
+                            <div class="space-y-2">
+                                <p>
+                                    <strong>Name:</strong> 
+                                    {{ $verification->user->firstname }} {{ $verification->user->lastname }}
+                                </p>
+                                <p>
+                                    <strong>Email:</strong> 
+                                    <a href="mailto:{{ $verification->user->email }}" class="text-blue-600 hover:underline">
+                                        {{ $verification->user->email }}
+                                    </a>
+                                </p>
+                                <p>
+                                    <strong>ID Type:</strong> 
+                                    {{ ucwords(str_replace('_', ' ', $verification->id_type)) }}
+                                </p>
+                                <p>
+                                    <strong>Status:</strong>
+                                    @switch($verification->status)
+                                        @case('pending')
+                                            <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800">
+                                                Pending Review
+                                            </span>
+                                            @break
+                                        @case('approved')
+                                            <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+                                                Approved
+                                            </span>
+                                            @break
+                                        @case('rejected')
+                                            <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800">
+                                                Rejected
+                                            </span>
+                                            @break
+                                    @endswitch
+                                </p>
+                                <p>
+                                    <strong>Submitted At:</strong>
+                                    {{ $verification->created_at->format('M d, Y - H:i') }}
+                                </p>
+                                @if ($verification->reviewed_at)
+                                    <p>
+                                        <strong>Reviewed At:</strong>
+                                        {{ $verification->reviewed_at->format('M d, Y - H:i') }}
+                                    </p>
+                                @endif
+                            </div>
+                        </div>
+
+                        <!-- Actions Section -->
+                        <div>
+                            <h3 class="text-lg font-bold mb-4">Actions</h3>
+                            
+                            @if ($verification->status === 'pending')
+                                <div class="space-y-3">
+                                    <!-- Approve Form -->
+                                    <form method="POST" action="{{ route('admin.verifications.approve', $verification) }}">
+                                        @csrf
+                                        <button type="submit" class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition">
+                                            ✓ Approve Verification
+                                        </button>
+                                    </form>
+
+                                    <!-- Reject Form (with toggle for reason) -->
+                                    <div x-data="{ showRejectForm: false }">
+                                        <button 
+                                            @click="showRejectForm = !showRejectForm"
+                                            class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition">
+                                            ✕ Reject Verification
+                                        </button>
+
+                                        <form 
+                                            x-show="showRejectForm" 
+                                            method="POST" 
+                                            action="{{ route('admin.verifications.reject', $verification) }}"
+                                            class="mt-4 p-4 bg-red-50 rounded-lg border border-red-200"
+                                        >
+                                            @csrf
+                                            <div class="mb-4">
+                                                <label for="rejection_reason" class="block text-sm font-medium text-gray-700 mb-2">
+                                                    Reason for Rejection (required)
+                                                </label>
+                                                <textarea 
+                                                    id="rejection_reason"
+                                                    name="rejection_reason"
+                                                    rows="4"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent @error('rejection_reason') border-red-500 @enderror"
+                                                    placeholder="Explain why this verification is being rejected..."
+                                                    required
+                                                ></textarea>
+                                                @error('rejection_reason')
+                                                    <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button 
+                                                    type="submit"
+                                                    class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition">
+                                                    Confirm Rejection
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    @click="showRejectForm = false"
+                                                    class="flex-1 px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white font-semibold rounded-lg transition">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            @elseif ($verification->status === 'approved')
+                                <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <p class="text-green-800 font-semibold">
+                                        ✓ This verification has been approved
+                                    </p>
+                                    @if ($verification->reviewed_by)
+                                        <p class="text-sm text-green-700 mt-2">
+                                            Approved by: {{ $verification->reviewer->firstname ?? 'System' }}
+                                        </p>
+                                    @endif
+                                </div>
+                            @elseif ($verification->status === 'rejected')
+                                <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                                    <p class="text-red-800 font-semibold">
+                                        ✕ This verification has been rejected
+                                    </p>
+                                    @if ($verification->rejection_reason)
+                                        <p class="text-sm text-red-700 mt-2">
+                                            <strong>Reason:</strong> {{ $verification->rejection_reason }}
+                                        </p>
+                                    @endif
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Submitted Documents Section -->
+                    <div class="mt-8 pt-8 border-t border-gray-200">
+                        <h3 class="text-lg font-bold mb-4">Submitted Documents</h3>
+                        
+                        @if ($idFrontMedia || $idBackMedia)
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Front of ID -->
+                                <div>
+                                    <h4 class="font-semibold mb-3 text-gray-700">Front of ID</h4>
+                                    @if ($idFrontMedia)
+                                        <div class="relative group overflow-hidden rounded-lg border border-gray-200">
+                                            <img 
+                                                src="{{ $secureMediaService->getSecureMediaUrl($idFrontMedia['id']) }}"
+                                                alt="Front of ID"
+                                                class="w-full h-auto object-cover transition-transform group-hover:scale-105"
+                                            >
+                                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition flex items-center justify-center">
+                                                <a 
+                                                    href="{{ $secureMediaService->getSecureMediaUrl($idFrontMedia['id']) }}"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="opacity-0 group-hover:opacity-100 transition px-4 py-2 bg-white text-blue-600 font-semibold rounded">
+                                                    View Full Size
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-2">
+                                            {{ $idFrontMedia['filename'] }}
+                                        </p>
+                                    @else
+                                        <div class="flex items-center justify-center h-64 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
+                                            <p class="text-gray-500">No document uploaded</p>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- Back of ID -->
+                                <div>
+                                    <h4 class="font-semibold mb-3 text-gray-700">Back of ID</h4>
+                                    @if ($idBackMedia)
+                                        <div class="relative group overflow-hidden rounded-lg border border-gray-200">
+                                            <img 
+                                                src="{{ $secureMediaService->getSecureMediaUrl($idBackMedia['id']) }}"
+                                                alt="Back of ID"
+                                                class="w-full h-auto object-cover transition-transform group-hover:scale-105"
+                                            >
+                                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition flex items-center justify-center">
+                                                <a 
+                                                    href="{{ $secureMediaService->getSecureMediaUrl($idBackMedia['id']) }}"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="opacity-0 group-hover:opacity-100 transition px-4 py-2 bg-white text-blue-600 font-semibold rounded">
+                                                    View Full Size
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-2">
+                                            {{ $idBackMedia['filename'] }}
+                                        </p>
+                                    @else
+                                        <div class="flex items-center justify-center h-64 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
+                                            <p class="text-gray-500">No document uploaded</p>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @else
+                            <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                <p class="text-yellow-800">
+                                    ⚠ No verification documents found
+                                </p>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- Debug Info (only show in development) -->
+                    @if (config('app.debug'))
+                        <div class="mt-8 pt-8 border-t border-gray-200">
+                            <details class="text-xs text-gray-500">
+                                <summary class="cursor-pointer font-semibold">Debug Info</summary>
+                                <pre class="mt-2 p-3 bg-gray-100 rounded overflow-auto text-gray-700">
+Verification ID: {{ $verification->id }}
+User ID: {{ $verification->user_id }}
+Status: {{ $verification->status }}
+ID Type: {{ $verification->id_type }}
+Created: {{ $verification->created_at }}
+Updated: {{ $verification->updated_at }}
+                                </pre>
+                            </details>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    @endpush
+</x-app-layout>
+----
+--resources/views/creator/services/create.blade.php
+<x-app-layout>
+    <div class="py-6">
+        <div class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">
+            <livewire:service-form 
+                :categories="$categories"
+                :workflowTemplates="$workflowTemplates"
+                :addresses="$addresses"
+                :key="'service-form-create'"
+            />
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/creator/services/edit.blade.php
+<x-app-layout>
+    <div class="py-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <livewire:service-form 
+                :service="$service"
+                :categories="$categories"
+                :workflowTemplates="$workflowTemplates"
+                :addresses="$addresses"
+                :key="'service-form-'.$service->id"
+            />
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/listings/services/show.blade.php
+<x-app-layout :jsFiles="['app.js', 'swiper-listings.js']">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="lg:grid lg:grid-cols-3 lg:gap-8 max-w-7xl mx-auto">
+            
+            {{-- Left Column: Image Gallery and Creator Info --}}
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <!-- Image Carousel -->
+                    <div class="relative h-64 md:h-96 bg-gray-200">
+                        @if($service->media->isNotEmpty())
+                            <div class="swiper serviceSwiper h-full">
+                                <div class="swiper-wrapper">
+                                    @foreach($service->media as $media)
+                                        <div class="swiper-slide bg-gray-100 flex items-center justify-center">
+                                            <img src="{{ $media->getUrl() }}" alt="{{ $service->title }}" 
+                                                class="w-full h-full object-contain">
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div class="swiper-button-prev text-white"></div>
+                                <div class="swiper-button-next text-white"></div>
+                                <div class="swiper-pagination"></div>
+                            </div>
+                        @else
+                            <div class="flex items-center justify-center h-full">
+                                <span class="text-gray-400 text-lg">No images available</span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Description & Details (Desktop) -->
+                <div class="bg-white rounded-lg shadow-md p-6 space-y-6">
+                    <div>
+                        <h3 class="font-bold text-xl text-gray-800 mb-3">About this service</h3>
+                        <p class="text-gray-600 leading-relaxed">{{ $service->description ?? 'No description provided.' }}</p>
+                    </div>
+
+                     <!-- Workflow -->
+                    @include('listings.partials.workflow-steps', ['workflowTemplate' => $service->workflowTemplate])
+
+                    <!-- Creator Info -->
+                    <div class="pt-4 border-t">
+                        <h3 class="font-bold text-xl text-gray-800 mb-4">About the provider</h3>
+                        <div class="flex items-center space-x-4">
+                            <img src="{{ $service->creator->profile_photo_url }}" 
+                                alt="{{ $service->creator->name }}" 
+                                class="w-16 h-16 rounded-full">
+                            <div>
+                                <h4 class="font-semibold text-lg text-gray-900">{{ $service->creator->name }}</h4>
+                                <p class="text-sm text-gray-500">Member since {{ $service->creator->created_at->format('M Y') }}</p>
+                                {{-- Add rating here if available --}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                 <!-- Reviews Section -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Reviews</h3>
+                    <div class="space-y-4">
+                        {{-- Example review --}}
+                        <div class="border-b pb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center">
+                                    <img src="https://i.pravatar.cc/150?u=david" alt="David" class="w-8 h-8 rounded-full mr-3">
+                                    <span class="font-semibold text-sm text-gray-800">David Datu Sarmiento</span>
+                                </div>
+                                <div class="flex items-center space-x-1 text-yellow-400">
+                                    @for ($i = 0; $i < 5; $i++)
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                    @endfor
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-600 pl-11">
+                                I found that transacting with serbisyo makes my work easier
+                            </p>
+                        </div>
+                        
+                        {{-- No reviews state --}}
+                        <p class="text-sm text-gray-500 text-center py-6">No reviews yet for this service.</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Right Column: Action Card --}}
+            <div class="lg:col-span-1">
+                <div class="sticky top-20 bg-white rounded-lg shadow-lg border">
+                    <div class="p-6">
+                        <h2 class="text-2xl font-bold text-gray-800">{{ $service->title }}</h2>
+                        <div class="flex items-center space-x-2 mt-2">
+                            <span class="text-yellow-400 flex items-center">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <span class="ml-1 text-sm font-medium">5.0</span>
+                            </span>
+                            <span class="text-sm text-gray-500">(0 reviews)</span>
+                        </div>
+                    </div>
+                    <div class="px-6 pb-6 border-t">
+                        <div class="flex justify-between items-baseline mt-4">
+                            <span class="text-gray-600 font-medium">Service Rate</span>
+                            <span class="text-2xl font-bold text-gray-900">₱{{ number_format($service->price, 2) }}</span>
+                        </div>
+                        <div class="mt-1 text-sm text-gray-500 text-right">
+                            Location: {{ $service->address->town }}
+                        </div>
+
+                         @can('update', $service)
+                            <a href="{{ route('creator.services.manage', $service) }}" class="mt-6 block w-full text-center bg-gray-200 text-gray-800 rounded-lg px-6 py-3 font-semibold hover:bg-gray-300 transition">
+                                Go to Manage
+                            </a>
+                        @else
+                            <button type="button" 
+                                class="mt-6 w-full bg-green-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-green-700 transition shadow-md">
+                                Proceed to Order
+                            </button>
+                            <button type="button" 
+                                class="mt-2 w-full text-center text-gray-600 font-medium hover:text-green-700 transition">
+                                Add to wishlist
+                            </button>
+                        @endcan
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+----
+--resources/views/livewire/service-form.blade.php
+<div>
+    <header class="flex justify-between items-center p-4 border-b">
+        <h1 class="text-lg font-semibold">{{ $service->exists ? 'Edit Service' : 'Create a Service' }}</h1>
+    </header>
+
+    <form wire:submit.prevent="save" class="p-4 space-y-4">
+        
+        <!-- Global Error Display -->
+        @if ($errors->any())
+            <div class="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+                <h3 class="text-red-800 font-semibold mb-2">Validation Errors:</h3>
+                <ul class="list-disc list-inside text-red-700 text-sm">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <!-- Title -->
+        <div>
+            <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+            <input type="text" wire:model.defer="title" id="title" 
+                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            @error('title') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+        </div>
+
+        <!-- Price and Pay First -->
+        <div class="flex space-x-4">
+            <div class="w-1/2">
+                <label for="price" class="block text-sm font-medium text-gray-700">Price</label>
+                <input type="number" wire:model.defer="price" id="price" step="0.01"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @error('price') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+            </div>
+            <div class="w-1/2">
+                <label for="pay-first" class="block text-sm font-medium text-gray-700">Pay First</label>
+                <select wire:model.defer="pay_first" id="pay-first" 
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="0">No</option>
+                    <option value="1">Yes</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Category and Address -->
+        <div class="flex space-x-4">
+            <div class="w-1/2">
+                <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                <select wire:model.defer="category_id" id="category"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Select...</option>
+                    @foreach ($categories as $cat)
+                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                    @endforeach
+                </select>
+                @error('category_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+            </div>
+            <div class="w-1/2">
+                <label for="address" class="block text-sm font-medium text-gray-700">Address</label>
+                <select wire:model="address_id" id="address"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Select...</option>
+                    @foreach($addresses as $address)
+                        <option value="{{ $address->id }}">
+                            {{ $address->street }}, {{ $address->city }}
+                            @if($address->is_primary) (Primary) @endif
+                        </option>
+                    @endforeach
+                </select>
+                @error('address_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                <a href="{{ route('profile.edit') }}" class="text-xs text-blue-600 hover:text-blue-700 mt-1 inline-block">+ Add new address</a>
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+            <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+            <textarea wire:model.defer="description" id="description" rows="4" 
+                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+            @error('description') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+        </div>
+
+        <!-- Workflow Section - Simple wire:model approach -->
+        <div>
+            <label for="workflow_template_id" class="block text-sm font-medium text-gray-700 mb-1">Workflow</label>
+            <select wire:model.live="workflow_template_id" id="workflow_template_id"
+                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">Select a workflow...</option>
+                @foreach ($workflowTemplates as $template)
+                    <option value="{{ $template->id }}">{{ $template->name }}</option>
+                @endforeach
+            </select>
+            @error('workflow_template_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+            
+            @if($workflow_template_id)
+                @php
+                    $selectedWorkflow = $workflowTemplates->firstWhere('id', $workflow_template_id);
+                @endphp
+                @if($selectedWorkflow)
+                    <div class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <p class="text-sm text-gray-700"><strong>{{ $selectedWorkflow->name }}</strong></p>
+                        <p class="text-xs text-gray-600 mt-1">{{ $selectedWorkflow->description }}</p>
+                        @if ($selectedWorkflow->workTemplates->count() > 0)
+                            <div class="mt-2">
+                                <span class="text-xs font-semibold text-gray-700">Steps:</span>
+                                <ul class="list-disc list-inside text-xs text-gray-600">
+                                    @foreach ($selectedWorkflow->workTemplates as $work)
+                                        <li>{{ $work->name }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                    </div>
+                @endif
+            @endif
+            
+            <div class="mt-2 text-right">
+                <a href="{{ route('creator.workflows.create') }}" target="_blank" class="text-xs text-gray-600 hover:text-blue-700">
+                    + Create New Workflow
+                </a>
+            </div>
+        </div>
+
+        @include('livewire.partials.media-uploader')
+
+        <!-- Action Buttons -->
+        <div class="flex justify-end space-x-3 pt-4 border-t mt-6">
+            <a href="{{ route('creator.services.index') }}" 
+                class="bg-gray-100 border border-gray-300 rounded-md px-4 py-2 text-sm hover:bg-gray-200 transition">
+                Cancel
+            </a>
+            <button 
+                type="submit"
+                class="bg-blue-600 text-white rounded-md px-4 py-2 text-sm hover:bg-blue-700 transition">
+                {{ $service->exists ? 'Update' : 'Publish' }}
+            </button>
+        </div>
+    </form>
+</div>
+----
+--resources/views/livewire/partials/media-upload.blade.php
+<div class="space-y-4">
+    {{-- Error Messages --}}
+    @if($uploadErrors && count($uploadErrors) > 0)
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+            <div class="flex items-center gap-2 mb-2">
+                <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                <h3 class="font-semibold text-red-800">Upload Errors</h3>
+            </div>
+            <ul class="space-y-1 text-sm text-red-700">
+                @foreach($uploadErrors as $error)
+                    <li class="flex gap-2">
+                        <span class="text-red-500">•</span>
+                        <span>
+                            <strong>{{ $error['filename'] }}</strong><br>
+                            <span class="text-xs">{{ $error['error'] }}</span>
+                        </span>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- Success Messages --}}
+    @if($uploadSuccess && count($uploadSuccess) > 0)
+        <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+            <div class="flex items-center gap-2 mb-2">
+                <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <h3 class="font-semibold text-green-800">Successfully Uploaded</h3>
+            </div>
+            <ul class="space-y-1 text-sm text-green-700">
+                @foreach($uploadSuccess as $success)
+                    <li class="flex gap-2">
+                        <span class="text-green-500">✓</span>
+                        <span>{{ $success['filename'] }}</span>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- Skipped Messages --}}
+    @if($uploadSkipped && count($uploadSkipped) > 0)
+        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+            <div class="flex items-center gap-2 mb-2">
+                <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <h3 class="font-semibold text-yellow-800">Skipped Files</h3>
+            </div>
+            <ul class="space-y-1 text-sm text-yellow-700">
+                @foreach($uploadSkipped as $skipped)
+                    <li class="flex gap-2">
+                        <span class="text-yellow-500">⚠</span>
+                        <span>
+                            <strong>{{ $skipped['filename'] }}</strong><br>
+                            <span class="text-xs">{{ $skipped['reason'] }}</span>
+                        </span>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- Media Upload Area --}}
+    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+        
+        {{-- Grid for existing and new images --}}
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 mb-4">
+            {{-- Existing Images --}}
+            @foreach($existingImages as $img)
+                <div class="relative group">
+                    <img src="{{ $img['url'] }}" class="w-full h-24 object-cover rounded-md border border-gray-200">
+                    <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition flex items-center justify-center">
+                        <button type="button" 
+                            wire:click="removeExistingImage({{ $img['id'] }})"
+                            class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white w-6 h-6 flex items-center justify-center rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove image">
+                            ✕
+                        </button>
+                        <span class="absolute bottom-1 left-1 bg-gray-900 text-white px-2 py-0.5 text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            {{ $img['created_at'] }}
+                        </span>
+                    </div>
+                </div>
+            @endforeach
+
+            {{-- New Files Preview --}}
+            @foreach($newFiles as $i => $file)
+                <div class="relative group">
+                    <img src="{{ $file->temporaryUrl() }}" class="w-full h-24 object-cover rounded-md border-2 border-green-400">
+                    <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition flex items-center justify-center">
+                        <button type="button" 
+                            wire:click="removeNewFile({{ $i }})"
+                            class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white w-6 h-6 flex items-center justify-center rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove new upload">
+                            ✕
+                        </button>
+                        <span class="absolute bottom-1 left-1 bg-green-600 text-white px-2 py-0.5 text-xs rounded-full">
+                            New
+                        </span>
+                    </div>
+                </div>
+            @endforeach
+
+            {{-- "Add More" Button --}}
+            @if(count($existingImages) > 0 || count($newFiles) > 0)
+                <label for="file-upload" class="cursor-pointer w-full h-24 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md flex flex-col items-center justify-center text-gray-500 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span class="text-xs mt-1">Add More</span>
+                </label>
+            @endif
+        </div>
+
+        {{-- Hidden File Input --}}
+        <input id="file-upload" type="file" wire:model.live="newFiles" multiple class="hidden" accept="image/*">
+
+        {{-- Empty State: Large upload area --}}
+        @if(count($existingImages) === 0 && count($newFiles) === 0)
+            <label for="file-upload-empty" class="cursor-pointer flex flex-col items-center justify-center text-gray-500 hover:text-green-600 transition py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span class="mt-2 text-sm font-medium">Click to upload images</span>
+                <input id="file-upload-empty" type="file" wire:model.live="newFiles" multiple class="sr-only" accept="image/*">
+            </label>
+        @endif
+        
+        <p class="text-xs text-gray-500 mt-2">
+            Max 2MB per image. Supported: PNG, JPG, GIF, HEIC
+        </p>
+    </div>
+</div>
+<div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+    
+    {{-- Grid for existing and new images --}}
+    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 mb-4">
+        {{-- Existing Images --}}
+        @foreach($existingImages as $img)
+            <div class="relative group">
+                <img src="{{ $img['url'] }}" class="w-full h-24 object-cover rounded-md border border-gray-200">
+                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition flex items-center justify-center">
+                    <button type="button" wire:click="removeExistingImage({{ $img['id'] }})"
+                        class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white w-6 h-6 flex items-center justify-center rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                        ✕
+                    </button>
+                </div>
+            </div>
+        @endforeach
+
+        {{-- New Files Preview --}}
+        @foreach($newFiles as $i => $file)
+            <div class="relative group">
+                <img src="{{ $file->temporaryUrl() }}" class="w-full h-24 object-cover rounded-md border-2 border-green-400">
+                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition flex items-center justify-center">
+                     <button type="button" wire:click="removeNewFile({{ $i }})"
+                        class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white w-6 h-6 flex items-center justify-center rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                        ✕
+                    </button>
+                    <span class="absolute bottom-1 left-1 bg-green-600 text-white px-2 py-0.5 text-xs rounded-full">
+                        New
+                    </span>
+                </div>
+            </div>
+        @endforeach
+
+        {{-- "Add More" Button --}}
+        @if(count($existingImages) > 0 || count($newFiles) > 0)
+            <label for="file-upload" class="cursor-pointer w-full h-24 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md flex flex-col items-center justify-center text-gray-500 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                <span class="text-xs mt-1">Add More</span>
+            </label>
+        @endif
+    </div>
+
+    {{-- Hidden File Input --}}
+    <input id="file-upload" type="file" wire:model="newFiles" multiple class="hidden" accept="image/*" x-ref="fileInput">
+
+    {{-- Empty State: Large upload area --}}
+    @if(count($existingImages) === 0 && count($newFiles) === 0)
+        <label for="file-upload-empty" class="cursor-pointer flex flex-col items-center justify-center text-gray-500 hover:text-green-600 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span class="mt-2 text-sm font-medium">Click to upload images</span>
+            <input id="file-upload-empty" type="file" wire:model="newFiles" multiple class="sr-only" accept="image/*" x-ref="fileInput">
+        </label>
+    @endif
+    
+    <p class="text-xs text-gray-500 mt-2">Max 5MB per image. PNG, JPG, GIF accepted.</p>
+</div>
+----
+--resources/views/verification/submit.blade.php
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Verify Your Identity') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 bg-white border-b border-gray-200">
+                    <form method="POST" action="{{ route('verification.store') }}" enctype="multipart/form-data">
+                        @csrf
+
+                        <!-- ID Type -->
+                        <div>
+                            <x-input-label for="id_type" :value="__('ID Type')" />
+                            <select id="id_type" name="id_type" class="block mt-1 w-full rounded-md shadow-sm border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="national_id">{{ __('National ID') }}</option>
+                                <option value="drivers_license">{{ __("Driver's License") }}</option>
+                                <option value="passport">{{ __('Passport') }}</option>
+                            </select>
+                        </div>
+
+                        <!-- ID Front -->
+                        <div class="mt-4">
+                            <x-input-label for="id_front" :value="__('Front of ID')" />
+                            <x-text-input id="id_front" class="block mt-1 w-full" type="file" name="id_front" required />
+                        </div>
+
+                        <!-- ID Back -->
+                        <div class="mt-4">
+                            <x-input-label for="id_back" :value="__('Back of ID')" />
+                            <x-text-input id="id_back" class="block mt-1 w-full" type="file" name="id_back" required />
+                        </div>
+
+                        <div class="flex items-center justify-end mt-4">
+                            <x-primary-button>
+                                {{ __('Submit for Verification') }}
+                            </x-primary-button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+----
+--routes/web.php
+<?php
+use Illuminate\Support\Facades\Route;
+use App\Domains\Listings\Http\Controllers\ServiceController;
+use App\Domains\Users\Http\Controllers\ProfileController;
+use App\Domains\Users\Http\Controllers\UserVerificationController;
+use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
+use App\Domains\Listings\Http\Controllers\CategoryController;
+use App\Domains\Common\Http\Controllers\MediaServeController;
+use App\Domains\Listings\Http\Controllers\ListingController;
+use App\Domains\Listings\Http\Controllers\WorkCatalogController;
+use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
+use App\Domains\Listings\Http\Controllers\WorkTemplateController;
+use App\Domains\Listings\Http\Controllers\OpenOfferController;
+use App\Domains\Listings\Http\Controllers\OpenOfferBidController; // Added
+
+// Authentication routes
+require __DIR__.'/auth.php';
+
+// Home and static pages
+    Route::get('/', function () {
+        return view('home');
+    })->name('home');
+
+    Route::get('browse', [ListingController::class, 'index'])->name('browse');
+
+    Route::get('create', function () {
+        return view('create');
+    })->name('create');
+
+    Route::get('about', function () {
+        return view('about');
+    })->name('about');
+
+    Route::get('faq', function () {
+        return view('faq');
+    })->name('faq');
+
+// Public-facing service page
+Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
+
+// Public-facing open offer page
+Route::get('/openoffers/{openoffer}', [OpenOfferController::class, 'show'])->name('openoffers.show');
+
+// Creator space
+Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
+    Route::get('/', function () {
+        return view('dashboard');
+    })->name('dashboard');
+
+    // Service Management
+    Route::resource('services', ServiceController::class);
+    Route::get('services/{service}/manage', [ServiceController::class, 'manage'])->name('services.manage');
+
+    // Category Management
+    Route::resource('categories', CategoryController::class);
+
+    // Open Offer Management
+    Route::resource('openoffers', OpenOfferController::class)->except(['show']);
+    Route::post('openoffers/{openoffer}/close', [OpenOfferController::class, 'close'])->name('openoffers.close');
+
+    // Bidding Management
+    Route::prefix('openoffers/{openoffer}')->name('openoffers.')->group(function () {
+        Route::resource('bids', OpenOfferBidController::class);
+        Route::post('bids/{bid}/accept', [OpenOfferBidController::class, 'accept'])->name('bids.accept');
+        Route::post('bids/{bid}/reject', [OpenOfferBidController::class, 'reject'])->name('bids.reject');
+    });
+
+    // Workflow Management
+    Route::get('workflows', [WorkflowTemplateController::class, 'index'])->name('workflows.index');
+    Route::get('workflows/create', [WorkflowTemplateController::class, 'create'])->name('workflows.create');
+    Route::get('workflows/{workflow}/edit', [WorkflowTemplateController::class, 'edit'])->name('workflows.edit');
+    Route::patch('workflows/{workflow}', [WorkflowTemplateController::class, 'update'])->name('workflows.update');
+    Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
+    Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
+});
+
+// User Verification
+Route::middleware(['auth'])->prefix('verification')->name('verification.')->group(function () {
+    Route::get('/submit', [UserVerificationController::class, 'create'])->name('create');
+    Route::post('/', [UserVerificationController::class, 'store'])->name('store');
+    Route::get('/status', [UserVerificationController::class, 'status'])->name('status');
+});
+
+// Profile editor
+   Route::middleware(['auth'])->prefix('profile')->group(function () {
+        Route::get('/', [ProfileController::class, 'edit'])
+            ->name('profile.edit');
+
+        Route::patch('/', [ProfileController::class, 'update'])
+            ->name('profile.update');
+
+        Route::delete('/', [ProfileController::class, 'destroy'])
+            ->name('profile.destroy');
+});
+
+// Admin Routes
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/verifications', [AdminUserVerificationController::class, 'index'])->name('verifications.index');
+    Route::get('/verifications/{verification}', [AdminUserVerificationController::class, 'show'])->name('verifications.show');
+    Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
+    Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
+});
+
+Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
+    ->middleware('auth')
+    ->name('media.serve');
+
+
+
+
+----
+--SUMMARY
+Text:19 Binary:0 Skipped:973

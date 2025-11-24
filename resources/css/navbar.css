@@ -90,6 +90,10 @@
     @apply px-4 py-1 rounded bg-brand text-background font-semibold hover:opacity-90 transition;
   }
 
+  .navbar-creator-link {
+    @apply block text-center bg-brand text-white rounded-md p-2 my-2 hover:bg-brand-dark transition-colors;
+}
+
   /* Mobile button override (if needed) */
   .navbar-mobile-button { @apply mt-2 px-4 py-2 border border-text rounded hover:bg-text hover:text-background transition; }
 

@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Domains\Common\Services\AddressService;
+use App\Domains\Common\Interfaces\AddressProviderInterface; // Added
 use App\Domains\Common\Models\Address;
 use Illuminate\Support\Collection;
 use Livewire\Component;
@@ -14,26 +15,46 @@ class AddressManager extends Component
     public bool $isOpen = false;
     public bool $isDeleteModalOpen = false;
 
-    // Form fields
+    // Form fields for a new/edited address
     public ?int $addressId = null;
-    public string $house_no = '';
-    public string $street = '';
-    public string $barangay = '';
-    public string $town = '';
-    public string $province = '';
-    public string $country = '';
+    public string $label = '';
+    public string $street_address = ''; // For user to input house number, street name etc.
+    public ?string $selectedRegion = null;
+    public ?string $selectedProvince = null;
+    public ?string $selectedCity = null;
+    public ?string $selectedBarangay = null;
+    public ?float $lat = null;
+    public ?float $lng = null;
     public bool $is_primary = false;
 
-    protected AddressService $addressService;
+    // Data collections for dropdowns
+    public array $regions = [];
+    public array $provinces = [];
+    public array $cities = [];
+    public array $barangays = [];
 
-    public function boot(AddressService $addressService)
+    // Loading states for UI feedback
+    public bool $loadingProvinces = false;
+    public bool $loadingCities = false;
+    public bool $loadingBarangays = false;
+
+    // To store the full address string from selected components + street_address
+    public string $full_address = '';
+
+
+    protected AddressService $addressService;
+    protected AddressProviderInterface $addressProvider; // Added
+
+    public function boot(AddressService $addressService, AddressProviderInterface $addressProvider) // Modified
     {
         $this->addressService = $addressService;
+        $this->addressProvider = $addressProvider; // Added
     }
 
     public function mount()
     {
         $this->loadAddresses();
+        $this->loadRegions(); // Load regions on mount
     }
 
     public function loadAddresses()
@@ -44,13 +65,15 @@ class AddressManager extends Component
     protected function rules(): array
     {
         return [
-            'house_no' => 'nullable|string|max:255',
-            'street' => 'nullable|string|max:255',
-            'barangay' => 'nullable|string|max:255',
-            'town' => 'required|string|max:255',
-            'province' => 'required|string|max:255',
-            'country' => 'required|string|max:255',
+            'label' => 'nullable|string|max:255',
+            'street_address' => 'required|string|max:255',
+            'selectedRegion' => 'required|string',
+            'selectedProvince' => 'required|string',
+            'selectedCity' => 'required|string',
+            'selectedBarangay' => 'required|string',
             'is_primary' => 'boolean',
+            'lat' => 'nullable|numeric',
+            'lng' => 'nullable|numeric',
         ];
     }
 
@@ -88,14 +111,21 @@ class AddressManager extends Component
     private function resetForm()
     {
         $this->addressId = null;
-        $this->house_no = '';
-        $this->street = '';
-        $this->barangay = '';
-        $this->town = '';
-        $this->province = '';
-        $this->country = '';
+        $this->label = '';
+        $this->street_address = '';
+        $this->selectedRegion = null;
+        $this->selectedProvince = null;
+        $this->selectedCity = null;
+        $this->selectedBarangay = null;
+        $this->lat = null;
+        $this->lng = null;
         $this->is_primary = false;
         $this->resetErrorBag();
+
+        // Clear dependent data
+        $this->provinces = [];
+        $this->cities = [];
+        $this->barangays = [];
     }
 
     public function save()
@@ -103,13 +133,22 @@ class AddressManager extends Component
         $validatedData = $this->validate();
 
         try {
+            $fullAddress = $this->composeFullAddress();
+            
+            $dataToService = array_merge($validatedData, [
+                'full_address' => $fullAddress,
+                'api_source' => 'PSGC_API',
+                'api_id' => $this->getApiIdFromSelection(),
+                'lat' => $this->lat,
+                'lng' => $this->lng,
+            ]);
+
             if ($this->addressId) {
-                // Update
-                $this->addressService->updateUserAddress($this->addressId, $validatedData);
+                $this->addressService->updateUserAddress($this->addressId, $dataToService);
                 session()->flash('success', 'Address updated successfully.');
             } else {
-                // Create
-                $this->addressService->createAddressForUser($validatedData);
+                $newAddress = $this->addressService->createAddressForUser($dataToService);
+                $this->dispatch('address-created', address: $newAddress->toArray());
                 session()->flash('success', 'Address added successfully.');
             }
 
@@ -128,12 +167,12 @@ class AddressManager extends Component
 
         if ($address) {
             $this->addressId = $address->id;
-            $this->house_no = $address->house_no ?? '';
-            $this->street = $address->street ?? '';
-            $this->barangay = $address->barangay ?? '';
-            $this->town = $address->town;
-            $this->province = $address->province;
-            $this->country = $address->country;
+            $this->label = $address->label ?? '';
+            $this->full_address = $address->full_address;
+            $this->street_address = $this->extractStreetAddressFromFullAddress($address->full_address);
+            $this->deriveAddressComponentsFromFullAddress($address->full_address);
+            $this->lat = $address->lat;
+            $this->lng = $address->lng;
             $this->is_primary = (bool) $address->pivot->is_primary;
             $this->openModal();
         }
@@ -169,5 +208,97 @@ class AddressManager extends Component
         } catch (\Exception $e) {
             session()->flash('error', 'An error occurred: ' . $e->getMessage());
         }
+    }
+
+    // --- New API-fetching methods ---
+
+    public function loadRegions(): void
+    {
+        $this->regions = $this->addressProvider->getRegions();
+    }
+
+    public function updatedSelectedRegion(?string $value): void
+    {
+        $this->reset(['selectedProvince', 'selectedCity', 'selectedBarangay', 'provinces', 'cities', 'barangays']);
+        if ($value) {
+            $this->loadingProvinces = true;
+            $this->provinces = $this->addressProvider->getProvinces($value);
+            $this->loadingProvinces = false;
+        }
+    }
+
+    public function updatedSelectedProvince(?string $value): void
+    {
+        $this->reset(['selectedCity', 'selectedBarangay', 'cities', 'barangays']);
+        if ($value) {
+            $this->loadingCities = true;
+            $this->cities = $this->addressProvider->getCities($value);
+            $this->loadingCities = false;
+        }
+    }
+
+    public function updatedSelectedCity(?string $value): void
+    {
+        $this->reset(['selectedBarangay', 'barangays']);
+        if ($value) {
+            $this->loadingBarangays = true;
+            $this->barangays = $this->addressProvider->getBarangays($value);
+            $this->loadingBarangays = false;
+        }
+    }
+
+    // --- Helper methods for address composition/decomposition ---
+
+    private function composeFullAddress(): string
+    {
+        $parts = [];
+        if ($this->street_address) {
+            $parts[] = $this->street_address;
+        }
+        if ($this->selectedBarangay) {
+            $parts[] = $this->findNameByCode($this->barangays, $this->selectedBarangay);
+        }
+        if ($this->selectedCity) {
+            $parts[] = $this->findNameByCode($this->cities, $this->selectedCity);
+        }
+        if ($this->selectedProvince) {
+            $parts[] = $this->findNameByCode($this->provinces, $this->selectedProvince);
+        }
+        if ($this->selectedRegion) {
+            $parts[] = $this->findNameByCode($this->regions, $this->selectedRegion);
+        }
+        return implode(', ', array_filter($parts));
+    }
+
+    private function findNameByCode(array $collection, string $code): string
+    {
+        foreach ($collection as $item) {
+            if (($item['code'] ?? null) === $code) {
+                return $item['name'] ?? $code;
+            }
+        }
+        return $code;
+    }
+
+    private function getApiIdFromSelection(): ?string
+    {
+        $ids = array_filter([
+            $this->selectedBarangay,
+            $this->selectedCity,
+            $this->selectedProvince,
+            $this->selectedRegion,
+        ]);
+        return count($ids) > 0 ? implode('-', $ids) : null;
+    }
+
+    private function extractStreetAddressFromFullAddress(string $fullAddress): string
+    {
+        $parts = explode(',', $fullAddress, 2);
+        return trim($parts[0]);
+    }
+
+    private function deriveAddressComponentsFromFullAddress(string $fullAddress): void
+    {
+        // Placeholder for future implementation
     }
 }

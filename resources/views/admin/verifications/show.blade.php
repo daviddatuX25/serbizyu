@@ -50,7 +50,7 @@
                             <div>
                                 <h4 class="font-semibold">Front of ID</h4>
                                 @if ($idFrontMedia)
-                                    <img src="{{ route('media.serve', ['payload' => \Illuminate\Support\Facades\Crypt::encryptString(json_encode(['media_id' => $idFrontMedia->id]))]) }}" alt="Front of ID" class="mt-2 border rounded-md">
+                                    <img src="{{ route('media.serve', ['payload' => Crypt::encryptString(json_encode(['media_id' => $idFrontMedia->id]))]) }}" alt="Front of ID" class="mt-2 border rounded-md">
                                 @else
                                     <p>No image uploaded.</p>
                                 @endif
@@ -58,7 +58,7 @@
                             <div>
                                 <h4 class="font-semibold">Back of ID</h4>
                                 @if ($idBackMedia)
-                                    <img src="{{ route('media.serve', ['payload' => \Illuminate\Support\Facades\Crypt::encryptString(json_encode(['media_id' => $idBackMedia->id]))]) }}" alt="Back of ID" class="mt-2 border rounded-md">
+                                    <img src="{{ route('media.serve', ['payload' => Crypt::encryptString(json_encode(['media_id' => $idBackMedia->id]))]) }}" alt="Back of ID" class="mt-2 border rounded-md">
                                 @else
                                     <p>No image uploaded.</p>
                                 @endif

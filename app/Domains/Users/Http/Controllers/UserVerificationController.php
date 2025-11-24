@@ -19,7 +19,7 @@ class UserVerificationController extends Controller
             return redirect()->route('verification.status');
         }
 
-        return view('verification.submit');
+        return view('creator.verification.submit');
     }
 
     public function store(Request $request, MediaUploader $uploader)
@@ -53,7 +53,7 @@ class UserVerificationController extends Controller
         // Upload the front ID and attach to the verification record
         if ($request->hasFile('id_front')) {
             $media = $uploader->fromSource($request->file('id_front'))
-                ->toDestination('local', $user->id) // Use user ID as directory
+                ->toDestination('local', 'verifications/' . $user->id) // Use user ID as directory
                 ->upload();
             $verification->attachMedia($media, 'verification-id-front');
         }
@@ -61,7 +61,7 @@ class UserVerificationController extends Controller
         // Upload the back ID and attach to the verification record
         if ($request->hasFile('id_back')) {
             $media = $uploader->fromSource($request->file('id_back'))
-                ->toDestination('local', $user->id) // Use user ID as directory
+                ->toDestination('local', 'verifications/' . $user->id) // Use user ID as directory
                 ->upload();
             $verification->attachMedia($media, 'verification-id-back');
         }
@@ -77,7 +77,7 @@ class UserVerificationController extends Controller
         // debugger
         $idBackMedia = $verification ? $verification->getMedia('verification-id-back')->first() : null;
 
-        return view('verification.status', [
+        return view('creator.verification.status', [
             'verification' => $verification,
             'idFrontMedia' => $idFrontMedia,
             'idBackMedia' => $idBackMedia,

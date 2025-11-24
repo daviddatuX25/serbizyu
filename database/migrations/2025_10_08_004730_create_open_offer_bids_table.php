@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Enums\BidStatus;
 
 return new class extends Migration
 {
@@ -13,12 +14,14 @@ return new class extends Migration
     {
         Schema::create('open_offer_bids', function (Blueprint $table) {
             $table->id();
-            // open offer id, bidder id, service id, proposed price..
             $table->foreignId('open_offer_id')->constrained('open_offers');
             $table->foreignId('bidder_id')->constrained('users');
-            $table->foreignId('service_id')->constrained('services');
-            $table->decimal('proposed_price', 10, 2);
+            $table->foreignId('service_id')->constrained('services')->nullable(); // A bid might not be tied to a specific service
+            $table->decimal('amount', 10, 2);
+            $table->text('message')->nullable();
+            $table->enum('status', array_column(BidStatus::cases(), 'value'))->default(BidStatus::PENDING->value);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

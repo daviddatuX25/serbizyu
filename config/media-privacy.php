@@ -1,6 +1,7 @@
 <?php
 
 use App\Domains\Users\Models\UserVerification;
+use App\Domains\Listings\Models\OpenOffer;
 
 return [
     /*
@@ -21,6 +22,7 @@ return [
 
     'models' => [
         UserVerification::class => 'private',
+        OpenOffer::class => 'public',
         // Example of a public model
         // \App\Domains\Listings\Models\Service::class => 'public',
     ],
