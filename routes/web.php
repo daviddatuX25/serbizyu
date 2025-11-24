@@ -11,6 +11,8 @@ use App\Domains\Listings\Http\Controllers\WorkCatalogController;
 use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
 use App\Domains\Listings\Http\Controllers\WorkTemplateController;
 use App\Domains\Listings\Http\Controllers\OpenOfferController;
+use App\Domains\Orders\Http\Controllers\OrderController;
+use App\Domains\Work\Http\Controllers\WorkInstanceController;
 
 // Authentication routes
 require __DIR__.'/auth.php';
@@ -57,6 +59,9 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     Route::patch('workflows/{workflow}', [WorkflowTemplateController::class, 'update'])->name('workflows.update');
     Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
     Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
+
+    // Seller Work Dashboard
+    Route::get('/work-dashboard', [WorkInstanceController::class, 'index'])->name('work-dashboard');
 });
 
 // User Verification
@@ -90,3 +95,25 @@ Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
     ->middleware('auth')
     ->name('media.serve');
 
+Route::get('/bids/{bidId}', function ($bidId) {
+    return view('bids.show', compact('bidId'));
+})->name('bids.show');
+
+Route::middleware(['auth'])->prefix('orders')->name('orders.')->group(function () {
+    Route::get('/', [OrderController::class, 'index'])->name('index');
+    Route::get('/create', [OrderController::class, 'create'])->name('create');
+    Route::post('/', [OrderController::class, 'store'])->name('store');
+    Route::get('/{order}', [OrderController::class, 'show'])->name('show');
+    Route::get('/{order}/edit', [OrderController::class, 'edit'])->name('edit');
+    Route::put('/{order}', [OrderController::class, 'update'])->name('update');
+    Route::delete('/{order}', [OrderController::class, 'destroy'])->name('destroy');
+    Route::post('/from-bid/{bid}', [OrderController::class, 'createFromBid'])->name('fromBid');
+    Route::post('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
+
+    // Work Instance Step Management
+    Route::post('/work-instances/{workInstance}/steps/{workInstanceStep}/start', [WorkInstanceController::class, 'startStep'])->name('work-instances.steps.start');
+    Route::post('/work-instances/{workInstance}/steps/{workInstanceStep}/complete', [WorkInstanceController::class, 'completeStep'])->name('work-instances.steps.complete');
+
+    // Activity Management
+    Route::resource('/work-instances/{workInstance}/steps/{workInstanceStep}/activities', ActivityController::class);
+});
