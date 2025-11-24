@@ -7,10 +7,12 @@ use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as Admin
 use App\Domains\Listings\Http\Controllers\CategoryController;
 use App\Domains\Common\Http\Controllers\MediaServeController;
 use App\Domains\Listings\Http\Controllers\ListingController;
-use App\Domains\Listings\Http\Controllers\WorkCatalogController;
 use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
-use App\Domains\Listings\Http\Controllers\WorkTemplateController;
 use App\Domains\Listings\Http\Controllers\OpenOfferController;
+use App\Domains\Listings\Http\Controllers\OpenOfferBidController;
+use App\Domains\Work\Http\Controllers\WorkInstanceController;
+// use public workflows
+use App\Domains\Listings\Http\Controllers\PublicWorkflowController;
 
 // Authentication routes
 require __DIR__.'/auth.php';

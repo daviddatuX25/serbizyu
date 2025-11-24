@@ -124,6 +124,8 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
             'id',
             'workflow_template_id'
         );
+    }
+    
     public function orders()
     {
         return $this->hasMany(\App\Domains\Orders\Models\Order::class, 'buyer_id');
