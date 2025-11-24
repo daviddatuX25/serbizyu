@@ -10,6 +10,7 @@ use App\Domains\Common\Models\Address;
 use App\Domains\Listings\Models\ListingReview;
 use Plank\Mediable\Mediable;
 use Plank\Mediable\MediableInterface;
+use Laravel\Scout\Searchable;
 
 use App\Domains\Common\Models\Image;
 
@@ -18,12 +19,27 @@ class Service extends Model implements MediableInterface
     use HasFactory;
     use SoftDeletes;
     use Mediable;
+    use Searchable;
 
     protected $table = 'services';
     protected $fillable = ['title', 'description', 'price', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
     protected $casts = [
         'pay_first' => 'boolean',
     ];
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array
+     */
+    public function toSearchableArray()
+    {
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'description' => $this->description,
+        ];
+    }
 
     public function getGalleryImagesAttribute()
     {

@@ -8,6 +8,8 @@ use App\Domains\Listings\Models\WorkflowTemplate;
 use App\Domains\Listings\Policies\CategoryPolicy;
 use App\Domains\Listings\Policies\ServicePolicy;
 use App\Domains\Listings\Policies\WorkflowPolicy;
+use App\Domains\Work\Models\WorkInstance;
+use App\Domains\Work\Policies\WorkInstancePolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Plank\Mediable\Media;
 
@@ -22,6 +24,8 @@ class AuthServiceProvider extends ServiceProvider
         Category::class => CategoryPolicy::class,
         Service::class => ServicePolicy::class,
         WorkflowTemplate::class => WorkflowPolicy::class,
+        \App\Domains\Orders\Models\Order::class => \App\Domains\Orders\Policies\OrderPolicy::class,
+        WorkInstance::class => WorkInstancePolicy::class,
     ];
 
     /**

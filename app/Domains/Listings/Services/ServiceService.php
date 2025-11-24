@@ -123,7 +123,7 @@ class ServiceService
      */
     public function getService($id): Service
     {
-        $service = Service::with(['creator', 'category', 'workflowTemplate', 'address', 'media'])->find($id);
+        $service = Service::with(['creator', 'category', 'workflowTemplate', 'address', 'media'])->withTrashed()->find($id);
 
         if (!$service) {
             throw new ResourceNotFoundException('Service does not exist.');
@@ -147,9 +147,7 @@ class ServiceService
             throw new ResourceNotFoundException('No services found.');
         }
 
-        if ($services->every->trashed()) {
-            throw new ResourceNotFoundException('Services have all been deleted.');
-        }
+
 
         return $services;
     }
@@ -157,9 +155,13 @@ class ServiceService
     /**
      * Paginated services with filters
      */
-    public function getPaginatedServices(array $filters = [])
+    public function getPaginatedServices(array $filters = [], bool $withTrashed = false)
     {
         $query = Service::with(['creator.media', 'address', 'media']);
+
+        if ($withTrashed) {
+            $query->withTrashed();
+        }
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -187,10 +189,14 @@ class ServiceService
     /**
      * Get services by creator
      */
-    public function getServicesForCreator(int $creatorId, array $filters = [])
+    public function getServicesForCreator(int $creatorId, array $filters = [], bool $withTrashed = false)
     {
         $query = Service::where('creator_id', $creatorId)
             ->with(['creator.media', 'address', 'media']);
+
+        if ($withTrashed) {
+            $query->withTrashed();
+        }
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];

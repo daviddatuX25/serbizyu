@@ -12,16 +12,32 @@ use Plank\Mediable\MediableInterface;
 use Plank\Mediable\Media;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Scout\Searchable;
 
 class OpenOffer extends Model implements MediableInterface
 {
     use HasFactory;
     use SoftDeletes;
     use Mediable;
+    use Searchable;
 
     protected $table = 'open_offers';
     
     protected $fillable = ['title', 'description', 'budget', 'pay_first', 'fulfilled' ,'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array
+     */
+    public function toSearchableArray()
+    {
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'description' => $this->description,
+        ];
+    }
 
     // casts
     protected $casts = [

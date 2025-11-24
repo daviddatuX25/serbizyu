@@ -13,8 +13,7 @@ class OrderPolicy
      */
     public function viewAny(User $user): bool
     {
-        // TODO: Implement actual logic
-        return true;
+        return $user->id !== null;
     }
 
     /**
@@ -22,8 +21,7 @@ class OrderPolicy
      */
     public function view(User $user, Order $order): bool
     {
-        // TODO: Implement actual logic
-        return true;
+        return $user->id === $order->buyer_id || $user->id === $order->seller_id;
     }
 
     /**
@@ -31,8 +29,7 @@ class OrderPolicy
      */
     public function create(User $user): bool
     {
-        // TODO: Implement actual logic
-        return true;
+        return $user->id !== null;
     }
 
     /**
@@ -40,8 +37,7 @@ class OrderPolicy
      */
     public function update(User $user, Order $order): bool
     {
-        // TODO: Implement actual logic
-        return true;
+        return $user->id === $order->buyer_id || $user->id === $order->seller_id;
     }
 
     /**
@@ -49,25 +45,6 @@ class OrderPolicy
      */
     public function delete(User $user, Order $order): bool
     {
-        // TODO: Implement actual logic
-        return true;
-    }
-
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Order $order): bool
-    {
-        // TODO: Implement actual logic
-        return true;
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Order $order): bool
-    {
-        // TODO: Implement actual logic
-        return true;
+        return $user->id === $order->buyer_id || $user->id === $order->seller_id;
     }
 }

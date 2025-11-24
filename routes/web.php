@@ -4,15 +4,22 @@ use App\Domains\Listings\Http\Controllers\ServiceController;
 use App\Domains\Users\Http\Controllers\ProfileController;
 use App\Domains\Users\Http\Controllers\UserVerificationController;
 use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
+use App\Domains\Admin\Http\Controllers\DashboardController;
+use App\Domains\Admin\Http\Controllers\ActivityLogController;
+use App\Domains\Admin\Http\Controllers\UserManagementController;
+use App\Domains\Admin\Http\Controllers\ListingManagementController;
+use App\Domains\Admin\Http\Controllers\SettingsController;
 use App\Domains\Listings\Http\Controllers\CategoryController;
 use App\Domains\Common\Http\Controllers\MediaServeController;
 use App\Domains\Listings\Http\Controllers\ListingController;
-use App\Domains\Listings\Http\Controllers\WorkCatalogController;
 use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
-use App\Domains\Listings\Http\Controllers\WorkTemplateController;
-use App\Domains\Listings\Http\Controllers\OpenOfferController;
 use App\Domains\Orders\Http\Controllers\OrderController;
 use App\Domains\Work\Http\Controllers\WorkInstanceController;
+use App\Domains\Work\Http\Controllers\ActivityController;
+use App\Domains\Payments\Http\Controllers\PaymentController;
+use App\Domains\Payments\Http\Controllers\PaymentWebhookController;
+use App\Domains\Payments\Http\Controllers\DisbursementController;
+use App\Domains\Payments\Http\Controllers\RefundController;
 
 // Authentication routes
 require __DIR__.'/auth.php';
@@ -84,11 +91,17 @@ Route::middleware(['auth'])->prefix('verification')->name('verification.')->grou
 });
 
 // Admin Routes
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/verifications', [AdminUserVerificationController::class, 'index'])->name('verifications.index');
     Route::get('/verifications/{verification}', [AdminUserVerificationController::class, 'show'])->name('verifications.show');
     Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
     Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
+    Route::resource('users', UserManagementController::class)->except(['create', 'store']);
+    Route::resource('listings', ListingManagementController::class)->except(['create', 'store']);
+    Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 });
 
 Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
@@ -98,6 +111,14 @@ Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
 Route::get('/bids/{bidId}', function ($bidId) {
     return view('bids.show', compact('bidId'));
 })->name('bids.show');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/messages/threads/{thread}', [App\Domains\Messaging\Http\Controllers\MessageController::class, 'show'])->name('messages.show');
+    Route::post('/messages/threads', [App\Domains\Messaging\Http\Controllers\MessageController::class, 'createThread'])->name('messages.createThread');
+    Route::post('/messages/threads/{thread}/messages', [App\Domains\Messaging\Http\Controllers\MessageController::class, 'sendMessage'])->name('messages.sendMessage');
+    Route::post('/messages/threads/{thread}/read', [App\Domains\Messaging\Http\Controllers\MessageController::class, 'markAsRead'])->name('messages.markAsRead');
+    Route::get('/messages/threads/{thread}/messages', [App\Domains\Messaging\Http\Controllers\MessageController::class, 'listMessages'])->name('messages.listMessages');
+});
 
 Route::middleware(['auth'])->prefix('orders')->name('orders.')->group(function () {
     Route::get('/', [OrderController::class, 'index'])->name('index');
@@ -109,11 +130,42 @@ Route::middleware(['auth'])->prefix('orders')->name('orders.')->group(function (
     Route::delete('/{order}', [OrderController::class, 'destroy'])->name('destroy');
     Route::post('/from-bid/{bid}', [OrderController::class, 'createFromBid'])->name('fromBid');
     Route::post('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
+});
 
+Route::middleware(['auth'])->prefix('payments')->name('payments.')->group(function () {
+    Route::get('/checkout/{order}', [PaymentController::class, 'checkout'])->name('checkout');
+    Route::post('/pay/{order}', [PaymentController::class, 'pay'])->name('pay');
+    Route::get('/success', [PaymentController::class, 'success'])->name('success');
+    Route::get('/failed', [PaymentController::class, 'failed'])->name('failed');
+});
+
+// Work Instance Management
+Route::middleware(['auth'])->prefix('work-instances')->name('work-instances.')->group(function () {
+    Route::get('/{workInstance}', [WorkInstanceController::class, 'show'])->name('show');
+    
     // Work Instance Step Management
-    Route::post('/work-instances/{workInstance}/steps/{workInstanceStep}/start', [WorkInstanceController::class, 'startStep'])->name('work-instances.steps.start');
-    Route::post('/work-instances/{workInstance}/steps/{workInstanceStep}/complete', [WorkInstanceController::class, 'completeStep'])->name('work-instances.steps.complete');
+    Route::post('/{workInstance}/steps/{workInstanceStep}/start', [WorkInstanceController::class, 'startStep'])->name('steps.start');
+    Route::post('/{workInstance}/steps/{workInstanceStep}/complete', [WorkInstanceController::class, 'completeStep'])->name('steps.complete');
 
     // Activity Management
-    Route::resource('/work-instances/{workInstance}/steps/{workInstanceStep}/activities', ActivityController::class);
+    Route::resource('/{workInstance}/steps/{workInstanceStep}/activities', ActivityController::class);
 });
+
+// Earnings & Disbursements
+Route::middleware(['auth'])->prefix('earnings')->name('earnings.')->group(function () {
+    Route::get('/', [DisbursementController::class, 'index'])->name('index');
+    Route::get('/disbursement/{disbursement}', [DisbursementController::class, 'show'])->name('show');
+    Route::post('/disbursement/{disbursement}/request', [DisbursementController::class, 'request'])->name('request');
+});
+
+// Refunds
+Route::middleware(['auth'])->prefix('refunds')->name('refunds.')->group(function () {
+    Route::get('/request/{order}', [RefundController::class, 'create'])->name('create');
+    Route::post('/request/{order}', [RefundController::class, 'store'])->name('store');
+    Route::get('/{refund}', [RefundController::class, 'show'])->name('show');
+    Route::post('/{refund}/approve', [RefundController::class, 'approve'])->name('approve');
+    Route::post('/{refund}/reject', [RefundController::class, 'reject'])->name('reject');
+    Route::post('/{refund}/process', [RefundController::class, 'process'])->name('process');
+});
+
+Route::post('/payments/webhook', [PaymentWebhookController::class, 'handle'])->name('payments.webhook');

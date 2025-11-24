@@ -56,5 +56,6 @@
     @foreach ($jsFiles as $js)
         @vite("resources/js/{$js}")
     @endforeach
+    @stack('scripts')
 </body>
 </html>

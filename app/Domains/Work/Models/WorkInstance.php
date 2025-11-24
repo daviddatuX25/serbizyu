@@ -17,6 +17,12 @@ class WorkInstance extends Model
         'completed_at',
     ];
 
+    protected $casts = [
+        'started_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'current_step_index' => 'integer',
+    ];
+
     public function order()
     {
         return $this->belongsTo(Order::class);
@@ -29,6 +35,67 @@ class WorkInstance extends Model
 
     public function workInstanceSteps()
     {
-        return $this->hasMany(WorkInstanceStep::class);
+        return $this->hasMany(WorkInstanceStep::class)->orderBy('step_index', 'asc');
+    }
+
+    /**
+     * Get the current step being executed
+     */
+    public function getCurrentStep()
+    {
+        return $this->workInstanceSteps()->where('step_index', $this->current_step_index)->first();
+    }
+
+    /**
+     * Get the next step to be executed
+     */
+    public function getNextStep()
+    {
+        return $this->workInstanceSteps()->where('step_index', '>', $this->current_step_index)->first();
+    }
+
+    /**
+     * Get all completed steps
+     */
+    public function getCompletedSteps()
+    {
+        return $this->workInstanceSteps()->where('status', 'completed')->get();
+    }
+
+    /**
+     * Get the progress percentage
+     */
+    public function getProgressPercentage()
+    {
+        $total = $this->workInstanceSteps()->count();
+        if ($total === 0) {
+            return 0;
+        }
+        $completed = $this->workInstanceSteps()->where('status', 'completed')->count();
+        return round(($completed / $total) * 100);
+    }
+
+    /**
+     * Check if work instance is completed
+     */
+    public function isCompleted(): bool
+    {
+        return $this->status === 'completed' || $this->workInstanceSteps()->where('status', '!=', 'completed')->doesntExist();
+    }
+
+    /**
+     * Check if work instance has started
+     */
+    public function hasStarted(): bool
+    {
+        return $this->started_at !== null;
+    }
+
+    /**
+     * Get activity threads for all steps
+     */
+    public function getActivityThreads()
+    {
+        return ActivityThread::whereIn('work_instance_step_id', $this->workInstanceSteps()->pluck('id'))->get();
     }
 }

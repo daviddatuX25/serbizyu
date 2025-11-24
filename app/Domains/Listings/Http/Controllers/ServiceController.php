@@ -31,7 +31,8 @@ class ServiceController extends Controller
     public function index(Request $request)
     {
         $services = $this->serviceService->getPaginatedServices($request->all());
-        return view('creator.services.index', compact('services'));
+        $categories = $this->categoryService->listAllCategories();
+        return view('creator.services.index', compact('services', 'categories'));
     }   
 
     /**

@@ -32,6 +32,6 @@ class WorkProgress extends Component
 
     public function render()
     {
-        return view('livewire.work-progress')->poll(2000);
+        return view('livewire.work-progress');
     }
 }

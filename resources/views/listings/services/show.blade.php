@@ -133,10 +133,14 @@
                         class="w-full sm:w-auto text-blue-600 font-medium hover:text-blue-700 transition order-2 sm:order-1">
                         Add to wishlist
                     </button>
-                    <button type="button" 
-                        class="w-full sm:w-auto bg-blue-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-blue-700 transition shadow-md order-1 sm:order-2">
-                        Proceed to Order
-                    </button>
+                    <form action="{{ route('orders.store') }}" method="POST" class="w-full sm:w-auto order-1 sm:order-2">
+                        @csrf
+                        <input type="hidden" name="service_id" value="{{ $service->id }}">
+                        <button type="submit" 
+                            class="w-full sm:w-auto bg-blue-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-blue-700 transition shadow-md">
+                            Proceed to Order
+                        </button>
+                    </form>
                 @endcan
               
             </footer>

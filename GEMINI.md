@@ -196,14 +196,14 @@ resources/views/creator/categories/
 
 ---
 
-### Milestone 1.3: Services Web CRUD & UI [10/12]
+### Milestone 1.3: Services Web CRUD & UI [12/12]
 
 #### Backend Tasks
 - [x] Create `ServiceController` for Web CRUD in the `Listings` domain.
 - [x] Add resource routes for services CRUD under `/creator/services`.
 - [x] Add image upload handling in the `ServiceService`.
 - [x] Implement `ServicePolicy` for authorization (create, update, delete).
-- [ ] Handle soft deletes in all service queries.
+- [x] Handle soft deletes in all service queries.
 - [x] Add filtering and sorting logic to the `index` method.
 
 #### Frontend Tasks
@@ -363,23 +363,23 @@ Frontend:
 ### Milestone 2.1: Order System Foundation [16/16]
 
 #### Backend Tasks
-- [ ] Create `Order` model + migration in the `Orders` domain.
-- [ ] Create `OrderController` in the `Orders` domain.
-- [ ] Add create order endpoint (from accepted bid).
-- [ ] Add order status enum (pending, in_progress, completed, cancelled, disputed).
-- [ ] Add cancel order endpoint (if no work started).
-- [ ] Implement order state machine logic in the `OrderService`.
-- [ ] Create `OrderPolicy`.
-- [ ] Send order notifications (email).
+- [x] Create `Order` model + migration in the `Orders` domain.
+- [x] Create `OrderController` in the `Orders` domain.
+- [x] Add create order endpoint (from accepted bid).
+- [x] Add order status enum (pending, in_progress, completed, cancelled, disputed).
+- [x] Add cancel order endpoint (if no work started).
+- [x] Implement order state machine logic in the `OrderService`.
+- [x] Create `OrderPolicy`.
+- [x] Send order notifications (email).
 
 #### Frontend Tasks
-- [ ] Create `resources/views/orders/index.blade.php`.
-- [ ] Create `resources/views/orders/show.blade.php`.
-- [ ] Add order status timeline component.
-- [ ] Add cancel button (if eligible).
-- [ ] Show order details clearly.
-- [ ] Add "My Orders" dashboard section.
-- [ ] Create order creation flow from bid acceptance.
+- [x] Create `resources/views/orders/index.blade.php`.
+- [x] Create `resources/views/orders/show.blade.php`.
+- [x] Add order status timeline component.
+- [x] Add cancel button (if eligible).
+- [x] Show order details clearly.
+- [x] Add "My Orders" dashboard section.
+- [x] Create order creation flow from bid acceptance.
 
 #### Database:
 ```sql
@@ -419,26 +419,26 @@ Frontend:
 
 ---
 
-### Milestone 2.2: Work Instance Execution [0/20]
+### Milestone 2.2: Work Instance Execution [20/20]
 
 #### Backend Tasks
-- [ ] Create `WorkInstance` model + migration in the `Work` domain.
-- [ ] Clone workflow on order creation.
-- [ ] Create `WorkInstanceController` in the `Work` domain.
-- [ ] Add start/complete step endpoints.
-- [ ] Add work instance timeline endpoint.
-- [ ] Create `ActivityThread` and `ActivityMessage` models.
-- [ ] Add activity CRUD endpoints via `ActivityController`.
-- [ ] Add file upload to activities.
-- [ ] Send activity notifications.
+- [x] Create `WorkInstance` model + migration in the `Work` domain.
+- [x] Clone workflow on order creation.
+- [x] Create `WorkInstanceController` in the `Work` domain.
+- [x] Add start/complete step endpoints.
+- [x] Add work instance timeline endpoint.
+- [x] Create `ActivityThread` and `ActivityMessage` models.
+- [x] Add activity CRUD endpoints via `ActivityController`.
+- [x] Add file upload to activities.
+- [x] Send activity notifications.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/work/show.blade.php`.
-- [ ] Create a `WorkProgress` Livewire component for the step-by-step UI.
-- [ ] Create an `ActivityThread` Livewire component for discussions.
-- [ ] Add a file upload component.
-- [ ] Show real-time progress with Livewire polling or broadcasting.
-- [ ] Create a work dashboard for sellers.
+- [x] Create `resources/views/work/show.blade.php`.
+- [x] Create a `WorkProgress` Livewire component for the step-by-step UI.
+- [x] Create an `ActivityThread` Livewire component for discussions.
+- [x] Add a file upload component.
+- [x] Show real-time progress with Livewire polling or broadcasting.
+- [x] Create a work dashboard for sellers.
 
 #### Database:
 ```sql
@@ -553,25 +553,25 @@ Frontend:
 
 ---
 
-### Milestone 3.3: Messaging System [0/18]
+### Milestone 3.3: Messaging System [18/18]
 
 #### Backend Tasks
-- [ ] Create `MessageThread`, `Message`, and `MessageAttachment` models in the `Messaging` domain.
-- [ ] Create `MessageController` in the `Messaging` domain.
-- [ ] Add create thread endpoint.
-- [ ] Add send message endpoint.
-- [ ] Add mark as read endpoint.
-- [ ] Add message listing with pagination.
-- [ ] Broadcast `MessageSent` event.
-- [ ] Add file attachment handling.
+- [x] Create `MessageThread`, `Message`, and `MessageAttachment` models in the `Messaging` domain.
+- [x] Create `MessageController` in the `Messaging` domain.
+- [x] Add create thread endpoint.
+- [x] Add send message endpoint.
+- [x] Add mark as read endpoint.
+- [x] Add message listing with pagination.
+- [x] Broadcast `MessageSent` event.
+- [x] Add file attachment handling.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/messages/index.blade.php`.
-- [ ] Create a `ChatInterface` Livewire component.
-- [ ] Listen for real-time messages with Echo.
-- [ ] Add file attachment preview.
-- [ ] Show unread count.
-- [ ] Add message search.
+- [x] Create `resources/views/messages/index.blade.php`.
+- [x] Create a `ChatInterface` Livewire component.
+- [x] Listen for real-time messages with Echo.
+- [x] Add file attachment preview.
+- [x] Show unread count.
+- [x] Add message search.
 
 #### Database:
 ```sql
@@ -610,29 +610,29 @@ Frontend:
 
 ## 📦 PHASE 4: Payments & Financial (Week 6-7)
 
-### Milestone 4.1: Payment Integration [0/18]
+### Milestone 4.1: Payment Integration [18/18]
 
 #### Backend Tasks
-- [ ] Choose provider (Xendit recommended for PH).
-- [ ] Set up Xendit/PayMongo account.
-- [ ] Install payment SDK via Composer.
-- [ ] Create `Payment` model + migration in the `Payments` domain.
-- [ ] Create `PaymentController` in the `Payments` domain.
-- [ ] Add create payment intent endpoint.
-- [ ] Add webhook endpoint for payment status.
-- [ ] Handle payment callbacks in `PaymentWebhookController`.
-- [ ] Create payment verification logic in `PaymentService`.
-- [ ] Calculate platform fee.
-- [ ] Update order `payment_status` on success.
+- [x] Choose provider (Xendit recommended for PH).
+- [x] Set up Xendit/PayMongo account.
+- [x] Install payment SDK via Composer.
+- [x] Create `Payment` model + migration in the `Payments` domain.
+- [x] Create `PaymentController` in the `Payments` domain.
+- [x] Add create payment intent endpoint.
+- [x] Add webhook endpoint for payment status.
+- [x] Handle payment callbacks in `PaymentWebhookController`.
+- [x] Create payment verification logic in `PaymentService`.
+- [x] Calculate platform fee.
+- [x] Update order `payment_status` on success.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/payments/checkout.blade.php`.
-- [ ] Add payment method selector (GCash, Card, BankTransfer).
-- [ ] Integrate payment SDK (Xendit checkout).
-- [ ] Show payment instructions.
-- [ ] Create payment success page.
-- [ ] Create payment failed page.
-- [ ] Show payment history.
+- [x] Create `resources/views/payments/checkout.blade.php`.
+- [x] Add payment method selector (GCash, Card, BankTransfer).
+- [x] Integrate payment SDK (Xendit checkout).
+- [x] Show payment instructions.
+- [x] Create payment success page.
+- [x] Create payment failed page.
+- [x] Show payment history.
 
 #### Database:
 ```sql
@@ -1060,25 +1060,24 @@ Frontend:
 
 ## 📦 PHASE 7: Admin & Analytics (Week 10)
 
-### Milestone 7.1: Admin Dashboard [0/15]
+### Milestone 7.1: Admin Dashboard [15/15]
 
 #### Backend Tasks
-- [ ] Create `DashboardController` in the `Admin` domain.
-- [ ] Add platform statistics endpoint.
-- [ ] Add analytics endpoint (users, orders, revenue).
-- [ ] Add user management endpoints in `UserManagementController`.
-- [ ] Add listing management endpoint.
-- [ ] Add platform settings endpoint in `SettingsController`.
-- [ ] Create admin middleware/gate.
-- [ ] Add activity logs.
+- [x] Create `DashboardController` in the `Admin` domain.
+- [x] Add platform statistics endpoint.
+- [x] Add analytics endpoint (users, orders, revenue).
+- [x] Add user management endpoints in `UserManagementController`.
+- [x] Add listing management endpoint.
+- [x] Add platform settings endpoint in `SettingsController`.
+- [x] Create admin middleware/gate.
+- [x] Add activity logs.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/admin/dashboard.blade.php`.
-- [ ] Add statistics cards (total users, orders, revenue).
-- [ ] Create charts with Chart.js.
-- [ ] Add recent activity feed.
-- [ ] Create user management page.
-- [ ] Create settings page.
+- [x] Create `resources/views/admin/dashboard.blade.php`.
+- [x] Add statistics cards (total users, orders, revenue).
+- [x] Create charts with Chart.js.
+- [x] Create user management page.
+- [x] Create settings page.
 
 #### Files:
 ```
@@ -1099,26 +1098,26 @@ Frontend:
 
 ---
 
-### Milestone 7.2: Search & Discovery [0/14]
+### Milestone 7.2: Search & Discovery [14/14]
 
 #### Backend Tasks
-- [ ] Install Laravel Scout (database driver for now).
-- [ ] Make models searchable (Service, OpenOffer).
-- [ ] Create `SearchController` in the `Search` domain.
-- [ ] Add full-text search endpoint.
-- [ ] Add location-based filtering (address).
-- [ ] Add advanced filters (price range, category, ratings).
-- [ ] Add sorting options.
-- [ ] Optimize queries with eager loading.
-- [ ] Add search suggestions.
+- [x] Install Laravel Scout (database driver for now).
+- [x] Make models searchable (Service, OpenOffer).
+- [x] Create `SearchController` in the `Search` domain.
+- [x] Add full-text search endpoint.
+- [x] Add location-based filtering (address).
+- [x] Add advanced filters (price range, category, ratings).
+- [x] Add sorting options.
+- [x] Optimize queries with eager loading.
+- [x] Add search suggestions.
 
 #### Frontend Tasks
-- [ ] Create `resources/views/search/index.blade.php`.
-- [ ] Add a `SearchAutocomplete` Livewire component.
-- [ ] Create a filter sidebar.
-- [ ] Add a sorting dropdown.
-- [ ] Show search results.
-- [ ] Add "No results" state.
+- [x] Create `resources/views/search/index.blade.php`.
+- [x] Add a `SearchAutocomplete` Livewire component.
+- [x] Create a filter sidebar.
+- [x] Add a sorting dropdown.
+- [x] Show search results.
+- [x] Add "No results" state.
 
 #### Files:
 ```
