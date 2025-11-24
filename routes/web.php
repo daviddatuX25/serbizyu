@@ -11,8 +11,6 @@ use App\Domains\Listings\Http\Controllers\WorkCatalogController;
 use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
 use App\Domains\Listings\Http\Controllers\WorkTemplateController;
 use App\Domains\Listings\Http\Controllers\OpenOfferController;
-use App\Domains\Listings\Http\Controllers\OpenOfferBidController;
-use App\Domains\Listings\Http\Controllers\PublicWorkflowController; // Added
 
 // Authentication routes
 require __DIR__.'/auth.php';
@@ -79,6 +77,9 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     Route::patch('workflows/{workflow}', [WorkflowTemplateController::class, 'update'])->name('workflows.update');
     Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
     Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
+
+    // Seller Work Dashboard
+    Route::get('/work-dashboard', [WorkInstanceController::class, 'index'])->name('work-dashboard');
 });
 
 // Authenticated user actions (e.g., bookmarking)
@@ -118,7 +119,4 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
     ->middleware('auth')
     ->name('media.serve');
-
-
-
 

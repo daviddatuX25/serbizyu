@@ -2,86 +2,88 @@
 
 namespace App\Domains\Orders\Http\Controllers;
 
-use App\Domains\Listings\Models\OpenOfferBid;
-use App\Domains\Orders\Http\Requests\StoreOrderRequest;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Orders\Services\OrderService;
-use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class OrderController extends Controller
 {
-    protected OrderService $orderService;
+    protected $orderService;
 
     public function __construct(OrderService $orderService)
     {
         $this->orderService = $orderService;
     }
 
-    public function index(Request $request): View
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
     {
-        $user = $request->user();
-        $orders = Order::where('buyer_id', $user->id)
-                       ->orWhere('seller_id', $user->id)
-                       ->with(['buyer', 'seller', 'service'])
-                       ->latest()
-                       ->paginate(10);
-
+        $orders = auth()->user()->orders()->with('service')->get();
         return view('orders.index', compact('orders'));
     }
 
-    public function create(Request $request): View|RedirectResponse
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
     {
-        $bidId = $request->query('open_offer_bid_id');
-
-        if (! $bidId) {
-            return redirect()->route('dashboard')->with('error', 'No bid specified for order creation.');
-        }
-
-        $bid = OpenOfferBid::with(['openOffer.user', 'service'])->findOrFail($bidId);
-
-        $this->authorize('create', $bid);
-
-        return view('orders.create', compact('bid'));
+        //
     }
 
-    public function store(StoreOrderRequest $request): RedirectResponse
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
     {
-        $bid = OpenOfferBid::findOrFail($request->validated('open_offer_bid_id'));
-
-        $this->authorize('create', $bid);
-
-        try {
-            $order = $this->orderService->createOrder($bid, $request->user());
-            return redirect()->route('orders.show', $order)->with('success', 'Order created successfully!');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Failed to create order: '.$e->getMessage());
-        }
+        //
     }
 
-    public function show(Order $order): View
+    /**
+     * Display the specified resource.
+     */
+    public function show(string $id)
     {
-        $this->authorize('view', $order);
-
+        $order = Order::with(['buyer', 'seller', 'service'])->findOrFail($id);
         return view('orders.show', compact('order'));
     }
 
-    public function destroy(Order $order): RedirectResponse
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(string $id)
     {
-        $this->authorize('cancel', $order);
+        //
+    }
 
-        try {
-            $order->update([
-                'status' => OrderStatus::Cancelled,
-                'cancelled_at' => now(),
-                'cancellation_reason' => 'Cancelled by buyer.', // Default reason, can be expanded
-            ]);
-            return redirect()->route('orders.show', $order)->with('success', 'Order cancelled successfully!');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Failed to cancel order: '.$e->getMessage());
-        }
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, string $id)
+    {
+        //
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        //
+    }
+
+    public function createFromBid(string $bid)
+    {
+        $order = $this->orderService->createOrderFromBid($bid);
+        return redirect()->route('orders.show', $order);
+    }
+
+    public function cancel(string $order)
+    {
+        $order = Order::findOrFail($order);
+        $this->orderService->cancelOrder($order);
+        return redirect()->route('orders.show', $order);
     }
 }

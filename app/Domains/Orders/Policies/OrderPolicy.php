@@ -2,25 +2,72 @@
 
 namespace App\Domains\Orders\Policies;
 
-use App\Domains\Listings\Models\OpenOfferBid;
 use App\Domains\Orders\Models\Order;
-use App\Enums\OrderStatus;
-use App\Models\User;
+use App\Domains\Users\Models\User;
+use Illuminate\Auth\Access\Response;
 
 class OrderPolicy
 {
+    /**
+     * Determine whether the user can view any models.
+     */
+    public function viewAny(User $user): bool
+    {
+        // TODO: Implement actual logic
+        return true;
+    }
+
+    /**
+     * Determine whether the user can view the model.
+     */
     public function view(User $user, Order $order): bool
     {
-        return $user->id === $order->buyer_id || $user->id === $order->seller_id;
+        // TODO: Implement actual logic
+        return true;
     }
 
-    public function create(User $user, OpenOfferBid $bid): bool
+    /**
+     * Determine whether the user can create models.
+     */
+    public function create(User $user): bool
     {
-        return $user->id === $bid->user_id;
+        // TODO: Implement actual logic
+        return true;
     }
 
-    public function cancel(User $user, Order $order): bool
+    /**
+     * Determine whether the user can update the model.
+     */
+    public function update(User $user, Order $order): bool
     {
-        return $user->id === $order->buyer_id && $order->status === OrderStatus::Pending;
+        // TODO: Implement actual logic
+        return true;
+    }
+
+    /**
+     * Determine whether the user can delete the model.
+     */
+    public function delete(User $user, Order $order): bool
+    {
+        // TODO: Implement actual logic
+        return true;
+    }
+
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, Order $order): bool
+    {
+        // TODO: Implement actual logic
+        return true;
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, Order $order): bool
+    {
+        // TODO: Implement actual logic
+        return true;
     }
 }
