@@ -360,7 +360,7 @@ Frontend:
 
 ## 📦 PHASE 2: Order System & Execution (Week 3-4)
 
-### Milestone 2.1: Order System Foundation [0/16]
+### Milestone 2.1: Order System Foundation [16/16]
 
 #### Backend Tasks
 - [ ] Create `Order` model + migration in the `Orders` domain.
