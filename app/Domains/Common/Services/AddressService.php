@@ -7,9 +7,16 @@ use App\Domains\Users\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Collection;
+use App\Domains\Common\Interfaces\AddressProviderInterface; // Added
 
 class AddressService
 {
+    protected AddressProviderInterface $addressProvider; // Added
+
+    public function __construct(AddressProviderInterface $addressProvider) // Modified
+    {
+        $this->addressProvider = $addressProvider; // Added
+    }
     /**
      * Get all addresses for the currently authenticated user.
      *
@@ -38,28 +45,41 @@ class AddressService
         /** @var User $user */
         $user = Auth::user();
 
-        // Extract is_primary from data
         $isPrimary = isset($data['is_primary']) ? (bool) $data['is_primary'] : false;
-        
-        // Remove is_primary and id from address data since they're not address fields
-        // Don't filter empty strings as they might be intentional
-        $addressData = collect($data)
-            ->except(['is_primary', 'id'])
-            ->toArray();
+
+        // Prepare address data for creation/finding
+        $addressData = [
+            'full_address' => $data['full_address'],
+            'address_hash' => $this->generateAddressHash($data),
+            'api_source' => $data['api_source'] ?? null,
+            'api_id' => $data['api_id'] ?? null,
+            'lat' => $data['lat'] ?? null,
+            'lng' => $data['lng'] ?? null,
+        ];
 
         return DB::transaction(function () use ($user, $addressData, $isPrimary) {
+            // Find an existing address or create a new one
+            $address = Address::firstOrCreate(
+                ['address_hash' => $addressData['address_hash']],
+                $addressData
+            );
+
             // If the new address is primary, unset other primary addresses
             if ($isPrimary) {
                 $this->unsetAllPrimaryAddresses($user);
             }
 
-            // Create the address
-            $address = Address::create($addressData);
-
-            // Attach to user with pivot data
-            $user->addresses()->attach($address->id, [
-                'is_primary' => $isPrimary,
-            ]);
+            // Attach to user with pivot data, unless already attached
+            if (!$user->addresses->contains($address->id)) {
+                $user->addresses()->attach($address->id, [
+                    'is_primary' => $isPrimary,
+                ]);
+            } else {
+                // If already attached, just update the pivot (e.g., is_primary status)
+                $user->addresses()->updateExistingPivot($address->id, [
+                    'is_primary' => $isPrimary,
+                ]);
+            }
 
             return $address->fresh();
         });
@@ -78,33 +98,61 @@ class AddressService
         /** @var User $user */
         $user = Auth::user();
         
-        // Verify the address belongs to the user
-        $address = $user->addresses()->findOrFail($addressId);
+        // Find the current address to be updated and verify it belongs to the user
+        $currentAddress = $user->addresses()->findOrFail($addressId);
 
-        // Extract is_primary from data
         $isPrimary = isset($data['is_primary']) ? (bool) $data['is_primary'] : false;
-        
-        // Remove is_primary and id from address data since they're not address fields
-        $addressData = collect($data)
-            ->except(['is_primary', 'id', 'addressId'])
-            ->filter(fn($value) => $value !== null && $value !== '')
-            ->toArray();
 
-        return DB::transaction(function () use ($user, $address, $addressId, $addressData, $isPrimary) {
+        // Prepare address data for new/updated address
+        $newAddressData = [
+            'full_address' => $data['full_address'],
+            'address_hash' => $this->generateAddressHash($data),
+            'api_source' => $data['api_source'] ?? null,
+            'api_id' => $data['api_id'] ?? null,
+            'lat' => $data['lat'] ?? null,
+            'lng' => $data['lng'] ?? null,
+        ];
+
+        return DB::transaction(function () use ($user, $currentAddress, $newAddressData, $isPrimary) {
+            // Find or create the new address based on updated data
+            $newAddress = Address::firstOrCreate(
+                ['address_hash' => $newAddressData['address_hash']],
+                $newAddressData
+            );
+
+            // If the address hash has changed, it means the user is effectively updating to a different address record
+            if ($currentAddress->id !== $newAddress->id) {
+                // Detach the old address from the user
+                $user->addresses()->detach($currentAddress->id);
+
+                // Handle orphaned old address
+                $this->deleteOrphanedAddress($currentAddress->id);
+
+                // Attach the new address to the user, unless already attached
+                if (!$user->addresses->contains($newAddress->id)) {
+                    $user->addresses()->attach($newAddress->id, [
+                        'is_primary' => $isPrimary,
+                    ]);
+                } else {
+                    // If already attached, just update the pivot (e.g., is_primary status)
+                    $user->addresses()->updateExistingPivot($newAddress->id, [
+                        'is_primary' => $isPrimary,
+                    ]);
+                }
+            } else {
+                // If the address hash has not changed, just update the existing address's attributes and pivot
+                $newAddress->update($newAddressData);
+                $user->addresses()->updateExistingPivot($newAddress->id, [
+                    'is_primary' => $isPrimary,
+                ]);
+            }
+
             // If the address is being set as primary, unset others
             if ($isPrimary) {
                 $this->unsetAllPrimaryAddresses($user);
             }
 
-            // Update the address attributes
-            $address->update($addressData);
-
-            // Update the pivot table
-            $user->addresses()->updateExistingPivot($addressId, [
-                'is_primary' => $isPrimary,
-            ]);
-
-            return $address->fresh();
+            return $newAddress->fresh();
         });
     }
 
@@ -128,13 +176,7 @@ class AddressService
             $user->addresses()->detach($addressId);
 
             // Check if the address is now orphaned and delete it
-            $relatedUsersCount = DB::table('user_addresses')
-                ->where('address_id', $addressId)
-                ->count();
-                
-            if ($relatedUsersCount === 0) {
-                Address::destroy($addressId);
-            }
+            $this->deleteOrphanedAddress($addressId);
         });
     }
 
@@ -182,6 +224,52 @@ class AddressService
             $user->addresses()->updateExistingPivot($addressId, [
                 'is_primary' => false,
             ]);
+        }
+    }
+
+    /**
+     * Generates a consistent hash for an address.
+     *
+     * @param array $addressData
+     * @return string
+     */
+    private function generateAddressHash(array $addressData): string
+    {
+        // Ensure consistent order and content for hashing
+        // This hash should uniquely identify a physical address
+        // The more detailed the address components, the more unique the hash
+        $fullAddress = $addressData['full_address'] ?? '';
+        $lat = $addressData['lat'] ?? '';
+        $lng = $addressData['lng'] ?? '';
+        $apiSource = $addressData['api_source'] ?? '';
+        $apiId = $addressData['api_id'] ?? '';
+
+        $addressString = implode('|', [
+            strtolower(trim($fullAddress)),
+            strtolower(trim($apiSource)),
+            strtolower(trim($apiId)),
+            // Include lat/lng in hash if they are consistently provided and desired for uniqueness
+            // strtolower(trim((string)$lat)),
+            // strtolower(trim((string)$lng)),
+        ]);
+
+        return sha1($addressString);
+    }
+
+    /**
+     * Helper to delete orphaned addresses.
+     *
+     * @param int $addressId
+     * @return void
+     */
+    private function deleteOrphanedAddress(int $addressId): void
+    {
+        $relatedUsersCount = DB::table('user_addresses')
+            ->where('address_id', $addressId)
+            ->count();
+            
+        if ($relatedUsersCount === 0) {
+            Address::destroy($addressId);
         }
     }
 }

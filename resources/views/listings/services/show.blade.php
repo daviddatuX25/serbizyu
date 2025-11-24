@@ -1,145 +1,127 @@
 <x-app-layout :jsFiles="['app.js', 'swiper-listings.js']">
-    <div class="container mx-auto px-4 py-6 max-w-lg md:max-w-4xl">
-        <div class="bg-white rounded-2xl border border-gray-300 shadow-md overflow-hidden">
-            <!-- Header (Mobile Only) -->
-            <header class="flex justify-between items-center p-4 border-b md:hidden">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-            </header>
-
-            <!-- Image Carousel -->
-            <div class="relative h-48 md:h-80 bg-gray-200">
-                @if($service->media->isNotEmpty())
-                    <div class="swiper serviceSwiper h-full">
-                        <div class="swiper-wrapper">
-                            @foreach($service->media as $media)
-                                <div class="swiper-slide">
-                                    <img src="{{ $media->getUrl() }}" alt="{{ $service->title }}" 
-                                        class="w-full h-full object-cover">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="lg:grid lg:grid-cols-3 lg:gap-8 max-w-7xl mx-auto">
+            
+            {{-- Left Column: Image Gallery and Creator Info --}}
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <!-- Image Carousel -->
+                    <div class="relative h-64 md:h-96 bg-gray-200">
+                        @if($service->media->isNotEmpty())
+                            <div class="swiper serviceSwiper h-full">
+                                <div class="swiper-wrapper">
+                                    @foreach($service->media as $media)
+                                        <div class="swiper-slide bg-gray-100 flex items-center justify-center">
+                                            <img src="{{ $media->getUrl() }}" alt="{{ $service->title }}" 
+                                                class="w-full h-full object-contain">
+                                        </div>
+                                    @endforeach
                                 </div>
-                            @endforeach
-                        </div>
-                        <!-- Navigation arrows -->
-                        <div class="swiper-button-prev text-white"></div>
-                        <div class="swiper-button-next text-white"></div>
-                        <!-- Pagination -->
-                        <div class="swiper-pagination"></div>
-                    </div>
-                @else
-                    <div class="flex items-center justify-center h-full">
-                        <span class="text-gray-400 text-lg">No images available</span>
-                    </div>
-                @endif
-            </div>
-
-            <!-- Service Details -->
-            <div class="p-4 space-y-3">
-                <h2 class="text-2xl md:text-3xl font-bold text-gray-800">{{ $service->title }}</h2>
-                
-                <!-- Rating -->
-                <div class="flex items-center space-x-2">
-                    <span class="text-yellow-400 text-lg">★★★★★</span>
-                    <span class="text-sm text-gray-600">(0 reviews)</span>
-                </div>
-
-                <!-- Service Info -->
-                <div class="text-sm md:text-base text-gray-700 space-y-2">
-                    <p><strong>Rate:</strong> ${{ number_format($service->price, 2) }}/hr</p>
-                    <p><strong>Location:</strong> {{ $service->address->town }}, {{ $service->address->province }}</p>
-                    
-                    <!-- Workflow - Collapsible -->
-                    <div x-data="{ expanded: false }">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <strong>Schedule:</strong>
-                                <span x-show="!expanded" class="ml-1">
-                                    {{ $service->workflowTemplate->workTemplates->pluck('name')->implode(' > ') }}
-                                </span>
+                                <div class="swiper-button-prev text-white"></div>
+                                <div class="swiper-button-next text-white"></div>
+                                <div class="swiper-pagination"></div>
                             </div>
-                            @if($service->workflowTemplate->workTemplates->count() > 3)
-                                <button @click="expanded = !expanded" class="text-blue-600 text-xs ml-2 flex-shrink-0">
-                                    <span x-show="!expanded">Show more</span>
-                                    <span x-show="expanded" x-cloak>Show less</span>
-                                </button>
-                            @endif
-                        </div>
-                        
-                        <!-- Expanded list view -->
-                        <div x-show="expanded" x-cloak class="mt-2 space-y-1 pl-4">
-                            @foreach($service->workflowTemplate->workTemplates as $index => $step)
-                                <p class="text-sm">{{ $index + 1 }}. {{ $step->name }}</p>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Description -->
-                @if($service->description)
-                    <div class="pt-3 border-t">
-                        <h3 class="font-semibold text-gray-800 mb-2">About this service</h3>
-                        <p class="text-sm text-gray-600 leading-relaxed">{{ $service->description }}</p>
-                    </div>
-                @endif
-
-                <!-- Creator Info -->
-                <div class="pt-3 border-t">
-                    <h3 class="font-semibold text-gray-800 mb-3">Service by</h3>
-                    <div class="flex items-center space-x-3">
-                        <img src="{{ $service->creator->profile_photo_url }}" 
-                            alt="{{ $service->creator->name }}" 
-                            class="w-12 h-12 rounded-full">
-                        <div>
-                            <h4 class="font-semibold text-gray-800">{{ $service->creator->name }}</h4>
-                            <p class="text-xs text-gray-500">Member since {{ $service->creator->created_at->format('M Y') }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Reviews Section -->
-                <div class="pt-3 border-t">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Reviews</h3>
-                    <div class="space-y-3">
-                        <!-- Example review -->
-                        <div class="border rounded-lg p-3 bg-gray-50">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="font-semibold text-sm text-gray-800">David Datu Sarmiento</span>
-                                <span class="text-yellow-400 text-xs">★★★★★</span>
+                        @else
+                            <div class="flex items-center justify-center h-full">
+                                <span class="text-gray-400 text-lg">No images available</span>
                             </div>
-                            <p class="text-sm text-gray-600">
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Description & Details (Desktop) -->
+                <div class="bg-white rounded-lg shadow-md p-6 space-y-6">
+                    <div>
+                        <h3 class="font-bold text-xl text-gray-800 mb-3">About this service</h3>
+                        <p class="text-gray-600 leading-relaxed">{{ $service->description ?? 'No description provided.' }}</p>
+                    </div>
+
+                     <!-- Workflow -->
+                    @include('listings.partials.workflow-steps', ['workflowTemplate' => $service->workflowTemplate])
+
+                    <!-- Creator Info -->
+                    <div class="pt-4 border-t">
+                        <h3 class="font-bold text-xl text-gray-800 mb-4">About the provider</h3>
+                        <div class="flex items-center space-x-4">
+                            <img src="{{ $service->creator->profile_photo_url }}" 
+                                alt="{{ $service->creator->name }}" 
+                                class="w-16 h-16 rounded-full">
+                            <div>
+                                <h4 class="font-semibold text-lg text-gray-900">{{ $service->creator->name }}</h4>
+                                <p class="text-sm text-gray-500">Member since {{ $service->creator->created_at->format('M Y') }}</p>
+                                {{-- Add rating here if available --}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                 <!-- Reviews Section -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Reviews</h3>
+                    <div class="space-y-4">
+                        {{-- Example review --}}
+                        <div class="border-b pb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center">
+                                    <img src="https://i.pravatar.cc/150?u=david" alt="David" class="w-8 h-8 rounded-full mr-3">
+                                    <span class="font-semibold text-sm text-gray-800">David Datu Sarmiento</span>
+                                </div>
+                                <div class="flex items-center space-x-1 text-yellow-400">
+                                    @for ($i = 0; $i < 5; $i++)
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                    @endfor
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-600 pl-11">
                                 I found that transacting with serbisyo makes my work easier
                             </p>
                         </div>
                         
-                        <!-- No reviews state -->
-                        <p class="text-sm text-gray-500 text-center py-4">No reviews yet. Be the first to review!</p>
+                        {{-- No reviews state --}}
+                        <p class="text-sm text-gray-500 text-center py-6">No reviews yet for this service.</p>
                     </div>
                 </div>
             </div>
 
-            {{-- change this actions if its the owner --}}
-            
-            <!-- Footer Actions -->
-            <footer class="flex flex-col sm:flex-row justify-between items-center gap-3 p-4 border-t bg-gray-50">
-                @can('update', $service)
-                    <a href="{{ route('creator.services.manage', $service) }}" class="w-full sm:w-auto text-blue-600 font-medium hover:text-blue-700 transition order-2 sm:order-1">
-                        Go to Manage
-                    </a>
-                @else
-                    <button type="button" 
-                        class="w-full sm:w-auto text-blue-600 font-medium hover:text-blue-700 transition order-2 sm:order-1">
-                        Add to wishlist
-                    </button>
-                    <button type="button" 
-                        class="w-full sm:w-auto bg-blue-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-blue-700 transition shadow-md order-1 sm:order-2">
-                        Proceed to Order
-                    </button>
-                @endcan
-              
-            </footer>
+            {{-- Right Column: Action Card --}}
+            <div class="lg:col-span-1">
+                <div class="sticky top-20 bg-white rounded-lg shadow-lg border">
+                    <div class="p-6">
+                        <h2 class="text-2xl font-bold text-gray-800">{{ $service->title }}</h2>
+                        <div class="flex items-center space-x-2 mt-2">
+                            <span class="text-yellow-400 flex items-center">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <span class="ml-1 text-sm font-medium">5.0</span>
+                            </span>
+                            <span class="text-sm text-gray-500">(0 reviews)</span>
+                        </div>
+                    </div>
+                    <div class="px-6 pb-6 border-t">
+                        <div class="flex justify-between items-baseline mt-4">
+                            <span class="text-gray-600 font-medium">Service Rate</span>
+                            <span class="text-2xl font-bold text-gray-900">₱{{ number_format($service->price, 2) }}</span>
+                        </div>
+                        <div class="mt-1 text-sm text-gray-500 text-right">
+                            Location: {{ $service->address->town }}
+                        </div>
+
+                         @can('update', $service)
+                            <a href="{{ route('creator.services.manage', $service) }}" class="mt-6 block w-full text-center bg-gray-200 text-gray-800 rounded-lg px-6 py-3 font-semibold hover:bg-gray-300 transition">
+                                Go to Manage
+                            </a>
+                        @else
+                            <button type="button" 
+                                class="mt-6 w-full bg-green-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-green-700 transition shadow-md">
+                                Proceed to Order
+                            </button>
+                            <button type="button" 
+                                class="mt-2 w-full text-center text-gray-600 font-medium hover:text-green-700 transition">
+                                Add to wishlist
+                            </button>
+                        @endcan
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </x-app-layout>

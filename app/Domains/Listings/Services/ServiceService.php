@@ -3,48 +3,39 @@
 namespace App\Domains\Listings\Services;
 
 use App\Domains\Listings\Models\Service;
-use App\Exceptions\ResourceNotFoundException;
-use App\Domains\Users\Services\UserService;
-use App\Domains\Listings\Services\CategoryService;
-use App\Domains\Listings\Services\WorkflowTemplateService;
-use App\Domains\Common\Services\AddressService;
-use Barryvdh\Debugbar\Facades\Debugbar;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Http\UploadedFile;
+use App\Config\MediaConfig;
 use Plank\Mediable\MediaUploader;
-use Illuminate\Database\Eloquent\Collection;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use Symfony\Component\ErrorHandler\Debug;
+use Illuminate\Support\Facades\Log;
 
 class ServiceService
 {
-    public function __construct(
-        private UserService $userService,
-        private CategoryService $categoryService,
-        private WorkflowTemplateService $workflowTemplateService,
-        private AddressService $addressService
-    ) {}
+    protected MediaConfig $mediaConfig;
+    protected MediaUploader $mediaUploader;
+
+    public function __construct()
+    {
+        $this->mediaConfig = new MediaConfig();
+        $this->mediaUploader = app(MediaUploader::class);
+    }
 
     /**
      * Create a new service with optional images
-     */
-   /**
-     * Create a new service with optional uploaded images
      */
     public function createService(array $data, array $uploadedFiles = []): Service
     {
         Log::info('Creating service', ['data_keys' => array_keys($data)]);
 
-        // Remove any image removal keys
+        // Remove media-related keys from service data
         $serviceData = collect($data)->except(['images_to_remove'])->toArray();
 
         // Create service
         $service = Service::create($serviceData);
 
-        // Handle uploads
-        $this->handleUploadedFiles($service, $uploadedFiles);
+        // Handle uploads - uses MediaConfig for validation
+        $this->handleUploadedFiles($service, $uploadedFiles, [], 'gallery');
 
-        return $service->loadMedia('gallery');
+        return $service->load('media');
     }
 
     /**
@@ -52,63 +43,119 @@ class ServiceService
      */
     public function updateService(Service $service, array $data, array $uploadedFiles = []): Service
     {
-        // Update service info
-        $service->update(collect($data)->except(['images_to_remove'])->toArray());
+        // Update service info (NOT media)
+        $serviceData = collect($data)->except(['images_to_remove'])->toArray();
+        $service->update($serviceData);
 
-        // Remove images if requested
-        if (!empty($data['images_to_remove'])) {
-            foreach ($data['images_to_remove'] as $mediaId) {
+        // Extract images to remove list
+        $imagesToRemove = $data['images_to_remove'] ?? [];
+
+        // Handle media: removes only explicitly requested, adds new, keeps rest
+        $this->handleUploadedFiles($service, $uploadedFiles, $imagesToRemove, 'gallery');
+
+        return $service->load('media');
+    }
+
+    /**
+     * Handle media uploads using MediaConfig
+     * 
+     * @param Service $service The service model
+     * @param array $files Newly uploaded files
+     * @param array $imagesToRemove Media IDs to detach
+     * @param string $tag Media tag (e.g., 'gallery')
+     */
+    protected function handleUploadedFiles(
+        Service $service,
+        array $files,
+        array $imagesToRemove = [],
+        string $tag = 'gallery'
+    ): void {
+        // STEP 1: Remove only explicitly requested media
+        if (!empty($imagesToRemove)) {
+            foreach ($imagesToRemove as $mediaId) {
                 try {
                     $service->detachMedia($mediaId);
-                    Log::info("Detached media ID: $mediaId");
+                    Log::info("Detached media ID: $mediaId from service {$service->id}");
                 } catch (\Exception $e) {
                     Log::warning('Failed to detach media: ' . $e->getMessage());
                 }
             }
         }
 
-        // Handle newly uploaded files
-        $this->handleUploadedFiles($service, $uploadedFiles);
-
-        return $service->loadMedia('gallery');
-    }
-
-    protected function handleUploadedFiles(Service $service, array $files): void
-    {
-        Debugbar::info('handleUploadedFiles called', ['files_count' => count($files)]);
-
-        $uploader = app(MediaUploader::class);
+        // STEP 2: Upload and attach NEW files
+        if (empty($files)) {
+            return;
+        }
 
         foreach ($files as $file) {
-            Debugbar::info('Processing file', ['file' => $file]);
+            if (!$file instanceof TemporaryUploadedFile) {
+                continue;
+            }
 
-            if ($file instanceof TemporaryUploadedFile) {
-                try {
-                    // Use getRealPath() directly - it's already stored by Livewire
-                    $sourcePath = $file->getRealPath();
-                    
-                    Debugbar::info('Source path', ['path' => $sourcePath, 'exists' => file_exists($sourcePath)]);
+            try {
+                // Detect media type from file
+                $mediaType = $this->detectMediaType($file);
 
-                    $media = $uploader->fromSource($sourcePath)
-                        ->toDestination('public', 'services')
-                        ->upload();
+                // Get limit from MediaConfig
+                $maxSizeKb = $this->mediaConfig->getUploadLimit($mediaType);
+                $fileSizeKb = $file->getSize() / 1024;
 
-                    $service->attachMedia($media, 'gallery');
-
-                    Debugbar::info('Attached media', ['media_id' => $media->id]);
-
-                } catch (\Exception $e) {
-                    Debugbar::error('Failed to upload media: ' . $e->getMessage());
-                    Log::error('Media upload failed', [
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
+                // Validate against MediaConfig limits
+                if ($fileSizeKb > $maxSizeKb) {
+                    Log::warning("File exceeds MediaConfig limit", [
+                        'filename' => $file->getClientOriginalName(),
+                        'size_kb' => $fileSizeKb,
+                        'limit_kb' => $maxSizeKb,
+                        'type' => $mediaType,
                     ]);
+                    continue;
                 }
-            } else {
-                Debugbar::warning('Skipped invalid file', ['file' => $file]);
+
+                $sourcePath = $file->getRealPath();
+
+                // Upload using MediaConfig destination
+                $destination = $this->mediaConfig->getDestination($mediaType);
+                
+                $media = $this->mediaUploader->fromSource($sourcePath)
+                    ->toDestination('public', $destination)
+                    ->upload();
+
+                // Attach to service - preserves existing media
+                $service->attachMedia($media, $tag);
+
+                Log::info('Attached new media', [
+                    'media_id' => $media->id,
+                    'service_id' => $service->id,
+                    'type' => $mediaType,
+                    'destination' => $destination,
+                ]);
+
+            } catch (\Exception $e) {
+                Log::error('Media upload failed: ' . $e->getMessage(), [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
             }
         }
-}
+    }
+
+    /**
+     * Detect media type from uploaded file
+     * Uses MIME type to determine category
+     */
+    private function detectMediaType(TemporaryUploadedFile $file): string
+    {
+        $mimeType = $file->getMimeType();
+
+        return match (true) {
+            str_starts_with($mimeType, 'image/') => 'images',
+            str_starts_with($mimeType, 'video/') => 'videos',
+            str_starts_with($mimeType, 'audio/') => 'audio',
+            str_contains($mimeType, 'pdf') => 'documents',
+            str_contains($mimeType, 'word') || str_contains($mimeType, 'document') => 'documents',
+            default => 'documents',
+        };
+    }
 
     /**
      * Delete a service
@@ -126,11 +173,11 @@ class ServiceService
         $service = Service::with(['creator', 'category', 'workflowTemplate', 'address', 'media'])->find($id);
 
         if (!$service) {
-            throw new ResourceNotFoundException('Service does not exist.');
+            throw new \App\Exceptions\ResourceNotFoundException('Service does not exist.');
         }
 
         if ($service->trashed()) {
-            throw new ResourceNotFoundException('Service has been deleted.');
+            throw new \App\Exceptions\ResourceNotFoundException('Service has been deleted.');
         }
 
         return $service;
@@ -139,16 +186,16 @@ class ServiceService
     /**
      * Retrieve all services
      */
-    public function getAllServices(): Collection
+    public function getAllServices()
     {
         $services = Service::withMedia()->get();
 
         if ($services->isEmpty()) {
-            throw new ResourceNotFoundException('No services found.');
+            throw new \App\Exceptions\ResourceNotFoundException('No services found.');
         }
 
         if ($services->every->trashed()) {
-            throw new ResourceNotFoundException('Services have all been deleted.');
+            throw new \App\Exceptions\ResourceNotFoundException('Services have all been deleted.');
         }
 
         return $services;
@@ -220,7 +267,7 @@ class ServiceService
      */
     public function getFilteredServices(array $filters = [])
     {
-        $query = Service::with(['creator.media', 'address', 'media']);
+        $query = Service::with(['creator.verification', 'creator.media', 'address', 'media']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -233,6 +280,13 @@ class ServiceService
         if (!empty($filters['category'])) {
             $query->where('category_id', $filters['category']);
         }
+        
+        if (!empty($filters['location_code'])) {
+            $locationCode = $filters['location_code'];
+            $query->whereHas('address', function ($q) use ($locationCode) {
+                $q->where('api_id', 'like', "{$locationCode}%");
+            });
+        }
 
         $sortable = ['created_at', 'price', 'title'];
         $sortBy = $filters['sort_by'] ?? 'created_at';
@@ -243,27 +297,5 @@ class ServiceService
         }
 
         return $query->get();
-    }
-
-    /**
-     * Helper: upload a single file to the service gallery
-     */
-    private function handleFileUpload(Service $service, $file): void
-    {
-        if ($file instanceof UploadedFile && $file->isValid()) {
-            try {
-                $uploader = app(MediaUploader::class); 
-                $media = $uploader->fromSource($file->getRealPath())
-                    ->toDestination('media', 'services')
-                    ->upload();
-
-                $service->attachMedia($media, 'gallery');
-                Log::info('Attached media: ' . $file->getClientOriginalName());
-            } catch (\Exception $e) {
-                Log::error('Failed to upload media: ' . $e->getMessage());
-            }
-        } else {
-            Log::warning('Invalid file skipped', ['file' => $file]);
-        }
     }
 }

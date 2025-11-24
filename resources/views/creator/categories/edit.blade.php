@@ -45,4 +45,4 @@
             </form>
         </div>
     </div>
-</x-app-layout>
+</x-creator-layout>

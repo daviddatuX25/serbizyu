@@ -3,6 +3,7 @@
 namespace App\Domains\Listings\Services;
 
 use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Users\Models\User;
 use App\Exceptions\ResourceNotFoundException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -22,7 +23,6 @@ class WorkflowTemplateService
     public function getWorkflowTemplatesByCreator(int $creatorId, array $filters = []): Collection
     {
         $query = WorkflowTemplate::where('creator_id', $creatorId)
-            ->orWhere('is_public', true)
             ->orderBy('name');
 
         if (isset($filters['search'])) {
@@ -30,6 +30,29 @@ class WorkflowTemplateService
         }
 
         return $query->get();
+    }
+
+    /**
+     * Get all workflow templates available to a user, including their own and bookmarked ones.
+     *
+     * @param User $user
+     * @return Collection<int, WorkflowTemplate>
+     */
+    public function getAvailableWorkflowTemplatesForUser(User $user): Collection
+    {
+        // Get templates created by the user
+        $myTemplates = $this->getWorkflowTemplatesByCreator($user->id);
+
+        // Get bookmarked templates for the user
+        // Use an instance of WorkflowBookmarkService, or inject it if this service grows
+        $workflowBookmarkService = app(WorkflowBookmarkService::class);
+        $bookmarkedTemplates = $workflowBookmarkService->getBookmarkedWorkflowsForUser($user);
+
+        // Merge and ensure uniqueness (in case a user bookmarks their own template, though design should prevent this)
+        $allTemplates = $myTemplates->merge($bookmarkedTemplates)->unique('id');
+
+        // Eager load workTemplates for all merged templates
+        return $allTemplates->load('workTemplates');
     }
 
     public function createWorkflowTemplate(array $data): WorkflowTemplate

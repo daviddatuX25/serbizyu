@@ -7,10 +7,12 @@ use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as Admin
 use App\Domains\Listings\Http\Controllers\CategoryController;
 use App\Domains\Common\Http\Controllers\MediaServeController;
 use App\Domains\Listings\Http\Controllers\ListingController;
-use App\Domains\Listings\Http\Controllers\WorkCatalogController;
 use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
-use App\Domains\Listings\Http\Controllers\WorkTemplateController;
 use App\Domains\Listings\Http\Controllers\OpenOfferController;
+use App\Domains\Listings\Http\Controllers\OpenOfferBidController;
+use App\Domains\Work\Http\Controllers\WorkInstanceController;
+// use public workflows
+use App\Domains\Listings\Http\Controllers\PublicWorkflowController;
 
 // Authentication routes
 require __DIR__.'/auth.php';
@@ -37,10 +39,16 @@ require __DIR__.'/auth.php';
 // Public-facing service page
 Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
 
+// Public-facing open offer page
+Route::get('/openoffers/{openoffer}', [OpenOfferController::class, 'show'])->name('openoffers.show');
+
+// Public Workflow Browsing
+Route::get('/workflows', [PublicWorkflowController::class, 'index'])->name('workflows');
+
 // Creator space
 Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
     Route::get('/', function () {
-        return view('dashboard');
+        return view('creator.dashboard');
     })->name('dashboard');
 
     // Service Management
@@ -50,6 +58,20 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     // Category Management
     Route::resource('categories', CategoryController::class);
 
+    // Open Offer Management
+    Route::resource('openoffers', OpenOfferController::class)->except(['show']);
+    Route::post('openoffers/{openoffer}/close', [OpenOfferController::class, 'close'])->name('openoffers.close');
+    Route::post('openoffers/{openoffer}/renew', [OpenOfferController::class, 'renew'])->name('openoffers.renew');
+
+    // Bidding Management for Open Offer Owners
+    Route::prefix('openoffers/{openoffer}')->name('openoffers.')->group(function () {
+        Route::resource('bids', OpenOfferBidController::class)->only([
+            'index', 'store', 'edit', 'update', 'destroy'
+        ]);
+        Route::post('bids/{bid}/accept', [OpenOfferBidController::class, 'accept'])->name('bids.accept');
+        Route::post('bids/{bid}/reject', [OpenOfferBidController::class, 'reject'])->name('bids.reject');
+    });
+
     // Workflow Management
     Route::get('workflows', [WorkflowTemplateController::class, 'index'])->name('workflows.index');
     Route::get('workflows/create', [WorkflowTemplateController::class, 'create'])->name('workflows.create');
@@ -57,6 +79,16 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     Route::patch('workflows/{workflow}', [WorkflowTemplateController::class, 'update'])->name('workflows.update');
     Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
     Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
+
+    // Seller Work Dashboard
+    Route::get('/work-dashboard', [WorkInstanceController::class, 'index'])->name('work-dashboard');
+});
+
+// Authenticated user actions (e.g., bookmarking)
+Route::middleware(['auth'])->group(function () {
+    // Workflow Bookmarking
+    Route::post('/workflows/{workflowTemplate}/bookmark', [PublicWorkflowController::class, 'bookmark'])->name('workflows.bookmark');
+    Route::delete('/workflows/{workflowTemplate}/bookmark', [PublicWorkflowController::class, 'unbookmark'])->name('workflows.unbookmark');
 });
 
 // User Verification

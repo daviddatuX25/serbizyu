@@ -4,14 +4,17 @@ namespace App\Domains\Listings\Http\Controllers;
 
 use App\Domains\Listings\Models\WorkflowTemplate;
 use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Domains\Listings\Services\CategoryService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class WorkflowTemplateController extends Controller
 {
-    public function __construct(private readonly WorkflowTemplateService $workflowTemplateService)
-    {
+    public function __construct(
+        private readonly WorkflowTemplateService $workflowTemplateService,
+        private readonly CategoryService $categoryService
+    ) {
     }
 
     /**
@@ -19,8 +22,7 @@ class WorkflowTemplateController extends Controller
      */
     public function index()
     {
-        $workflowTemplates = $this->workflowTemplateService->getWorkflowTemplatesByCreator(Auth::id());
-        return view('creator.workflows.index', compact('workflowTemplates'));
+        return view('creator.workflows.index');
     }
 
     /**
@@ -29,18 +31,19 @@ class WorkflowTemplateController extends Controller
      */
     public function create()
     {
-        // Create a NEW unsaved model instance
         $workflowTemplate = new WorkflowTemplate([
             'name' => 'Untitled Workflow',
             'description' => '',
             'creator_id' => Auth::id(),
             'is_public' => false,
         ]);
-
-        // IMPORTANT: Model exists in memory but NOT in database
-        // $workflowTemplate->exists === false
         
-        return view('creator.workflows.builder', ['workflowTemplate' => $workflowTemplate]);
+        $categories = $this->categoryService->listAllCategories();
+
+        return view('creator.workflows.builder', [
+            'workflowTemplate' => $workflowTemplate,
+            'categories' => $categories,
+        ]);
     }
 
     /**
@@ -48,8 +51,14 @@ class WorkflowTemplateController extends Controller
      */
     public function edit(WorkflowTemplate $workflow)
     {
-        $this->authorize('update', $workflow);   
-        return view('creator.workflows.builder', ['workflowTemplate' => $workflow]);
+        $this->authorize('update', $workflow);
+        
+        $categories = $this->categoryService->listAllCategories();
+
+        return view('creator.workflows.builder', [
+            'workflowTemplate' => $workflow,
+            'categories' => $categories,
+        ]);
     }
 
     /**

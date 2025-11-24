@@ -10,12 +10,10 @@ class Address extends Model
     use HasFactory;
 
     protected $fillable = [
-        'house_no',
-        'street',
-        'barangay',
-        'town',
-        'province',
-        'country',
+        'full_address',
+        'address_hash',
+        'api_source',
+        'api_id',
         'lat',
         'lng',
     ];

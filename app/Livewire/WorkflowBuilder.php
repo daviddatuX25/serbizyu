@@ -19,6 +19,7 @@ class WorkflowBuilder extends Component
     use AuthorizesRequests;
 
     public WorkflowTemplate $workflowTemplate;
+    public Collection $categories;
     
     /**
      * Define the context: 'page' (default) or 'modal'.
@@ -44,9 +45,10 @@ class WorkflowBuilder extends Component
     public $hasSavedChanges = false;
     private $tempIdCounter = -1; // Negative IDs for new items
 
-    public function mount(WorkflowTemplate $workflowTemplate)
+    public function mount(WorkflowTemplate $workflowTemplate, Collection $categories)
     {
         $this->workflowTemplate = $workflowTemplate;
+        $this->categories = $categories;
         
         // Load existing steps into memory
         $this->workTemplates = $workflowTemplate->workTemplates()
@@ -69,6 +71,7 @@ class WorkflowBuilder extends Component
         $this->name = $workflowTemplate->name ?? '';
         $this->description = $workflowTemplate->description ?? '';
         $this->is_public = $workflowTemplate->is_public ?? false;
+        $this->workflowTemplate->category_id = $workflowTemplate->category_id ?? null;
         $this->hasSavedChanges = true;
     }
 
@@ -170,7 +173,8 @@ class WorkflowBuilder extends Component
             'name' => $this->name,
             'description' => $this->description ?: null,
             'is_public' => $this->is_public,
-            'creator_id' => auth()->id(), // You may need to add this!
+            'category_id' => $this->workflowTemplate->category_id,
+            'creator_id' => auth()->id(),
         ];
 
         if ($isCreating) {

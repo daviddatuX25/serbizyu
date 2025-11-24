@@ -12,8 +12,10 @@ use App\Domains\Common\Models\UserAddress;
 use Plank\Mediable\Mediable;
 use Plank\Mediable\MediableInterface;
 use Plank\Mediable\Media;
-
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Domains\Common\Models\Image;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class User extends Authenticatable implements MustVerifyEmail, MediableInterface
 {
@@ -94,4 +96,38 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
         return $this->hasOne(UserVerification::class);
     }
 
+    public function openOffers()
+    {
+        return $this->hasMany(\App\Domains\Listings\Models\OpenOffer::class, 'creator_id');
+    }
+
+    public function services()
+    {
+        return $this->hasMany(\App\Domains\Listings\Models\Service::class, 'creator_id');
+    }
+
+    public function bids()
+    {
+        return $this->hasMany(\App\Domains\Listings\Models\OpenOfferBid::class, 'bidder_id');
+    }
+
+    /**
+     * Get the bookmarked workflow templates for the user.
+     */
+    public function bookmarkedWorkflows(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            WorkflowTemplate::class,
+            UserBookmarkedWorkflowTemplate::class,
+            'user_id',
+            'id',
+            'id',
+            'workflow_template_id'
+        );
+    }
+    
+    public function orders()
+    {
+        return $this->hasMany(\App\Domains\Orders\Models\Order::class, 'buyer_id');
+    }
 }

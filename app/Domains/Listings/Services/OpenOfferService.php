@@ -1,130 +1,113 @@
 <?php
+
 namespace App\Domains\Listings\Services;
 
 use App\Domains\Listings\Models\OpenOffer;
-use App\Domains\Listings\Services\WorkflowTemplateService;
-use App\Domains\Listings\Services\CategoryService;
-use App\Domains\Users\Services\UserService;
-use App\Domains\Common\Services\AddressService;
-
-use App\Exceptions\AuthorizationException;
-use App\Exceptions\BusinessRuleException;
-use App\Exceptions\ResourceNotFoundException;
-use Illuminate\Database\Eloquent\Collection;
+use App\Domains\Users\Models\User;
+use Illuminate\Support\Facades\DB;
+use Plank\Mediable\MediaUploader;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use App\Enums\OpenOfferStatus;
 
 class OpenOfferService
 {
-
-    public function __construct(
-        private UserService $userService,
-        private CategoryService $categoryService,
-        private WorkflowTemplateService $workflowTemplateService
-    ){}
-
-
-        /**
-         * Creates a new OpenOffer.
-         *
-         * @param array $data The data to be used when creating the OpenOffer.
-         * @return OpenOffer The newly created OpenOffer.
-         * @throws BusinessRuleException If the price is less than or equal to 0.
-         * @throws AuthorizationException If the workflow does not belong to the creator or the user is not a creator.
-         * @throws ResourceNotFoundException If the category or workflow template does not exist or has been deleted.
-         */
-    // public function createOpenOffer($data): OpenOffer
-    // {
-    //     if ($data['price'] <= 0) {
-    //         throw new BusinessRuleException('Price must be greater than 0.');
-    //     }
-
-    //     $this->categoryService->getCategory($data['category_id']);
-        
-    //     if (!empty($data['workflow_template_id'])) {
-    //         $workflow = $this->workflowTemplateService->getWorkflowTemplate($data['workflow_template_id']);            
-
-    //         if (!$workflow->is_public && $workflow->creator_id != $data['creator_id']) 
-    //         {
-    //             throw new AuthorizationException('Workflow does not belong to creator.');
-    //         }
-    //     }
-
-    //     // set address if not set then get fro mthe address of the user
-    //     $creator = $this->userService->getUser($data['creator_id']);
-    //     if ($creator == null) {
-    //         throw new ResourceNotFoundException('Creator does not exist.');
-    //     }
-    //     if ($creator->trashed()) {
-    //         throw new ResourceNotFoundException('Creator has been deleted.');
-    //     }
-
-    //     if ($data['address_id']) {
-    //         $address = app(AddressService::class)->getAddress($data['address_id']);
-    //         if ($address == null) {
-    //             throw new ResourceNotFoundException('Address does not exist.');
-    //         }
-    //     } else {
-    //         $address = $creator->addresses()->where('is_primary', true)->first();
-    //         if ($address == null) {
-    //             throw new ResourceNotFoundException('Creator does not have a primary address.');
-    //         }
-    //         $data['address_id'] = $address->id;
-    //     }
-
-    //     return OpenOffer::create($data);
-    // }
-
-    /**
-     * Retrieves an OpenOffer by its ID.
-     *
-     * @param int $id The ID of the OpenOffer to retrieve.
-     * @return OpenOffer The retrieved OpenOffer.
-     * @throws ResourceNotFoundException If the OpenOffer does not exist or has been deleted.
-     */
-    public function getOpenOffer($id): OpenOffer
+    public function createOpenOffer(User $user, array $data, array $uploadedFiles = []): OpenOffer
     {
-        // get an open offer
-        $openOffer = OpenOffer::find($id)->with('creator', 'category', 'workflowTemplate.workTemplates', 'address', 'images');
-        if ($openOffer == null) {
-            throw new ResourceNotFoundException('Open Offer does not exist.');
-        }
-        
-        if ($openOffer->trashed()) {
-            throw new ResourceNotFoundException('Open Offer has been deleted.');
-        }
+        $openOffer = $user->openOffers()->create([
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'budget' => $data['budget'],
+            'category_id' => $data['category_id'],
+            'deadline' => $data['deadline'] ?? null,
+            'workflow_template_id' => $data['workflow_template_id'] ?? null,
+            'pay_first' => $data['pay_first'] ?? false,
+            'address_id' => $data['address_id'] ?? null,
+        ]);
+
+        $this->handleUploadedFiles($openOffer, $uploadedFiles);
 
         return $openOffer;
     }
 
-
-/**
- * Retrieves all OpenOffers.
- *
- * @return Collection A collection of all OpenOffers.
- * @throws ResourceNotFoundException If no openOffers are found or if all openOffers have been deleted.
- */
-    public function getAllOpenOffers(): Collection
+    public function updateOpenOffer(OpenOffer $openOffer, array $data, array $uploadedFiles = []): OpenOffer
     {
-        $openOffers = OpenOffer::with('creator', 'category', 'workflowTemplate.workTemplates', 'address')->get();
+        $openOffer->update([
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'budget' => $data['budget'],
+            'category_id' => $data['category_id'],
+            'deadline' => $data['deadline'] ?? null,
+            'workflow_template_id' => $data['workflow_template_id'] ?? null,
+            'pay_first' => $data['pay_first'] ?? false,
+            'address_id' => $data['address_id'] ?? null,
+        ]);
 
-        if ($openOffers->isEmpty()) {
-            throw new ResourceNotFoundException('No openOffers found.');
+        // Handle images to remove
+        if (isset($data['images_to_remove']) && !empty($data['images_to_remove'])) {
+            $openOffer->media()->whereIn('id', $data['images_to_remove'])->delete();
         }
 
-        if ($openOffers->every->trashed()) {
-            throw new ResourceNotFoundException('Open offers have all been deleted.');
-        }
+        $this->handleUploadedFiles($openOffer, $uploadedFiles);
 
-        $openOffers->each(function ($offer) {
-            $offer->thumbnail = $offer->getMedia('thumbnail')->first();
+        return $openOffer;
+    }
+
+    protected function handleUploadedFiles(OpenOffer $openOffer, array $files): void
+    {
+        $mediaUploader = app(MediaUploader::class);
+
+        foreach ($files as $file) {
+            if ($file instanceof TemporaryUploadedFile) {
+                try {
+                    $sourcePath = $file->getRealPath();
+
+                    $media = $mediaUploader->fromSource($sourcePath)
+                        ->toDestination('public', 'open-offers')
+                        ->upload();
+
+                    $openOffer->attachMedia($media, 'images');
+                } catch (\Exception $e) {
+                    // Log error but continue
+                    \Log::error('Failed to upload media for open offer: ' . $e->getMessage());
+                }
+            }
+        }
+    }
+
+    public function deleteOpenOffer(OpenOffer $openOffer): void
+    {
+        DB::transaction(function () use ($openOffer) {
+            $openOffer->detachMedia('images');
+            $openOffer->delete();
         });
+    }
 
-        return $openOffers;
-}
+    public function closeOpenOffer(OpenOffer $openOffer): OpenOffer
+    {
+        $openOffer->update(['status' => OpenOfferStatus::CLOSED]);
+        return $openOffer;
+    }
 
+    public function renewOpenOffer(OpenOffer $openOffer): OpenOffer
+    {
+        $maxDays = config('listings.open_offer_max_days', 30);
+        $newDeadline = now()->addDays($maxDays);
 
+        $openOffer->update([
+            'status' => OpenOfferStatus::OPEN,
+            'deadline' => $newDeadline,
+        ]);
+
+        return $openOffer;
+    }
+
+    /**
+     * Get filtered open offers (collection)
+     */
     public function getFilteredOffers(array $filters = [])
     {
-        $query = OpenOffer::with(['creator.media', 'address', 'media']);
+        $query = OpenOffer::whereHas('creator')->with(['creator.verification', 'creator.media', 'address', 'media', 'bids']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -138,7 +121,14 @@ class OpenOfferService
             $query->where('category_id', $filters['category']);
         }
 
-        $sortable = ['created_at', 'budget', 'title'];
+        if (!empty($filters['location_code'])) {
+            $locationCode = $filters['location_code'];
+            $query->whereHas('address', function ($q) use ($locationCode) {
+                $q->where('api_id', 'like', "{$locationCode}%");
+            });
+        }
+
+        $sortable = ['created_at', 'budget_from', 'budget_to', 'title'];
         $sortBy = $filters['sort_by'] ?? 'created_at';
         $sortDir = $filters['sort_direction'] ?? 'desc';
 
@@ -146,126 +136,6 @@ class OpenOfferService
             $query->orderBy($sortBy, $sortDir);
         }
 
-        return $query->get(); // return collection, pagination handled in controller
-    }
-
-
-
-
-    public function getAllOpenOffersFiltered(array $filters = [])
-    {
-        $query = OpenOffer::with('creator', 'category', 'address', 'thumbnail');
-
-        // Apply search filter
-        if (!empty($filters['search'])) {
-            $searchTerm = $filters['search'];
-            $query->where(function ($q) use ($searchTerm) {
-                $q->where('title', 'like', "%{$searchTerm}%")
-                    ->orWhere('description', 'like', "%{$searchTerm}%");
-            });
-        }
-
-        // Apply category filter
-        if (!empty($filters['category'])) {
-            $query->where('category_id', $filters['category']);
-        }
-
-        // Apply sorting
-        $sortBy = $filters['sort_by'] ?? 'created_at';
-        $sortDirection = $filters['sort_direction'] ?? 'desc';
-
-        // Validate sort_by to prevent arbitrary column sorting
-        $sortableColumns = ['created_at', 'price', 'title'];
-        if (in_array($sortBy, $sortableColumns)) {
-            $query->orderBy($sortBy, $sortDirection);
-        }
-
         return $query->get();
     }
-
-    public function createOpenOffer(array $data, MediaUploader $uploader): OpenOffer
-    {
-        return DB::transaction(function () use ($data, $uploader) {
-
-            // Step 1 — Create the offer record
-            $offer = OpenOffer::create([
-                'title' => $data['title'],
-                'description' => $data['description'] ?? null,
-                'budget' => $data['budget'],
-                'category_id' => $data['category_id'],
-                'workflow_template_id' => $data['workflow_template_id'] ?? null,
-                'pay_first' => $data['pay_first'] ?? false,
-                'address_id' => $data['address_id'] ?? null,
-                'creator_id' => $data['creator_id'],
-            ]);
-
-            // Step 2 — Handle newly uploaded images from FormWithMedia
-            if (!empty($data['newFiles'])) {
-                $this->attachMedia($offer, $data['newFiles'], $uploader);
-            }
-
-            return $offer;
-        });
-    }
-
-    public function updateOpenOffer(OpenOffer $offer, array $data, MediaUploader $uploader): OpenOffer
-    {
-        return DB::transaction(function () use ($offer, $data, $uploader) {
-
-            // Step 1 — Update attributes
-            $offer->update([
-                'title' => $data['title'],
-                'description' => $data['description'] ?? null,
-                'budget' => $data['budget'],
-                'category_id' => $data['category_id'],
-                'workflow_template_id' => $data['workflow_template_id'] ?? null,
-                'pay_first' => $data['pay_first'] ?? false,
-                'address_id' => $data['address_id'] ?? null,
-            ]);
-
-            // Step 2 — Remove any existing images the user marked
-            if (!empty($data['images_to_remove'])) {
-                $this->detachMedia($offer, $data['images_to_remove']);
-            }
-
-            // Step 3 — Add new uploaded images
-            if (!empty($data['newFiles'])) {
-                $this->attachMedia($offer, $data['newFiles'], $uploader);
-            }
-
-            return $offer;
-        });
-    }
-
-    private function attachMedia(OpenOffer $offer, array $filePaths, MediaUploader $uploader): void
-    {
-        foreach ($filePaths as $path) {
-            try {
-                $media = 
-                    $uploader->fromSource(storage_path('app/' . $path))
-                             ->toDirectory('offers/gallery')
-                             ->upload();
-
-                $offer->attachMedia($media, 'gallery');
-
-            } catch (\Throwable $e) {
-                Log::error("OpenOfferService attachMedia failed: " . $e->getMessage());
-            }
-        }
-    }
-
-    private function detachMedia(OpenOffer $offer, array $mediaIds): void
-    {
-        foreach ($mediaIds as $id) {
-            try {
-                $media = $offer->media()->where('id', $id)->first();
-                if ($media) {
-                    $offer->detachMedia($media);
-                }
-            } catch (\Throwable $e) {
-                Log::error("OpenOfferService detachMedia failed: " . $e->getMessage());
-            }
-        }
-    }
-    
 }

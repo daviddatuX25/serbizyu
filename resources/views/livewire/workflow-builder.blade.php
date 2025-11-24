@@ -27,6 +27,21 @@
                         focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
                 </div>
 
+                <div>
+                    <label for="workflow_category" class="block text-sm font-medium text-gray-700">Category</label>
+                    <select
+                        id="workflow_category"
+                        wire:model.defer="workflowTemplate.category_id"
+                        wire:change="$set('hasSavedChanges', false)"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <option value="">Select a category...</option>
+                        @foreach($categories as $category)
+                            <option value="{{ $category->id }}">{{ $category->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <div class="flex items-center justify-between">
                     <label for="is_public" class="flex items-center">
                         <input 

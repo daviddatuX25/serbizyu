@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-creator-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Verify Your Identity') }}
@@ -44,4 +44,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-creator-layout>

@@ -1,0 +1,1465 @@
+MAP: Generated 2025-11-22 14:02:34
+--app/Domains/Listings/Models/OpenOffer.php
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Domains\Users\Models\User;
+use App\Domains\Listings\Models\Category;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Common\Models\Address;
+use Plank\Mediable\Mediable;
+use Plank\Mediable\MediableInterface;
+use Plank\Mediable\Media;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Enums\OpenOfferStatus; // Added OpenOfferStatus enum
+
+class OpenOffer extends Model implements MediableInterface
+{
+    use HasFactory;
+    use SoftDeletes;
+    use Mediable;
+
+    protected $table = 'open_offers';
+    
+    protected $fillable = [
+        'title',
+        'description',
+        'budget',
+        'pay_first',
+        'fulfilled',
+        'category_id',
+        'creator_id',
+        'workflow_template_id',
+        'address_id',
+        'deadline', // Added deadline
+        'status',   // Added status
+    ];
+
+    // casts
+    protected $casts = [
+        'fulfilled' => 'boolean',
+        'deadline' => 'datetime', // Added deadline cast
+        'status' => OpenOfferStatus::class, // Added status cast
+    ];
+
+
+    public function thumbnail()
+    {
+        return $this->belongsTo(Media::class, 'thumbnail_id');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'creator_id'); // Explicitly define foreign key
+    }
+    
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'creator_id'); // Alias for creator
+    }
+
+    public function workflowTemplate()
+    {
+        return $this->belongsTo(WorkflowTemplate::class);
+    }
+
+    public function bids()
+    
+    {
+        return $this->hasMany(OpenOfferBid::class);
+    }
+
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\OpenOfferFactory::new();
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
+    }
+}
+----
+--app/Domains/Listings/Models/Service.php
+<?php
+
+namespace App\Domains\Listings\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Domains\Users\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Domains\Common\Models\Address;
+use App\Domains\Listings\Models\ListingReview;
+use Plank\Mediable\Mediable;
+use Plank\Mediable\MediableInterface;
+
+use App\Domains\Common\Models\Image;
+
+class Service extends Model implements MediableInterface
+{
+    use HasFactory;
+    use SoftDeletes;
+    use Mediable;
+
+    protected $table = 'services';
+    protected $fillable = ['title', 'description', 'price', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
+    protected $casts = [
+        'pay_first' => 'boolean',
+    ];
+
+    public function getGalleryImagesAttribute()
+    {
+        // Returns a Collection of Media objects tagged 'gallery'
+        return $this->getMedia('gallery');
+    }
+
+    public function getThumbnailAttribute()
+    {
+        // Returns the first media tagged 'gallery'
+        return $this->getMedia('gallery')->first();
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function workflowTemplate()
+    {
+        return $this->belongsTo(WorkflowTemplate::class);
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
+    }
+
+    public function reviews()
+    {
+        return $this->morphMany(ListingReview::class, 'listing');
+    }
+
+    public function getThumbnailUrlAttribute()
+    {
+        return $this->getFirstMediaUrl('gallery');
+    }
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\ServiceFactory::new();
+    }
+}
+----
+--app/Domains/Listings/Services/OpenOfferService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\OpenOffer;
+use App\Domains\Users\Models\User;
+use Illuminate\Support\Facades\DB;
+use Plank\Mediable\MediaUploader;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+
+class OpenOfferService
+{
+    public function createOpenOffer(User $user, array $data, array $uploadedFiles = []): OpenOffer
+    {
+        $openOffer = $user->openOffers()->create([
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'budget' => $data['budget'],
+            'category_id' => $data['category_id'],
+            'deadline' => $data['deadline'] ?? null,
+            'workflow_template_id' => $data['workflow_template_id'] ?? null,
+            'pay_first' => $data['pay_first'] ?? false,
+            'address_id' => $data['address_id'] ?? null,
+            'fulfilled' => false,
+        ]);
+
+        $this->handleUploadedFiles($openOffer, $uploadedFiles);
+
+        return $openOffer;
+    }
+
+    public function updateOpenOffer(OpenOffer $openOffer, array $data, array $uploadedFiles = []): OpenOffer
+    {
+        $openOffer->update([
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'budget' => $data['budget'],
+            'category_id' => $data['category_id'],
+            'deadline' => $data['deadline'] ?? null,
+            'workflow_template_id' => $data['workflow_template_id'] ?? null,
+            'pay_first' => $data['pay_first'] ?? false,
+            'address_id' => $data['address_id'] ?? null,
+        ]);
+
+        // Handle images to remove
+        if (isset($data['images_to_remove']) && !empty($data['images_to_remove'])) {
+            $openOffer->media()->whereIn('id', $data['images_to_remove'])->delete();
+        }
+
+        $this->handleUploadedFiles($openOffer, $uploadedFiles);
+
+        return $openOffer;
+    }
+
+    protected function handleUploadedFiles(OpenOffer $openOffer, array $files): void
+    {
+        $mediaUploader = app(MediaUploader::class);
+
+        foreach ($files as $file) {
+            if ($file instanceof TemporaryUploadedFile) {
+                try {
+                    $sourcePath = $file->getRealPath();
+
+                    $media = $mediaUploader->fromSource($sourcePath)
+                        ->toDestination('public', 'open-offers')
+                        ->upload();
+
+                    $openOffer->attachMedia($media, 'images');
+                } catch (\Exception $e) {
+                    // Log error but continue
+                    \Log::error('Failed to upload media for open offer: ' . $e->getMessage());
+                }
+            }
+        }
+    }
+
+    public function deleteOpenOffer(OpenOffer $openOffer): void
+    {
+        DB::transaction(function () use ($openOffer) {
+            $openOffer->detachMedia('images');
+            $openOffer->delete();
+        });
+    }
+
+    public function closeOpenOffer(OpenOffer $openOffer): OpenOffer
+    {
+        $openOffer->update(['status' => 'closed']);
+        return $openOffer;
+    }
+
+    /**
+     * Get filtered open offers (collection)
+     */
+    public function getFilteredOffers(array $filters = [])
+    {
+        $query = OpenOffer::whereHas('creator')->with(['creator', 'address', 'media', 'bids']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'budget_from', 'budget_to', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->get();
+    }
+}
+----
+--app/Domains/Listings/Services/ServiceService.php
+<?php
+
+namespace App\Domains\Listings\Services;
+
+use App\Domains\Listings\Models\Service;
+use App\Config\MediaConfig;
+use Plank\Mediable\MediaUploader;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Illuminate\Support\Facades\Log;
+
+class ServiceService
+{
+    protected MediaConfig $mediaConfig;
+    protected MediaUploader $mediaUploader;
+
+    public function __construct()
+    {
+        $this->mediaConfig = new MediaConfig();
+        $this->mediaUploader = app(MediaUploader::class);
+    }
+
+    /**
+     * Create a new service with optional images
+     */
+    public function createService(array $data, array $uploadedFiles = []): Service
+    {
+        Log::info('Creating service', ['data_keys' => array_keys($data)]);
+
+        // Remove media-related keys from service data
+        $serviceData = collect($data)->except(['images_to_remove'])->toArray();
+
+        // Create service
+        $service = Service::create($serviceData);
+
+        // Handle uploads - uses MediaConfig for validation
+        $this->handleUploadedFiles($service, $uploadedFiles, [], 'gallery');
+
+        return $service->load('media');
+    }
+
+    /**
+     * Update an existing service and manage images
+     */
+    public function updateService(Service $service, array $data, array $uploadedFiles = []): Service
+    {
+        // Update service info (NOT media)
+        $serviceData = collect($data)->except(['images_to_remove'])->toArray();
+        $service->update($serviceData);
+
+        // Extract images to remove list
+        $imagesToRemove = $data['images_to_remove'] ?? [];
+
+        // Handle media: removes only explicitly requested, adds new, keeps rest
+        $this->handleUploadedFiles($service, $uploadedFiles, $imagesToRemove, 'gallery');
+
+        return $service->load('media');
+    }
+
+    /**
+     * Handle media uploads using MediaConfig
+     * 
+     * @param Service $service The service model
+     * @param array $files Newly uploaded files
+     * @param array $imagesToRemove Media IDs to detach
+     * @param string $tag Media tag (e.g., 'gallery')
+     */
+    protected function handleUploadedFiles(
+        Service $service,
+        array $files,
+        array $imagesToRemove = [],
+        string $tag = 'gallery'
+    ): void {
+        // STEP 1: Remove only explicitly requested media
+        if (!empty($imagesToRemove)) {
+            foreach ($imagesToRemove as $mediaId) {
+                try {
+                    $service->detachMedia($mediaId);
+                    Log::info("Detached media ID: $mediaId from service {$service->id}");
+                } catch (\Exception $e) {
+                    Log::warning('Failed to detach media: ' . $e->getMessage());
+                }
+            }
+        }
+
+        // STEP 2: Upload and attach NEW files
+        if (empty($files)) {
+            return;
+        }
+
+        foreach ($files as $file) {
+            if (!$file instanceof TemporaryUploadedFile) {
+                continue;
+            }
+
+            try {
+                // Detect media type from file
+                $mediaType = $this->detectMediaType($file);
+
+                // Get limit from MediaConfig
+                $maxSizeKb = $this->mediaConfig->getUploadLimit($mediaType);
+                $fileSizeKb = $file->getSize() / 1024;
+
+                // Validate against MediaConfig limits
+                if ($fileSizeKb > $maxSizeKb) {
+                    Log::warning("File exceeds MediaConfig limit", [
+                        'filename' => $file->getClientOriginalName(),
+                        'size_kb' => $fileSizeKb,
+                        'limit_kb' => $maxSizeKb,
+                        'type' => $mediaType,
+                    ]);
+                    continue;
+                }
+
+                $sourcePath = $file->getRealPath();
+
+                // Upload using MediaConfig destination
+                $destination = $this->mediaConfig->getDestination($mediaType);
+                
+                $media = $this->mediaUploader->fromSource($sourcePath)
+                    ->toDestination('public', $destination)
+                    ->upload();
+
+                // Attach to service - preserves existing media
+                $service->attachMedia($media, $tag);
+
+                Log::info('Attached new media', [
+                    'media_id' => $media->id,
+                    'service_id' => $service->id,
+                    'type' => $mediaType,
+                    'destination' => $destination,
+                ]);
+
+            } catch (\Exception $e) {
+                Log::error('Media upload failed: ' . $e->getMessage(), [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Detect media type from uploaded file
+     * Uses MIME type to determine category
+     */
+    private function detectMediaType(TemporaryUploadedFile $file): string
+    {
+        $mimeType = $file->getMimeType();
+
+        return match (true) {
+            str_starts_with($mimeType, 'image/') => 'images',
+            str_starts_with($mimeType, 'video/') => 'videos',
+            str_starts_with($mimeType, 'audio/') => 'audio',
+            str_contains($mimeType, 'pdf') => 'documents',
+            str_contains($mimeType, 'word') || str_contains($mimeType, 'document') => 'documents',
+            default => 'documents',
+        };
+    }
+
+    /**
+     * Delete a service
+     */
+    public function deleteService(Service $service): bool
+    {
+        return $service->delete();
+    }
+
+    /**
+     * Retrieve a single service
+     */
+    public function getService($id): Service
+    {
+        $service = Service::with(['creator', 'category', 'workflowTemplate', 'address', 'media'])->find($id);
+
+        if (!$service) {
+            throw new \App\Exceptions\ResourceNotFoundException('Service does not exist.');
+        }
+
+        if ($service->trashed()) {
+            throw new \App\Exceptions\ResourceNotFoundException('Service has been deleted.');
+        }
+
+        return $service;
+    }
+
+    /**
+     * Retrieve all services
+     */
+    public function getAllServices()
+    {
+        $services = Service::withMedia()->get();
+
+        if ($services->isEmpty()) {
+            throw new \App\Exceptions\ResourceNotFoundException('No services found.');
+        }
+
+        if ($services->every->trashed()) {
+            throw new \App\Exceptions\ResourceNotFoundException('Services have all been deleted.');
+        }
+
+        return $services;
+    }
+
+    /**
+     * Paginated services with filters
+     */
+    public function getPaginatedServices(array $filters = [])
+    {
+        $query = Service::with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * Get services by creator
+     */
+    public function getServicesForCreator(int $creatorId, array $filters = [])
+    {
+        $query = Service::where('creator_id', $creatorId)
+            ->with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->paginate(10);
+    }
+
+    /**
+     * Get filtered services (collection)
+     */
+    public function getFilteredServices(array $filters = [])
+    {
+        $query = Service::with(['creator.media', 'address', 'media']);
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+            );
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        $sortable = ['created_at', 'price', 'title'];
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortDir = $filters['sort_direction'] ?? 'desc';
+
+        if (in_array($sortBy, $sortable)) {
+            $query->orderBy($sortBy, $sortDir);
+        }
+
+        return $query->get();
+    }
+}
+----
+--app/Livewire/FormWithMedia.php
+<?php
+
+namespace App\Livewire;
+
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * Non-Destructive Media Form Handler
+ * 
+ * Keeps all existing media unless explicitly removed by user
+ * Appends new uploads to existing collection
+ */
+abstract class FormWithMedia extends Component
+{
+    use WithFileUploads;
+
+    // New uploads from user
+    public array $newFiles = [];
+    
+    // Media IDs that user explicitly removed (marked for deletion)
+    public array $imagesToRemove = [];
+    
+    // Existing media currently attached to model
+    public array $existingImages = [];
+    
+    // Not used in non-destructive approach, but kept for compatibility
+    public array $selectedImages = [];
+
+    /**
+     * Load existing media from a model
+     * 
+     * This captures the CURRENT state of media.
+     * When user removes an image, it goes to $imagesToRemove
+     * When user adds files, they go to $newFiles
+     */
+    protected function loadExistingMedia(Model $model)
+    {
+        if ($model->exists && $model->relationLoaded('media')) {
+            $this->existingImages = $model->media->map(fn($m) => [
+                'id' => $m->id,
+                'url' => $m->getUrl(),
+                'filename' => $m->filename,
+                'created_at' => $m->created_at->format('M d, Y'),
+            ])->toArray();
+
+            Log::info('Loaded existing media', [
+                'model' => class_basename($model),
+                'count' => count($this->existingImages)
+            ]);
+        }
+    }
+
+    /**
+     * Validate new file uploads
+     */
+    public function updatedNewFiles()
+    {
+        $this->validate([
+            'newFiles.*' => 'image|max:2048', // Adjust as needed
+        ]);
+
+        Log::info('New files validated', ['count' => count($this->newFiles)]);
+    }
+
+    /**
+     * Remove a newly added file (not yet saved)
+     */
+    public function removeNewFile(int $index)
+    {
+        if (isset($this->newFiles[$index])) {
+            $removed = $this->newFiles[$index];
+            array_splice($this->newFiles, $index, 1);
+            
+            Log::info('Removed new file', ['index' => $index]);
+            session()->flash('info', 'New upload removed');
+        }
+    }
+
+    /**
+     * Mark an existing image for removal
+     * 
+     * Does NOT delete immediately - just marks it for deletion on save
+     */
+    public function removeExistingImage(int $id)
+    {
+        // Add to removal queue only if not already there
+        if (!in_array($id, $this->imagesToRemove)) {
+            $this->imagesToRemove[] = $id;
+            
+            Log::info('Marked media for removal', ['media_id' => $id]);
+        }
+
+        // Remove from display (cosmetic - shows as "pending deletion")
+        $this->existingImages = array_values(
+            array_filter($this->existingImages, fn($img) => $img['id'] !== $id)
+        );
+
+        session()->flash('info', 'Image marked for removal');
+    }
+
+    /**
+     * Restore an image that was marked for removal
+     * 
+     * Call this if user changes their mind
+     */
+    public function restoreExistingImage(int $id, Model $model)
+    {
+        // Remove from deletion queue
+        $this->imagesToRemove = array_filter(
+            $this->imagesToRemove,
+            fn($mediaId) => $mediaId !== $id
+        );
+
+        // Reload existing images to show it again
+        $this->loadExistingMedia($model);
+        
+        Log::info('Restored media from removal', ['media_id' => $id]);
+        session()->flash('success', 'Image restored');
+    }
+
+    /**
+     * Get uploaded files ready for processing
+     */
+    protected function getUploadedFiles(): array
+    {
+        $filtered = [];
+        
+        foreach ($this->newFiles as $file) {
+            if ($file instanceof TemporaryUploadedFile) {
+                $filtered[] = $file;
+            }
+        }
+
+        Log::info('Preparing uploaded files', [
+            'total_newFiles' => count($this->newFiles),
+            'filtered_count' => count($filtered),
+        ]);
+
+        return $filtered;
+    }
+
+    /**
+     * Get data to pass to service layer
+     * 
+     * Returns both the files to add AND the IDs to remove
+     */
+    protected function getMediaData(): array
+    {
+        return [
+            'newFiles' => $this->getUploadedFiles(),
+            'imagesToRemove' => $this->imagesToRemove,
+        ];
+    }
+
+    /**
+     * Reset media form state after save
+     */
+    protected function resetMediaForm()
+    {
+        $this->newFiles = [];
+        $this->imagesToRemove = [];
+        $this->selectedImages = [];
+        
+        Log::info('Media form reset');
+    }
+}
+----
+--app/Livewire/OpenOfferForm.php
+<?php
+
+namespace App\Livewire;
+
+use App\Domains\Listings\Models\OpenOffer;
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use Illuminate\Support\Facades\Storage;
+use Plank\Mediable\MediaUploader;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Collection;
+
+class OpenOfferForm extends FormWithMedia
+{
+    use WithFileUploads;
+
+    public ?OpenOffer $offer = null;
+
+    public string $title = '';
+    public ?string $description = null;
+    public ?float $budget = null;
+    public ?int $category_id = null;
+    public ?int $workflow_template_id = null;
+    public bool $pay_first = false;
+    public ?int $address_id = null;
+    public ?string $deadline = null;
+
+    // For lists (categories, workflows) loaded for select inputs
+    public array $categories = [];
+    public array $workflowTemplates = [];
+    public Collection $addresses;
+
+    protected function rules(): array
+    {
+        return [
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'budget' => 'required|numeric|min:1',
+            'category_id' => 'required|integer|exists:categories,id',
+            'workflow_template_id' => 'nullable|integer|exists:workflow_templates,id',
+            'pay_first' => 'nullable|boolean',
+            'address_id' => 'nullable|integer|exists:addresses,id',
+            'deadline' => 'nullable|date|after_or_equal:today',
+            'newFiles' => 'nullable|array',
+            'newFiles.*' => 'file|max:5120',
+            'imagesToRemove' => 'nullable|array',
+            'imagesToRemove.*' => 'integer',
+        ];
+    }
+
+    protected $listeners = [
+        // you can listen to custom events if needed
+    ];
+
+    public function mount(?OpenOffer $offer = null, ?Collection $addresses = null)
+    {
+        $this->offer = $offer;
+        $this->addresses = $addresses ? $addresses->map(function ($address) {
+            $address->is_primary = $address->pivot->is_primary ?? false;
+            return $address;
+        }) : new Collection();
+
+        // Load selects (you can replace with services or inject them)
+        $this->categories = app(\App\Domains\Listings\Services\CategoryService::class)->listAllCategories()->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->toArray();
+
+        $this->workflowTemplates = app(\App\Domains\Listings\Services\WorkflowTemplateService::class)
+            ->getWorkflowTemplatesByCreator(auth()->id())
+            ->map(fn($w) => ['id' => $w->id, 'name' => $w->name])->toArray();
+            
+        if ($this->offer && $this->offer->exists) {
+            $this->title = $this->offer->title;
+            $this->description = $this->offer->description;
+            $this->budget = $this->offer->budget;
+            $this->category_id = $this->offer->category_id;
+            $this->workflow_template_id = $this->offer->workflow_template_id;
+            $this->pay_first = (bool)$this->offer->pay_first;
+            $this->address_id = $this->offer->address_id;
+            $this->deadline = $this->offer->deadline ? $this->offer->deadline->format('Y-m-d') : null;
+
+            $this->loadExistingMedia($this->offer);
+        }
+    }
+
+    public function save()
+    {
+        $this->validate();
+
+        $openOfferService = app(\App\Domains\Listings\Services\OpenOfferService::class);
+
+        $data = [
+            'title' => $this->title,
+            'description' => $this->description,
+            'budget' => $this->budget,
+            'category_id' => $this->category_id,
+            'workflow_template_id' => $this->workflow_template_id,
+            'pay_first' => $this->pay_first,
+            'address_id' => $this->address_id,
+            'deadline' => $this->deadline,
+            'images_to_remove' => $this->imagesToRemove,
+        ];
+
+        $uploadedFiles = $this->getUploadedFiles();
+
+        try {
+            if ($this->offer && $this->offer->exists) {
+                $updated = $openOfferService->updateOpenOffer($this->offer, $data, $uploadedFiles);
+                $this->dispatch('openOfferSaved', $updated->id);
+                session()->flash('success', 'Open offer updated successfully!');
+                return redirect()->route('creator.openoffers.index');
+            } else {
+                $created = $openOfferService->createOpenOffer(auth()->user(), $data, $uploadedFiles);
+                $this->dispatch('openOfferSaved', $created->id);
+                session()->flash('success', 'Open offer created successfully!');
+                return redirect()->route('creator.openoffers.index');
+            }
+        }
+        catch (\Throwable $e) {
+            \Log::error('OpenOfferForm save failed: ' . $e->getMessage(), ['exception' => $e]);
+            $this->addError('save', 'Failed to save open offer: ' . $e->getMessage());
+        }
+    }
+
+    public function close(OpenOffer $openoffer){
+        $this->authorize('close', $openoffer);
+
+        $this->openOfferService->closeOpenOffer($openoffer);
+
+        return back()->with('success', 'Open Offer closed successfully!');
+    }
+
+    public function render()
+    {
+        return view('livewire.open-offer-form');
+    }
+}
+
+
+----
+--app/Livewire/ServiceForm.php
+<?php
+
+namespace App\Livewire;
+
+use App\Domains\Listings\Models\Service;
+use App\Domains\Listings\Services\ServiceService;
+use Barryvdh\Debugbar\Facades\Debugbar;
+
+class ServiceForm extends FormWithMedia
+{
+    public ?Service $service = null;
+
+    // Livewire properties
+    public ?string $title = null;
+    public ?string $description = null;
+    public float|string|null $price = null;
+    public int|string|null $category_id = null;
+    public int|string|null $workflow_template_id = null;
+    public ?bool $pay_first = null;
+    public ?int $address_id = null;
+
+    public $categories;
+    public $workflowTemplates;
+    public $addresses;
+
+    protected $rules = [
+        'title' => 'required|string|min:3|max:255',
+        'description' => 'nullable|string|min:10',
+        'price' => 'required|numeric|min:0.01',
+        'category_id' => 'required|exists:categories,id',
+        'workflow_template_id' => 'required|integer|exists:workflow_templates,id',
+        'address_id' => 'required|exists:addresses,id',
+        'pay_first' => 'boolean',
+        'newFiles.*' => 'nullable|image|max:2048', // Uses MediaConfig.UPLOAD_LIMITS['images']
+    ];
+
+    public function updatedWorkflowTemplateId($value)
+    {
+        Debugbar::info('updatedWorkflowTemplateId called', [
+            'value' => $value,
+            'type' => gettype($value)
+        ]);
+        
+        if (is_string($value) && is_numeric($value)) {
+            $this->workflow_template_id = (int) $value;
+            Debugbar::info('Casted to integer', ['new_value' => $this->workflow_template_id]);
+        }
+    }
+
+    public function mount(
+        ?Service $service = null,
+        $categories = [],
+        $workflowTemplates = [],
+        $addresses = []
+    ) {
+        $this->service = $service;
+        $this->categories = collect($categories);
+        $this->workflowTemplates = collect($workflowTemplates);
+        $this->addresses = collect($addresses)->map(function ($address) {
+            $address->is_primary = $address->pivot->is_primary ?? false;
+            return $address;
+        });
+
+        Debugbar::info('Addresses', ['addresses' => $this->addresses]);
+
+        // Default values
+        $this->title = '';
+        $this->description = '';
+        $this->price = '';
+        $this->category_id = '';
+        $this->workflow_template_id = null;
+        $this->pay_first = false;
+        $this->address_id = $this->addresses->firstWhere('pivot.is_primary', true)->id ?? null;
+
+        if ($service && $service->exists) {
+            // Edit mode – populate with existing data
+            $this->title = $service->title;
+            $this->description = $service->description;
+            $this->price = $service->price;
+            $this->category_id = $service->category_id;
+            $this->workflow_template_id = $service->workflow_template_id;
+            $this->pay_first = $service->pay_first ?? false;
+            $this->address_id = $service->address_id;
+
+            // IMPORTANT: Load existing media for display
+            // This captures current state without destructive behavior
+            $this->loadExistingMedia($this->service);
+        } else {
+            // Create mode – set default primary address if exists
+            $primary = $this->addresses->firstWhere('pivot.is_primary', true);
+            $this->address_id = $primary?->id ?? null;
+        }
+        
+        Debugbar::info('Mount completed', [
+            'service_exists' => $service->exists,
+            'existing_media_count' => count($this->existingImages),
+        ]);
+    }
+
+    /**
+     * Save service with non-destructive media handling
+     * 
+     * Workflow:
+     * 1. Validate all form data
+     * 2. Prepare service data (excluding media info)
+     * 3. Prepare media data (uploads + removals)
+     * 4. Call service layer
+     * 5. Reset and redirect
+     */
+    public function save(ServiceService $serviceService)
+    {
+        Debugbar::info('=== SAVE METHOD CALLED ===');
+
+        try {
+            // Step 1: Validate
+            $this->validate();
+            Debugbar::info('Validation passed');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Debugbar::error('Validation failed', $e->errors());
+            throw $e;
+        }
+
+        // Step 2: Prepare service data (media handled separately)
+        $data = [
+            'title' => $this->title,
+            'description' => $this->description,
+            'price' => $this->price,
+            'category_id' => $this->category_id,
+            'workflow_template_id' => $this->workflow_template_id,
+            'address_id' => $this->address_id,
+            'pay_first' => $this->pay_first,
+            'creator_id' => auth()->id(),
+        ];
+
+        // Step 3: Get uploaded files and removal list
+        $uploadedFiles = $this->getUploadedFiles();
+        $imagesToRemove = $this->imagesToRemove;
+
+        // Step 4: Include media instructions in data array
+        $data['images_to_remove'] = $imagesToRemove;
+
+        Debugbar::info('Prepared save data', [
+            'files_to_add' => count($uploadedFiles),
+            'files_to_remove' => count($imagesToRemove),
+            'total_existing' => count($this->existingImages),
+        ]);
+
+        try {
+            if ($this->service && $this->service->exists) {
+                // UPDATE: Pass both uploads and removals
+                $serviceService->updateService(
+                    $this->service,
+                    $data,
+                    $uploadedFiles
+                );
+                
+                Debugbar::info('Service updated', ['id' => $this->service->id]);
+            } else {
+                // CREATE: Pass uploads (no removals on create)
+                $serviceService->createService($data, $uploadedFiles);
+                Debugbar::info('Service created');
+            }
+
+            // Step 5: Success
+            $this->resetMediaForm();
+            session()->flash('success', 'Service saved successfully!');
+            return redirect()->route('creator.services.index');
+
+        } catch (\Throwable $e) {
+            Debugbar::error('Service save failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->addError('save', 'Failed to save service: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Restore removed image (user changed their mind)
+     */
+    public function restoreImage(int $mediaId)
+    {
+        $this->restoreExistingImage($mediaId, $this->service);
+    }
+
+    public function render()
+    {
+        return view('livewire.service-form');
+    }
+}
+----
+--config/mediable.php
+<?php
+
+return [
+    /*
+     * The database connection name to use
+     *
+     * Set to `null` in order to use the default database connection
+     */
+    'connection_name' => null,
+
+    /*
+     * FQCN of the model to use for media
+     *
+     * Should extend `Plank\Mediable\Media`
+     */
+    'model' => Plank\Mediable\Media::class,
+
+    /*
+     * Name to be used for mediables joining table
+     */
+    'mediables_table' => 'mediables',
+
+    /*
+     * Filesystem disk to use if none is specified
+     */
+    'default_disk' => 'public',
+
+    /*
+     * Filesystems that can be used for media storage
+     *
+     * Uploader will throw an exception if a disk not in this list is selected
+     */
+    'allowed_disks' => [
+        'public',
+        'local',
+    ],
+
+    /*
+     * The maximum file size in bytes for a single uploaded file
+     */
+    'max_size' => 1024 * 1024 * 10,
+
+    /*
+     * What to do if a duplicate file is uploaded.
+     *
+     * Options include:
+     *
+     * * `'increment'`: the new file's name is given an incrementing suffix
+     * * `'replace'` : the old file and media model is deleted
+     * * `'error'`: an Exception is thrown
+     */
+    'on_duplicate' => Plank\Mediable\MediaUploader::ON_DUPLICATE_INCREMENT,
+
+    /*
+     * Reject files unless both their mime and extension are recognized and both match a single aggregate type
+     */
+    'strict_type_checking' => false,
+
+    /*
+     * Reject files whose mime type or extension is not recognized
+     * if true, files will be given a type of `'other'`
+     */
+    'allow_unrecognized_types' => false,
+
+    /**
+     * Prefer the client-provided MIME type over the one inferred from the file contents, if provided
+     * May be slightly faster to compute, but is not guaranteed to be accurate if the source is untrusted
+     */
+    'prefer_client_mime_type' => false,
+
+    /*
+     * Only allow files with specific MIME type(s) to be uploaded
+     */
+    'allowed_mime_types' => [],
+
+    /*
+     * Only allow files with specific file extension(s) to be uploaded
+     */
+    'allowed_extensions' => [],
+
+    /*
+     * Only allow files matching specific aggregate type(s) to be uploaded
+     */
+    'allowed_aggregate_types' => [],
+
+    /*
+     * List of aggregate types recognized by the application
+     *
+     * Each type should list the MIME types and extensions
+     * that should be recognized for the type
+     */
+    'aggregate_types' => [
+        Plank\Mediable\Media::TYPE_IMAGE => [
+            'mime_types' => [
+                'image/jpeg',
+                'image/png',
+                'image/gif',
+                'image/heic',
+            ],
+            'extensions' => [
+                'jpg',
+                'jpeg',
+                'png',
+                'gif',
+                'heic',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_IMAGE_VECTOR => [
+            'mime_types' => [
+                'image/svg+xml',
+            ],
+            'extensions' => [
+                'svg',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_PDF => [
+            'mime_types' => [
+                'application/pdf',
+            ],
+            'extensions' => [
+                'pdf',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_AUDIO => [
+            'mime_types' => [
+                'audio/aac',
+                'audio/ogg',
+                'audio/mpeg',
+                'audio/mp3',
+                'audio/mpeg',
+                'audio/wav'
+            ],
+            'extensions' => [
+                'aac',
+                'ogg',
+                'oga',
+                'mp3',
+                'wav',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_VIDEO => [
+            'mime_types' => [
+                'video/mp4',
+                'video/mpeg',
+                'video/ogg',
+                'video/webm'
+            ],
+            'extensions' => [
+                'mp4',
+                'm4v',
+                'mov',
+                'ogv',
+                'webm'
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_ARCHIVE => [
+            'mime_types' => [
+                'application/zip',
+                'application/x-compressed-zip',
+                'multipart/x-zip',
+            ],
+            'extensions' => [
+                'zip',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_DOCUMENT => [
+            'mime_types' => [
+                'text/plain',
+                'application/plain',
+                'text/xml',
+                'text/json',
+                'application/json',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ],
+            'extensions' => [
+                'doc',
+                'docx',
+                'txt',
+                'text',
+                'xml',
+                'json',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_SPREADSHEET => [
+            'mime_types' => [
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ],
+            'extensions' => [
+                'xls',
+                'xlsx',
+            ]
+        ],
+        Plank\Mediable\Media::TYPE_PRESENTATION => [
+            'mime_types' =>
+                [
+                    'application/vnd.ms-powerpoint',
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                    'application/vnd.openxmlformats-officedocument.presentationml.slideshow'
+                ],
+            'extensions' =>
+                [
+                    'ppt',
+                    'pptx',
+                    'ppsx',
+                ]
+        ],
+    ],
+
+    /*
+     * List of adapters to use for various source inputs
+     *
+     * Adapters can map either to a class or a pattern (regex)
+     */
+    'source_adapters' => [
+        'class' => [
+            Symfony\Component\HttpFoundation\File\UploadedFile::class => Plank\Mediable\SourceAdapters\UploadedFileAdapter::class,
+            Symfony\Component\HttpFoundation\File\File::class => Plank\Mediable\SourceAdapters\FileAdapter::class,
+            Psr\Http\Message\StreamInterface::class => Plank\Mediable\SourceAdapters\StreamAdapter::class,
+        ],
+        'pattern' => [
+            '^https?://' => Plank\Mediable\SourceAdapters\RemoteUrlAdapter::class,
+            '^/' => Plank\Mediable\SourceAdapters\LocalPathAdapter::class,
+            '^[a-zA-Z]:\\\\' => Plank\Mediable\SourceAdapters\LocalPathAdapter::class,
+            '^data:/?/?[^,]*,' => Plank\Mediable\SourceAdapters\DataUrlAdapter::class,
+        ],
+    ],
+
+    /*
+     * List of URL Generators to use for handling various filesystem drivers
+     *
+     */
+    'url_generators' => [
+        'local' => Plank\Mediable\UrlGenerators\LocalUrlGenerator::class,
+        's3' => Plank\Mediable\UrlGenerators\S3UrlGenerator::class,
+    ],
+
+    /**
+     * Should mediable instances automatically reload their media relationships after modification are made to a tag.
+     *
+     * If true, will automatically reload media the next time `getMedia()`, `getMediaMatchAll()` or `getAllMediaByTag()` are called.
+     */
+    'rehydrate_media' => true,
+
+    /**
+     * Detach associated media when mediable model is soft deleted.
+     */
+    'detach_on_soft_delete' => false,
+
+    /**
+     * Prevents loading migrations from the package.
+     *
+     * Use this if you are renaming the published migrations and want to prevent them from being loaded twice.
+     */
+    'ignore_migrations' => false,
+
+    /**
+     * Configuration for image optimization
+     */
+    'image_optimization' => [
+        /**
+         * Whether to apply image optimization after performing image manipulations by default
+         */
+        'enabled' => true,
+        /**
+         * array of optimizers to use, which should implement \Spatie\ImageOptimizer\Optimizer
+         * Each can be passed an array of command line arguments to be passed to the optimizer
+         */
+        'optimizers' => [
+            \Spatie\ImageOptimizer\Optimizers\Jpegoptim::class => [
+                '--max=85',
+                '--strip-all',
+                '--all-progressive',
+            ],
+            \Spatie\ImageOptimizer\Optimizers\Pngquant::class => [
+                '--quality=85',
+                '--force',
+                '--skip-if-larger',
+            ],
+            \Spatie\ImageOptimizer\Optimizers\Optipng::class => [
+                '-i0',
+                '-o2',
+                '-quiet',
+            ],
+            \Spatie\ImageOptimizer\Optimizers\Gifsicle::class => [
+                '-b',
+                '-O3',
+            ],
+            \Spatie\ImageOptimizer\Optimizers\Cwebp::class => [
+                '-q 80',
+                '-m 6',
+                '-pass 10',
+                '-mt',
+            ],
+            \Spatie\ImageOptimizer\Optimizers\Avifenc::class => [
+                '-a cq-level=23',
+                '-j all',
+                '--min 0',
+                '--max 63',
+                '--minalpha 0',
+                '--maxalpha 63',
+                '-a end-usage=q',
+                '-a tune=ssim',
+            ],
+        ],
+    ]
+];
+----
+--resources/views/livewire/partials/media-upload.blade.php
+<div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+    
+    {{-- Grid for existing and new images --}}
+    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 mb-4">
+        {{-- Existing Images --}}
+        @foreach($existingImages as $img)
+            <div class="relative group">
+                <img src="{{ $img['url'] }}" class="w-full h-24 object-cover rounded-md border border-gray-200">
+                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition flex items-center justify-center">
+                    <button type="button" wire:click="removeExistingImage({{ $img['id'] }})"
+                        class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white w-6 h-6 flex items-center justify-center rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                        ✕
+                    </button>
+                </div>
+            </div>
+        @endforeach
+
+        {{-- New Files Preview --}}
+        @foreach($newFiles as $i => $file)
+            <div class="relative group">
+                <img src="{{ $file->temporaryUrl() }}" class="w-full h-24 object-cover rounded-md border-2 border-green-400">
+                <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition flex items-center justify-center">
+                     <button type="button" wire:click="removeNewFile({{ $i }})"
+                        class="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white w-6 h-6 flex items-center justify-center rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                        ✕
+                    </button>
+                    <span class="absolute bottom-1 left-1 bg-green-600 text-white px-2 py-0.5 text-xs rounded-full">
+                        New
+                    </span>
+                </div>
+            </div>
+        @endforeach
+
+        {{-- "Add More" Button --}}
+        @if(count($existingImages) > 0 || count($newFiles) > 0)
+            <label for="file-upload" class="cursor-pointer w-full h-24 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md flex flex-col items-center justify-center text-gray-500 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                <span class="text-xs mt-1">Add More</span>
+            </label>
+        @endif
+    </div>
+
+    {{-- Hidden File Input --}}
+    <input id="file-upload" type="file" wire:model="newFiles" multiple class="hidden" accept="image/*" x-ref="fileInput">
+
+    {{-- Empty State: Large upload area --}}
+    @if(count($existingImages) === 0 && count($newFiles) === 0)
+        <label for="file-upload-empty" class="cursor-pointer flex flex-col items-center justify-center text-gray-500 hover:text-green-600 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span class="mt-2 text-sm font-medium">Click to upload images</span>
+            <input id="file-upload-empty" type="file" wire:model="newFiles" multiple class="sr-only" accept="image/*" x-ref="fileInput">
+        </label>
+    @endif
+    
+    <p class="text-xs text-gray-500 mt-2">Max 5MB per image. PNG, JPG, GIF accepted.</p>
+</div>
+----
+--SUMMARY
+Text:9 Binary:0 Skipped:777
