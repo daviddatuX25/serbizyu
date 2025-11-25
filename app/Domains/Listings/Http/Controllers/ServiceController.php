@@ -7,6 +7,7 @@ use App\Domains\Listings\Services\CategoryService;
 use App\Domains\Common\Services\AddressService;
 use App\Domains\Listings\Services\ServiceService;
 use App\Domains\Listings\Services\WorkflowTemplateService;
+use App\Domains\Orders\Services\OrderService;
 use App\Http\Controllers\Controller;
 use App\Domains\Listings\Http\Requests\StoreServiceRequest;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -22,7 +23,8 @@ class ServiceController extends Controller
         private ServiceService $serviceService,
         private CategoryService $categoryService,
         private WorkflowTemplateService $workflowTemplateService,
-        private AddressService $addressService
+        private AddressService $addressService,
+        private OrderService $orderService
     ) {}
 
     /**
@@ -53,6 +55,19 @@ class ServiceController extends Controller
     {
         $this->authorize('view', $service);
         return view('listings.services.show', compact('service'));
+    }
+
+    /**
+     * Handle the checkout process for a service.
+     */
+    public function checkout(Service $service)
+    {
+        $this->authorize('purchase', $service); // Assuming a 'purchase' policy exists
+
+        $order = $this->orderService->createOrderFromService($service, Auth::user());
+
+        // Assuming an order details page exists
+        return redirect()->route('orders.show', $order)->with('success', 'Order created successfully!');
     }
 
 

@@ -5,6 +5,7 @@ namespace App\Domains\Listings\Http\Controllers;
 use App\Domains\Listings\Models\OpenOffer;
 use App\Domains\Listings\Models\OpenOfferBid;
 use App\Domains\Listings\Services\OpenOfferBidService;
+use App\Domains\Orders\Services\OrderService;
 use App\Domains\Listings\Http\Requests\StoreOpenOfferBidRequest;
 use App\Domains\Listings\Http\Requests\UpdateOpenOfferBidRequest;
 use App\Http\Controllers\Controller;
@@ -14,10 +15,12 @@ use Illuminate\Support\Facades\Auth;
 class OpenOfferBidController extends Controller
 {
     protected $openOfferBidService;
+    protected $orderService;
 
-    public function __construct(OpenOfferBidService $openOfferBidService)
+    public function __construct(OpenOfferBidService $openOfferBidService, OrderService $orderService)
     {
         $this->openOfferBidService = $openOfferBidService;
+        $this->orderService = $orderService;
     }
 
     public function index(OpenOffer $openoffer)
@@ -86,7 +89,11 @@ class OpenOfferBidController extends Controller
 
         try {
             $this->openOfferBidService->acceptBid($bid);
-            return back()->with('success', 'Bid accepted successfully! Offer closed.');
+            $order = $this->orderService->createOrderFromBid($bid);
+            
+            // Assuming an order details page exists
+            return redirect()->route('orders.show', $order)->with('success', 'Bid accepted and order created successfully!');
+
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }

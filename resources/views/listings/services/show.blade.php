@@ -110,10 +110,14 @@
                                 Go to Manage
                             </a>
                         @else
-                            <button type="button" 
-                                class="mt-6 w-full bg-green-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-green-700 transition shadow-md">
-                                Proceed to Order
-                            </button>
+                            <form action="{{ route('services.checkout', $service) }}" method="POST">
+                                @csrf
+                                <button type="submit" 
+                                    class="mt-6 w-full bg-green-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-green-700 transition shadow-md"
+                                    @if(Auth::id() === $service->creator_id) disabled @endif>
+                                    Proceed to Order
+                                </button>
+                            </form>
                             <button type="button" 
                                 class="mt-2 w-full text-center text-gray-600 font-medium hover:text-green-700 transition">
                                 Add to wishlist

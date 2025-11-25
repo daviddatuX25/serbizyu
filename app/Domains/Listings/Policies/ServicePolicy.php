@@ -49,6 +49,14 @@ class ServicePolicy
     }
 
     /**
+     * Determine whether the user can purchase the model.
+     */
+    public function purchase(User $user, Service $service): bool
+    {
+        return $user->id !== $service->creator_id;
+    }
+
+    /**
      * Determine whether the user can restore the model.
      */
     public function restore(User $user, Service $service): bool

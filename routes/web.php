@@ -11,6 +11,8 @@ use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
 use App\Domains\Listings\Http\Controllers\OpenOfferController;
 use App\Domains\Listings\Http\Controllers\OpenOfferBidController;
 use App\Domains\Work\Http\Controllers\WorkInstanceController;
+use App\Domains\Orders\Http\Controllers\OrderController;
+use App\Domains\Work\Http\Controllers\ActivityController;
 // use public workflows
 use App\Domains\Listings\Http\Controllers\PublicWorkflowController;
 
@@ -32,7 +34,7 @@ require __DIR__.'/auth.php';
         return view('about');
     })->name('about');
 
-    Route::get('faq', function () {
+Route::get('faq', function () {
         return view('faq');
     })->name('faq');
 
@@ -89,6 +91,12 @@ Route::middleware(['auth'])->group(function () {
     // Workflow Bookmarking
     Route::post('/workflows/{workflowTemplate}/bookmark', [PublicWorkflowController::class, 'bookmark'])->name('workflows.bookmark');
     Route::delete('/workflows/{workflowTemplate}/bookmark', [PublicWorkflowController::class, 'unbookmark'])->name('workflows.unbookmark');
+
+    // Service Checkout
+    Route::post('/services/{service}/checkout', [ServiceController::class, 'checkout'])->name('services.checkout');
+
+    // Order Management
+    Route::resource('orders', \App\Domains\Orders\Http\Controllers\OrderController::class)->only(['index', 'show']);
 });
 
 // User Verification
@@ -122,3 +130,22 @@ Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
     ->middleware('auth')
     ->name('media.serve');
 
+
+Route::middleware(['auth'])->prefix('orders')->name('orders.')->group(function () {
+    Route::get('/', [OrderController::class, 'index'])->name('index');
+    Route::get('/create', [OrderController::class, 'create'])->name('create');
+    Route::post('/', [OrderController::class, 'store'])->name('store');
+    Route::get('/{order}', [OrderController::class, 'show'])->name('show');
+    Route::get('/{order}/edit', [OrderController::class, 'edit'])->name('edit');
+    Route::put('/{order}', [OrderController::class, 'update'])->name('update');
+    Route::delete('/{order}', [OrderController::class, 'destroy'])->name('destroy');
+    Route::post('/from-bid/{bid}', [OrderController::class, 'createFromBid'])->name('fromBid');
+    Route::post('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
+
+    // Work Instance Step Management
+    Route::post('/work-instances/{workInstance}/steps/{workInstanceStep}/start', [WorkInstanceController::class, 'startStep'])->name('work-instances.steps.start');
+    Route::post('/work-instances/{workInstance}/steps/{workInstanceStep}/complete', [WorkInstanceController::class, 'completeStep'])->name('work-instances.steps.complete');
+
+    // Activity Management
+    Route::resource('/work-instances/{workInstance}/steps/{workInstanceStep}/activities', ActivityController::class);
+});
