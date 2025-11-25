@@ -43,6 +43,21 @@
             </div>
         </div>
 
+        <!-- Payment Method -->
+        <div>
+            <label for="payment-method" class="block text-sm font-medium text-gray-700">Accepted Payment Methods</label>
+            <select wire:model.defer="payment_method" id="payment-method"
+                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @foreach ($paymentMethods as $value => $label)
+                    <option value="{{ $value }}">{{ $label }}</option>
+                @endforeach
+            </select>
+            <p class="text-xs text-gray-500 mt-1">
+                <span id="payment-help">Choose which payment methods you accept</span>
+            </p>
+            @error('payment_method') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+        </div>
+
         <!-- Category -->
         <div>
             <label for="category" class="block text-sm font-medium text-gray-700">Category</label>

@@ -12,7 +12,8 @@ use Plank\Mediable\MediableInterface;
 use Plank\Mediable\Media;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Enums\OpenOfferStatus; // Added OpenOfferStatus enum
+use App\Enums\OpenOfferStatus;
+use App\Enums\PaymentMethod;
 use Laravel\Scout\Searchable;
 
 class OpenOffer extends Model implements MediableInterface
@@ -29,32 +30,20 @@ class OpenOffer extends Model implements MediableInterface
         'description',
         'budget',
         'pay_first',
+        'payment_method',
         'category_id',
         'creator_id',
         'workflow_template_id',
         'address_id',
-        'deadline', // Added deadline
-        'status',   // Added status
+        'deadline',
+        'status',
     ];
-
-    /**
-     * Get the indexable data array for the model.
-     *
-     * @return array
-     */
-    public function toSearchableArray()
-    {
-        return [
-            'id' => $this->id,
-            'title' => $this->title,
-            'description' => $this->description,
-        ];
-    }
 
     // casts
     protected $casts = [
-        'deadline' => 'datetime', // Added deadline cast
-        'status' => OpenOfferStatus::class, // Added status cast
+        'deadline' => 'datetime',
+        'status' => OpenOfferStatus::class,
+        'payment_method' => PaymentMethod::class,
     ];
 
 

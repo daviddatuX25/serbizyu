@@ -23,9 +23,20 @@ use App\Domains\Payments\Http\Controllers\PaymentController;
 use App\Domains\Payments\Http\Controllers\PaymentWebhookController;
 use App\Domains\Payments\Http\Controllers\DisbursementController;
 use App\Domains\Payments\Http\Controllers\RefundController;
+use App\Domains\Messaging\Http\Controllers\MessageController;
+use App\Domains\Payments\Http\Controllers\CashPaymentController;
 
-// Authentication routes
+
+// require or include auth.php
 require __DIR__.'/auth.php';
+
+// Messaging Routes
+Route::middleware('auth')->group(function () {
+    Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
+    Route::get('/messages/{user}', [MessageController::class, 'show'])->name('messages.show');
+    Route::post('/messages/{thread}', [MessageController::class, 'sendMessage'])->name('messages.send');
+    Route::put('/messages/{thread}/read', [MessageController::class, 'markAsRead'])->name('messages.read');
+});
 
 // Home and static pages
     Route::get('/', function () {
@@ -154,7 +165,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth'])->prefix('orders')->name('orders.')->group(function () {
-    Route::get('/', [OrderController::class, 'index'])->name('index');
+    Route::get('/', [OrderController::class, 'index'])->name('index');//
     Route::get('/create', [OrderController::class, 'create'])->name('create');
     Route::post('/', [OrderController::class, 'store'])->name('store');
     Route::get('/{order}', [OrderController::class, 'show'])->name('show');
@@ -170,6 +181,14 @@ Route::middleware(['auth'])->prefix('payments')->name('payments.')->group(functi
     Route::post('/pay/{order}', [PaymentController::class, 'pay'])->name('pay');
     Route::get('/success', [PaymentController::class, 'success'])->name('success');
     Route::get('/failed', [PaymentController::class, 'failed'])->name('failed');
+
+    // Cash Payment Handshake Routes
+    Route::get('/cash/handshake', [PaymentController::class, 'cashHandshake'])->name('cash.handshake');
+    Route::post('/cash/buyer-claimed', [PaymentController::class, 'buyerClaimedPayment'])->name('cash.buyer-claimed');
+    Route::post('/cash/seller-confirmed', [PaymentController::class, 'sellerConfirmedPayment'])->name('cash.seller-confirmed');
+    Route::post('/cash/seller-rejected', [PaymentController::class, 'sellerRejectedPayment'])->name('cash.seller-rejected');
+    Route::get('/cash/waiting', [PaymentController::class, 'waitingForSeller'])->name('cash.wait-seller');
+    Route::get('/cash/disputed', [PaymentController::class, 'paymentDisputed'])->name('cash.disputed');
 });
 
 // Work Instance Management
@@ -202,3 +221,5 @@ Route::middleware(['auth'])->prefix('refunds')->name('refunds.')->group(function
 });
 
 Route::post('/payments/webhook', [PaymentWebhookController::class, 'handle'])->name('payments.webhook');
+
+// Logout authenitcatedsessioncontroller destroy

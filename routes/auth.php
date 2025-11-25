@@ -11,6 +11,7 @@ use App\Domains\Users\Http\Controllers\Auth\RegisteredUserController;
 use App\Domains\Users\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
+
 Route::middleware('guest')->group(function () {
     Route::get('join', [RegisteredUserController::class, 'create'])
         ->name('auth.join');
@@ -57,3 +58,5 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
 });
+
+?>

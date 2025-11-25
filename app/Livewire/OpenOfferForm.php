@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Domains\Listings\Models\OpenOffer;
+use App\Enums\PaymentMethod;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Collection;
@@ -25,11 +26,13 @@ class OpenOfferForm extends Component
     public ?float $budget = null;
     public ?int $category_id = null;
     public bool $pay_first = false;
+    public ?string $payment_method = 'any';
     public ?int $address_id = null;
     public ?string $deadline = null;
     public string $deadline_option = '7';
 
     public array $categories = [];
+    public array $paymentMethods = [];
     
     public function boot(AddressProviderInterface $addressProvider)
     {
@@ -45,6 +48,7 @@ class OpenOfferForm extends Component
             'category_id' => 'required|integer|exists:categories,id',
             'workflow_template_id' => 'nullable|integer|exists:workflow_templates,id',
             'pay_first' => 'nullable|boolean',
+            'payment_method' => 'required|in:cash,online,any',
             'address_id' => 'nullable|integer|exists:addresses,id',
             'deadline_option' => 'required|in:1,3,7,14,30',
         ];
@@ -65,6 +69,7 @@ class OpenOfferForm extends Component
         $this->offer = $offer;
         $this->mountAddressable($addresses ?? new Collection());
         $this->mountWorkflowable($offer);
+        $this->paymentMethods = PaymentMethod::options();
 
         $this->categories = app(\App\Domains\Listings\Services\CategoryService::class)->listAllCategories()->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->toArray();
             
@@ -74,10 +79,13 @@ class OpenOfferForm extends Component
             $this->budget = $this->offer->budget;
             $this->category_id = $this->offer->category_id;
             $this->pay_first = (bool)$this->offer->pay_first;
+            $this->payment_method = $this->offer->payment_method?->value ?? 'any';
             $this->address_id = $this->offer->address_id;
             $this->deadline = $this->offer->deadline ? $this->offer->deadline->format('Y-m-d') : null;
 
             $this->loadExistingMedia($this->offer);
+        } else {
+            $this->payment_method = 'any';
         }
     }
 
@@ -101,6 +109,7 @@ class OpenOfferForm extends Component
             'category_id' => $this->category_id,
             'workflow_template_id' => $this->workflow_template_id,
             'pay_first' => $this->pay_first,
+            'payment_method' => $this->payment_method,
             'address_id' => $this->address_id,
             'deadline' => $deadline,
             'images_to_remove' => $this->imagesToRemove,

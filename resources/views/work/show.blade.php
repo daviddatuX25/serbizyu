@@ -189,8 +189,8 @@
                                      alt="{{ $workInstance->order->seller->name }}" 
                                      class="h-10 w-10 rounded-full mr-3">
                                 <div>
-                                    <p class="font-medium text-gray-900">{{ $workInstance->order->seller->name }}</p>
-                                    <p class="text-sm text-gray-600">@{{ $workInstance->order->seller->username }}</p>
+                                    <p class="font-medium text-gray-900">{{ $workInstance->order->seller->firstname }}</p>
+                                    <p class="text-sm text-gray-600">{{ $workInstance->order->seller->email }}</p>
                                 </div>
                             </div>
                         </div>
@@ -201,8 +201,8 @@
                                      alt="{{ $workInstance->order->buyer->name }}" 
                                      class="h-10 w-10 rounded-full mr-3">
                                 <div>
-                                    <p class="font-medium text-gray-900">{{ $workInstance->order->buyer->name }}</p>
-                                    <p class="text-sm text-gray-600">@{{ $workInstance->order->buyer->username }}</p>
+                                    <p class="font-medium text-gray-900">{{ $workInstance->order->buyer->firstname }}</p>
+                                    <p class="text-sm text-gray-600">{{ $workInstance->order->buyer->email }}</p>
                                 </div>
                             </div>
                         </div>

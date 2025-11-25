@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domains\Listings\Models\Category;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Users\Models\User;
 use App\Domains\Orders\Models\Order;
@@ -16,30 +17,32 @@ class OrderCreationTest extends TestCase
     use RefreshDatabase;
 
     /** @test */
-    public function a_user_can_create_an_order_from_a_service_page()
+    public function a_user_can_create_an_order_from_a_service_page(): void
     {
         // 1. Arrange
-        $user = User::factory()->create();
+        $buyer = User::factory()->create();
+        $seller = User::factory()->create();
         $category = Category::factory()->create();
         $workflowTemplate = WorkflowTemplate::factory()->create();
         $service = Service::factory()->create([
             'category_id' => $category->id,
-            'creator_id' => $user->id,
+            'creator_id' => $seller->id,
             'workflow_template_id' => $workflowTemplate->id,
         ]);
 
         // 2. Act
-        $response = $this->actingAs($user)->post(route('orders.store'), [
+        $response = $this->actingAs($buyer)->post(route('orders.store'), [
             'service_id' => $service->id,
         ]);
 
         // 3. Assert
         $this->assertDatabaseHas('orders', [
             'service_id' => $service->id,
-            'buyer_id' => $user->id,
+            'buyer_id' => $buyer->id,
+            'seller_id' => $seller->id,
         ]);
 
-        $order = Order::where('service_id', $service->id)->where('buyer_id', $user->id)->first();
+        $order = Order::where('service_id', $service->id)->where('buyer_id', $buyer->id)->first();
 
         $response->assertRedirect(route('orders.show', $order));
 
@@ -47,7 +50,7 @@ class OrderCreationTest extends TestCase
             'order_id' => $order->id,
             'workflow_template_id' => $workflowTemplate->id,
         ]);
-        
+
         $workInstance = WorkInstance::where('order_id', $order->id)->first();
 
         $this->assertDatabaseHas('work_instance_steps', [

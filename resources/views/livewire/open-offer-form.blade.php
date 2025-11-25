@@ -57,6 +57,15 @@
                 </select>
                 @error('category_id') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
             </div>
+            <div>
+                <label for="payment_method" class="block text-sm font-medium text-gray-700">Accepted Payment Methods</label>
+                <select wire:model="payment_method" id="payment_method" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                    @foreach ($paymentMethods as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('payment_method') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+            </div>
         </div>
 
         @include('livewire.partials._address-form-fields')

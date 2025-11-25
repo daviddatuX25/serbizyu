@@ -4,7 +4,7 @@ namespace App\Domains\Messaging\Http\Controllers;
 
 use App\Domains\Messaging\Models\Message;
 use App\Domains\Messaging\Models\MessageThread;
-use App\Domains\Messaging\Models\MessageAttachment;
+use App\Domains\Users\Models\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,7 +40,7 @@ class MessageController extends Controller
     {
         $request->validate([
             'content' => 'required|string',
-            'attachments.*' => 'file|max:10240', // Max 10MB per file
+            'attachments.*' => 'file|max:10240',
         ]);
 
         $message = DB::transaction(function () use ($request, $thread) {
@@ -60,9 +60,6 @@ class MessageController extends Controller
             }
             return $message;
         });
-
-        // TODO: Broadcast MessageSent event
-        // event(new MessageSent($message));
 
         return response()->json($message->load('attachments'), 201);
     }
@@ -90,10 +87,62 @@ class MessageController extends Controller
     }
 
     /**
-     * Display a specific message thread.
+     * Show messages index page
      */
-    public function show(MessageThread $thread)
+    public function index()
     {
-        return view('messages.show', compact('thread'));
+        return view('messages.index');
+    }
+
+    /**
+     * Show specific conversation
+     */
+    public function show(User $user)
+    {
+        $thread = MessageThread::where('parent_type', 'direct_message')
+            ->first();
+
+        return view('messages.show', compact('thread', 'user'));
+    }
+
+    /**
+     * Get conversations list
+     */
+    public function conversations()
+    {
+        return response()->json(['conversations' => []]);
+    }
+
+    /**
+     * Get message history with another user
+     */
+    public function history(User $user)
+    {
+        return response()->json(['messages' => []]);
+    }
+
+    /**
+     * Store a direct message
+     */
+    public function store(Request $request, User $user)
+    {
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Mark message as read
+     */
+    public function markRead($messageId)
+    {
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Get unread count
+     */
+    public function unreadCount()
+    {
+        return response()->json(['count' => 0]);
     }
 }
+

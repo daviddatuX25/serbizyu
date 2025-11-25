@@ -4,6 +4,7 @@ namespace App\Domains\Orders\Http\Controllers;
 
 use App\Domains\Orders\Models\Order;
 use App\Domains\Orders\Services\OrderService;
+use App\Domains\Listings\Models\OpenOfferBid;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -37,11 +38,14 @@ class OrderController extends Controller
      */
     public function create()
     {
-        //
+        return view('orders.create');
     }
 
     /**
      * Store a newly created resource in storage.
+     * Routes based on pay_first requirement:
+     * - If pay_first = true: redirect to payment
+     * - If pay_first = false: create order and redirect to show page with payment reminder
      */
     public function store(Request $request)
     {
@@ -49,9 +53,18 @@ class OrderController extends Controller
             'service_id' => 'required|exists:services,id',
         ]);
 
-        $order = $this->orderService->createOrderFromService($request->service_id, Auth::user());
+        $service = \App\Domains\Listings\Models\Service::findOrFail($request->service_id);
 
-        return redirect()->route('orders.show', $order);
+        if ($service->pay_first) {
+            // Create order in pending state, redirect to payment
+            $order = $this->orderService->createOrderFromService($service, Auth::user());
+            return redirect()->route('payments.checkout', $order);
+        }
+
+        // No pay_first required - create order and redirect to show page
+        $order = $this->orderService->createOrderFromService($service, Auth::user());
+        return redirect()->route('orders.show', $order)
+            ->with('info', 'Order created! Please proceed with payment to start work.');
     }
 
     /**
@@ -109,7 +122,8 @@ class OrderController extends Controller
 
     public function createFromBid(string $bid)
     {
-        $order = $this->orderService->createOrderFromBid($bid);
+        $bidModel = OpenOfferBid::findOrFail($bid);
+        $order = $this->orderService->createOrderFromBid($bidModel);
         return redirect()->route('orders.show', $order);
     }
 

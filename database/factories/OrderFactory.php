@@ -4,11 +4,9 @@ namespace Database\Factories;
 
 use App\Domains\Users\Models\User;
 use App\Domains\Listings\Models\Service;
+use App\Enums\OrderStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Domains\Orders\Models\Order>
- */
 class OrderFactory extends Factory
 {
     /**
@@ -18,13 +16,17 @@ class OrderFactory extends Factory
      */
     public function definition(): array
     {
+        $price = $this->faker->randomFloat(2, 50, 1000);
+        $platformFee = $price * 0.05;
+
         return [
             'buyer_id' => User::factory(),
             'seller_id' => User::factory(),
             'service_id' => Service::factory(),
-            'price' => $this->faker->randomFloat(2, 10, 1000),
-            'total_amount' => $this->faker->randomFloat(2, 10, 1000),
-            'status' => 'pending',
+            'price' => $price,
+            'platform_fee' => $platformFee,
+            'total_amount' => $price + $platformFee,
+            'status' => OrderStatus::PENDING->value,
             'payment_status' => 'pending',
         ];
     }

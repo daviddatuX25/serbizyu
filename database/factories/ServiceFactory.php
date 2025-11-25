@@ -8,13 +8,8 @@ use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Models\Category;
 use App\Domains\Listings\Models\WorkflowTemplate;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Service>
- */
 class ServiceFactory extends Factory
-
 {
-
     protected $model = Service::class;
 
     /**
@@ -27,11 +22,11 @@ class ServiceFactory extends Factory
         return [
             'title' => $this->faker->sentence(3),
             'description' => $this->faker->paragraph(),
-            'price' => $this->faker->randomFloat(2, 10, 100),
+            'price' => $this->faker->randomFloat(2, 50, 1000),
             'pay_first' => $this->faker->boolean(30),
-            'category_id' => Category::inRandomOrder()->first()->id,
-            'creator_id' => User::inRandomOrder()->first()->id,
-            'workflow_template_id' => WorkflowTemplate::inRandomOrder()->first()->id,
+            'category_id' => Category::factory(),
+            'creator_id' => User::factory(),
+            'workflow_template_id' => WorkflowTemplate::factory(),
         ];
     }
 }

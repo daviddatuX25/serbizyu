@@ -24,6 +24,8 @@ class Order extends Model
         'total_amount',
         'status',
         'payment_status',
+        'payment_method',
+        'paid_at',
         'cancelled_at',
         'cancellation_reason',
     ];

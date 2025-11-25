@@ -25,6 +25,16 @@ Route::prefix('addresses')->name('api.addresses.')->group(function () {
     Route::get('/cities/{cityCode}/barangays', [AddressController::class, 'barangays'])->name('barangays');
 });
 
+// Messaging API
+Route::middleware('auth:sanctum')->prefix('messages')->name('api.messages.')->group(function () {
+    Route::get('conversations', [\App\Domains\Messaging\Http\Controllers\MessageController::class, 'conversations'])->name('conversations');
+    Route::get('{user}/history', [\App\Domains\Messaging\Http\Controllers\MessageController::class, 'history'])->name('history');
+    Route::post('{user}', [\App\Domains\Messaging\Http\Controllers\MessageController::class, 'store'])->name('store');
+    Route::put('{message}/read', [\App\Domains\Messaging\Http\Controllers\MessageController::class, 'markRead'])->name('read');
+    Route::get('unread/count', [\App\Domains\Messaging\Http\Controllers\MessageController::class, 'unreadCount'])->name('unread');
+});
+
+
 
 /*
 Route::middleware(['api', ForceJsonResponse::class])->group(function () {

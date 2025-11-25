@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Services\ServiceService;
 use App\Domains\Common\Services\AddressService;
+use App\Enums\PaymentMethod;
 use Livewire\Component;
 use Livewire\Attributes\On;
 use App\Livewire\Traits\Addressable;
@@ -26,9 +27,11 @@ class ServiceForm extends Component
     public float|string|null $price = null;
     public int|string|null $category_id = null;
     public ?bool $pay_first = false;
+    public ?string $payment_method = 'any';
     public ?int $address_id = null;
 
     public $categories = [];
+    public $paymentMethods = [];
 
     public function boot(AddressProviderInterface $addressProvider)
     {
@@ -45,6 +48,7 @@ class ServiceForm extends Component
             'workflow_template_id' => 'required|integer|exists:workflow_templates,id',
             'address_id' => 'nullable|exists:addresses,id',
             'pay_first' => 'boolean',
+            'payment_method' => 'required|in:cash,online,any',
         ];
 
         if ($this->showAddressModal) {
@@ -58,6 +62,7 @@ class ServiceForm extends Component
     {
         $this->service = $service;
         $this->categories = collect($categories);
+        $this->paymentMethods = PaymentMethod::options();
         $this->mountAddressable(collect($addresses));
         $this->mountWorkflowable($service);
 
@@ -68,12 +73,14 @@ class ServiceForm extends Component
             $this->price = $this->service->price;
             $this->category_id = $this->service->category_id;
             $this->pay_first = $this->service->pay_first ?? false;
+            $this->payment_method = $this->service->payment_method?->value ?? 'any';
             $this->address_id = $this->service->address_id;
             $this->loadExistingMedia($this->service);
         } else {
             // Create mode – set default primary address if exists
             $primary = $this->addresses->firstWhere('pivot.is_primary', true);
             $this->address_id = $primary?->id ?? null;
+            $this->payment_method = 'any';
         }
     }
 
@@ -98,6 +105,7 @@ class ServiceForm extends Component
             'workflow_template_id' => $this->workflow_template_id,
             'address_id' => $this->address_id,
             'pay_first' => $this->pay_first,
+            'payment_method' => $this->payment_method,
             'creator_id' => auth()->id(),
         ];
 

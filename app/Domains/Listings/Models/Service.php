@@ -13,6 +13,7 @@ use Plank\Mediable\MediableInterface;
 use Laravel\Scout\Searchable;
 
 use App\Domains\Common\Models\Image;
+use App\Enums\PaymentMethod;
 
 class Service extends Model implements MediableInterface
 {
@@ -22,9 +23,10 @@ class Service extends Model implements MediableInterface
     use Searchable;
 
     protected $table = 'services';
-    protected $fillable = ['title', 'description', 'price', 'pay_first', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
+    protected $fillable = ['title', 'description', 'price', 'pay_first', 'payment_method', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
     protected $casts = [
         'pay_first' => 'boolean',
+        'payment_method' => PaymentMethod::class,
     ];
 
     /**

@@ -13,121 +13,69 @@ use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Models\WorkflowTemplate;
 use App\Domains\Work\Models\WorkInstance;
 use App\Domains\Work\Models\WorkInstanceStep;
-use LogicException;
 
 class OrderService
 {
     public function createOrderFromBid(OpenOfferBid $bid): Order
     {
-        $bid = OpenOfferBid::with('openOffer', 'service')->findOrFail($bidId);
         $offer = $bid->openOffer;
+        $service = $bid->service;
 
-        // Set the bid as accepted
-        $bid->accepted = true;
-        $bid->save();
-
-        $order = new Order([
-            'buyer_id' => $offer->buyer_id,
-            'seller_id' => $bid->service->creator_id,
-            'service_id' => $bid->service_id,
+        $orderData = [
+            'buyer_id' => $offer->creator_id,
+            'seller_id' => $service->creator_id,
+            'service_id' => $service->id,
             'open_offer_id' => $bid->open_offer_id,
-            'open_offer_bid_id' => $bidId,
-            'price' => $bid->proposed_price,
-            'platform_fee' => $bid->proposed_price * 0.05, // Assuming a 5% platform fee
-            'total_amount' => $bid->proposed_price * 1.05,
+            'open_offer_bid_id' => $bid->id,
+            'price' => $bid->amount,
+            'platform_fee' => $this->calculatePlatformFee($bid->amount),
             'status' => OrderStatus::PENDING->value,
             'payment_status' => 'pending',
-        ]);
-        $order->save();
+        ];
 
-        // Workflow Cloning Logic
-        $service = $bid->service;
-        if ($service && $service->workflowTemplate) {
-            $workflowTemplate = $service->workflowTemplate;
+        $orderData['total_amount'] = $orderData['price'] + $orderData['platform_fee'];
 
-            $workInstance = WorkInstance::create([
-                'order_id' => $order->id,
-                'workflow_template_id' => $workflowTemplate->id,
-                'current_step_index' => 0,
-                'status' => 'pending', // Initial status for work instance
-                'started_at' => null,
-                'completed_at' => null,
-            ]);
+        $order = Order::create($orderData);
 
-            foreach ($workflowTemplate->workTemplates as $index => $workTemplate) {
-                WorkInstanceStep::create([
-                    'work_instance_id' => $workInstance->id,
-                    'work_template_id' => $workTemplate->id,
-                    'step_index' => $index,
-                    'status' => 'pending', // Initial status for each step
-                    'started_at' => null,
-                    'completed_at' => null,
-                ]);
-            }
+        if ($service->workflowTemplate) {
+            $this->cloneWorkflowForOrder($order, $service->workflowTemplate);
         }
 
-
-        try {
-            Mail::to($order->buyer->email)->send(new OrderCreated($order)); // Send email to buyer
-        } catch (\Exception $e) {
-            // Log the error but don't break the order creation
-            Log::warning('Failed to send order created email', ['order_id' => $order->id, 'error' => $e->getMessage()]);
-        }
+        $this->sendOrderCreatedEmail($order);
 
         return $order;
     }
 
-    public function createOrderFromService(string $serviceId, $buyer): Order
+    public function createOrderFromService(Service $service, User $buyer): Order
     {
-        $service = Service::findOrFail($serviceId);
+        $service->refresh();
 
-        $order = new Order([
+        $orderData = [
             'buyer_id' => $buyer->id,
             'seller_id' => $service->creator_id,
             'service_id' => $service->id,
             'price' => $service->price,
-            'platform_fee' => $service->price * 0.05, // Assuming a 5% platform fee
-            'total_amount' => $service->price * 1.05,
+            'platform_fee' => $this->calculatePlatformFee($service->price),
             'status' => OrderStatus::PENDING->value,
             'payment_status' => 'pending',
-        ]);
-        $order->save();
+        ];
 
-        // Workflow Cloning Logic
-        if ($service && $service->workflowTemplate) {
-            $workflowTemplate = $service->workflowTemplate;
+        $orderData['total_amount'] = $orderData['price'] + $orderData['platform_fee'];
 
-            $workInstance = WorkInstance::create([
-                'order_id' => $order->id,
-                'workflow_template_id' => $workflowTemplate->id,
-                'current_step_index' => 0,
-                'status' => 'pending', // Initial status for work instance
-                'started_at' => null,
-                'completed_at' => null,
-            ]);
+        $order = Order::create($orderData);
 
-            foreach ($workflowTemplate->workTemplates as $index => $workTemplate) {
-                WorkInstanceStep::create([
-                    'work_instance_id' => $workInstance->id,
-                    'work_template_id' => $workTemplate->id,
-                    'step_index' => $index,
-                    'status' => 'pending', // Initial status for each step
-                    'started_at' => null,
-                    'completed_at' => null,
-                ]);
-            }
+        if ($service->workflowTemplate) {
+            $this->cloneWorkflowForOrder($order, $service->workflowTemplate);
         }
 
-
-        Mail::to($order->buyer->email)->send(new OrderCreated($order)); // Send email to buyer
+        $this->sendOrderCreatedEmail($order);
 
         return $order;
     }
 
     protected function calculatePlatformFee(float $amount): float
     {
-        // Replace with actual fee calculation logic
-        return $amount * 0.05; // Example: 5% fee
+        return $amount * 0.05;
     }
 
     protected function cloneWorkflowForOrder(Order $order, WorkflowTemplate $workflowTemplate): void
@@ -137,6 +85,8 @@ class OrderService
             'workflow_template_id' => $workflowTemplate->id,
             'current_step_index' => 0,
             'status' => 'pending',
+            'started_at' => null,
+            'completed_at' => null,
         ]);
 
         foreach ($workflowTemplate->workTemplates as $index => $workTemplate) {
@@ -145,6 +95,20 @@ class OrderService
                 'work_template_id' => $workTemplate->id,
                 'step_index' => $index,
                 'status' => 'pending',
+                'started_at' => null,
+                'completed_at' => null,
+            ]);
+        }
+    }
+
+    protected function sendOrderCreatedEmail(Order $order): void
+    {
+        try {
+            Mail::to($order->buyer->email)->send(new OrderCreated($order));
+        } catch (\Exception $e) {
+            Log::warning('Failed to send order created email', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -152,15 +116,11 @@ class OrderService
     public function cancelOrder(Order $order): Order
     {
         if ($order->status !== OrderStatus::PENDING->value) {
-            // Or throw an exception
             return $order;
         }
 
         $order->status = OrderStatus::CANCELLED->value;
         $order->save();
-
-        // TODO: Send OrderCancelled email
-        // Mail::to($order->buyer->email)->send(new OrderCancelled($order));
 
         return $order;
     }
