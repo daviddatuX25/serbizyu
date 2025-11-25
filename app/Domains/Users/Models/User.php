@@ -7,6 +7,7 @@ use App\Domains\Common\Models\Address;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Scout\Searchable;
 use Spatie\Permission\Traits\HasRoles;
 use App\Domains\Common\Models\UserAddress;
 use Plank\Mediable\Mediable;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 class User extends Authenticatable implements MustVerifyEmail, MediableInterface
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, Mediable;
+    use HasFactory, Notifiable, HasRoles, Mediable, Searchable;
 
     protected $guard_name = 'web';
 

@@ -27,56 +27,6 @@
                 </div>
             @endif
 
-            <!-- Filtering and Sorting Form -->
-            <div class="mb-6 bg-white p-6 rounded-lg shadow-md">
-                <form action="{{ route('creator.services.index') }}" method="GET" class="space-y-4 md:space-y-0 md:flex md:gap-4 items-end">
-                    <div class="flex-1">
-                        <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
-                        <input type="text" name="search" id="search" value="{{ request('search') }}"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                               placeholder="Search services...">
-                    </div>
-
-                    <div>
-                        <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
-                        <select name="category" id="category"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                            <option value="">All Categories</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->id }}" @selected(request('category') == $category->id)>
-                                    {{ $category->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="sort_by" class="block text-sm font-medium text-gray-700">Sort By</label>
-                        <select name="sort_by" id="sort_by"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                            <option value="created_at" @selected(request('sort_by', 'created_at') == 'created_at')>Created At</option>
-                            <option value="price" @selected(request('sort_by') == 'price')>Price</option>
-                            <option value="title" @selected(request('sort_by') == 'title')>Title</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="sort_direction" class="block text-sm font-medium text-gray-700">Direction</label>
-                        <select name="sort_direction" id="sort_direction"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                            <option value="desc" @selected(request('sort_direction', 'desc') == 'desc')>Descending</option>
-                            <option value="asc" @selected(request('sort_direction') == 'asc')>Ascending</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <button type="submit"
-                                class="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-                            Apply Filters
-                        </button>
-                    </div>
-                </form>
-            </div>
 
             @if ($services->isNotEmpty())
             <div class="hidden md:block bg-white overflow-hidden shadow-sm sm:rounded-lg">

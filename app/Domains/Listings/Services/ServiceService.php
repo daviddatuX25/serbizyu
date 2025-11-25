@@ -3,7 +3,7 @@
 namespace App\Domains\Listings\Services;
 
 use App\Domains\Listings\Models\Service;
-use App\Config\MediaConfig;
+use App\Support\MediaConfig;
 use Plank\Mediable\MediaUploader;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Illuminate\Support\Facades\Log;

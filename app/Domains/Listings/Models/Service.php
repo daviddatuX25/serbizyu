@@ -28,6 +28,13 @@ class Service extends Model implements MediableInterface
     ];
 
     /**
+     * The relationships that should always be loaded.
+     *
+     * @var array
+     */
+    protected $with = ['media'];
+
+    /**
      * Get the indexable data array for the model.
      *
      * @return array

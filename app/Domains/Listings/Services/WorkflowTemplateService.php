@@ -81,6 +81,7 @@ class WorkflowTemplateService
                 'name' // You might want to adjust the name of the duplicate
             ]);
             $newWorkflowTemplate->name = $workflowTemplate->name . ' (Copy)';
+            $newWorkflowTemplate->creator_id = Auth::user()->id;
             $newWorkflowTemplate->save();
 
             foreach ($workflowTemplate->workTemplates as $workTemplate) {

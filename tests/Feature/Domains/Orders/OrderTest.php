@@ -54,10 +54,10 @@ class OrderTest extends TestCase
     /** @test */
     public function guest_cannot_access_order_pages(): void
     {
-        $this->get(route('orders.index'))->assertRedirect(route('login'));
-        $this->get(route('orders.create', ['open_offer_bid_id' => $this->acceptedBid->id]))->assertRedirect(route('login'));
-        $this->post(route('orders.store'))->assertRedirect(route('login'));
-        $this->get(route('orders.show', Order::factory()->create()))->assertRedirect(route('login'));
+        $this->get(route('orders.index'))->assertRedirect(route('auth.signin'));
+        $this->get(route('orders.create', ['open_offer_bid_id' => $this->acceptedBid->id]))->assertRedirect(route('auth.signin'));
+        $this->post(route('orders.store'))->assertRedirect(route('auth.signin'));
+        $this->get(route('orders.show', Order::factory()->create()))->assertRedirect(route('auth.signin'));
     }
 
     /** @test */

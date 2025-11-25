@@ -1344,7 +1344,7 @@ return new class extends Migration
         @if (Auth::check() && Auth::user()->id === $openOffer->creator_id)
             <p class="text-gray-600">You cannot bid on your own offer.</p>
         @elseif (!Auth::check())
-            <p class="text-gray-600">Please <a href="{{ route('login') }}" class="text-indigo-600 hover:underline">log in</a> to place a bid.</p>
+            <p class="text-gray-600">Please <a href="{{ route('auth.signin') }}" class="text-indigo-600 hover:underline">log in</a> to place a bid.</p>
         @else
             <p class="text-gray-600">You are not authorized to place a bid on this offer.</p>
         @endif

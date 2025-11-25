@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: serbizyu-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+    env_file:
+      - /env/.env.docker
+    depends_on:
+      - mysql
+      - meilisearch
+      - mailpit
+    command: >
+      sh -c "
+        php artisan serve --host=0.0.0.0 --port=8000
+      "
+
+  mysql:
+    image: mysql:8.0
+    container_name: serbizyu-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: serbizyu
+      MYSQL_USER: sail
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.8
+    container_name: serbizyu-meili
+    ports:
+      - "7700:7700"
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: serbizyu-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"

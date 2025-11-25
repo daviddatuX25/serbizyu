@@ -53,7 +53,9 @@ class WorkflowPolicy
      */
     public function duplicate(User $user, WorkflowTemplate $workflowTemplate): bool
     {
-        return $workflowTemplate->is_public;
+       
+        // A user can duplicate a workflow if they own it, OR if it is public.
+        return $user->id === $workflowTemplate->creator_id || $workflowTemplate->is_public;
     }
 
     /**

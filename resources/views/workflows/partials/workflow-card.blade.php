@@ -49,7 +49,7 @@
                 @endif
             @endif
         @else
-            <a href="{{ route('login') }}" class="text-sm text-blue-600 hover:underline">Login to bookmark</a>
+            <a href="{{ route('auth.signin') }}" class="text-sm text-blue-600 hover:underline">Login to bookmark</a>
         @endauth
     </div>
 </div>

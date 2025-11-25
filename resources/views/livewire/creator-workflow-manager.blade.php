@@ -38,10 +38,6 @@
                     </div>
                     <div class="flex space-x-2">
                         <a href="{{ route('creator.workflows.edit', ['workflow' => $workflow->id]) }}" class="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Edit</a>
-                        <form action="{{ route('creator.workflows.duplicate', ['workflow' => $workflow->id]) }}" method="POST" style="display:inline;">
-                            @csrf
-                            <button type="submit" class="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">Duplicate</button>
-                        </form>
                         <button wire:click="delete({{ $workflow->id }})" wire:confirm="Are you sure you want to delete this workflow?" class="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Delete</button>
                     </div>
                 </div>
