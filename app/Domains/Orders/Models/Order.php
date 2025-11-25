@@ -4,10 +4,15 @@ namespace App\Domains\Orders\Models;
 
 use App\Domains\Users\Models\User;
 use App\Domains\Listings\Models\Service;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class Order extends Model
 {
+    use HasFactory, LogsActivity;
+
     protected $fillable = [
         'buyer_id',
         'seller_id',
@@ -22,6 +27,13 @@ class Order extends Model
         'cancelled_at',
         'cancellation_reason',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['status', 'payment_status'])
+            ->setDescriptionForEvent(fn(string $eventName) => "Order has been {$eventName}");
+    }
 
     public function buyer()
     {
@@ -41,5 +53,25 @@ class Order extends Model
     public function workInstance()
     {
         return $this->hasOne(\App\Domains\Work\Models\WorkInstance::class);
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(\App\Domains\Payments\Models\Payment::class);
+    }
+
+    public function disbursement()
+    {
+        return $this->hasOne(\App\Domains\Payments\Models\Disbursement::class);
+    }
+
+    public function refund()
+    {
+        return $this->hasOne(\App\Domains\Payments\Models\Refund::class);
+    }
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\OrderFactory::new();
     }
 }

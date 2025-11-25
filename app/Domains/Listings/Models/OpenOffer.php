@@ -13,12 +13,14 @@ use Plank\Mediable\Media;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Enums\OpenOfferStatus; // Added OpenOfferStatus enum
+use Laravel\Scout\Searchable;
 
 class OpenOffer extends Model implements MediableInterface
 {
     use HasFactory;
     use SoftDeletes;
     use Mediable;
+    use Searchable;
 
     protected $table = 'open_offers';
     
@@ -34,6 +36,20 @@ class OpenOffer extends Model implements MediableInterface
         'deadline', // Added deadline
         'status',   // Added status
     ];
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array
+     */
+    public function toSearchableArray()
+    {
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'description' => $this->description,
+        ];
+    }
 
     // casts
     protected $casts = [

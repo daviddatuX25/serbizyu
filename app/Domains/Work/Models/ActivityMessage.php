@@ -11,6 +11,13 @@ class ActivityMessage extends Model
         'activity_thread_id',
         'user_id',
         'content',
+        'read_at',
+    ];
+
+    protected $casts = [
+        'read_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function activityThread()
@@ -25,6 +32,32 @@ class ActivityMessage extends Model
 
     public function attachments()
     {
-        return $this->hasMany(ActivityAttachment::class);
+        return $this->hasMany(ActivityAttachment::class)->orderBy('created_at', 'asc');
+    }
+
+    /**
+     * Mark message as read
+     */
+    public function markAsRead()
+    {
+        if ($this->read_at === null) {
+            $this->update(['read_at' => now()]);
+        }
+    }
+
+    /**
+     * Check if message has attachments
+     */
+    public function hasAttachments(): bool
+    {
+        return $this->attachments()->exists();
+    }
+
+    /**
+     * Get attachment count
+     */
+    public function getAttachmentCount()
+    {
+        return $this->attachments()->count();
     }
 }

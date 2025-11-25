@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Auth;
 
 class ActivityController extends Controller
 {
@@ -41,7 +42,7 @@ class ActivityController extends Controller
 
         $activityMessage = ActivityMessage::create([
             'activity_thread_id' => $request->activity_thread_id, // Assuming this is passed
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'content' => $request->content,
         ]);
 
@@ -119,6 +120,23 @@ class ActivityController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $activityMessage = ActivityMessage::findOrFail($id);
+
+        // Authorization: Only message creator can delete
+        if ($activityMessage->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized to delete this message.');
+        }
+
+        // Delete attachments
+        if ($activityMessage->attachments()->exists()) {
+            foreach ($activityMessage->attachments as $attachment) {
+                Storage::disk('public')->delete($attachment->file_path);
+                $attachment->delete();
+            }
+        }
+
+        $activityMessage->delete();
+
+        return back()->with('success', 'Message deleted successfully.');
     }
 }

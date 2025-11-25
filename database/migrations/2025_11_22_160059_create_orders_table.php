@@ -16,13 +16,13 @@ return new class extends Migration
             $table->foreignId('buyer_id')->constrained('users');
             $table->foreignId('seller_id')->constrained('users');
             $table->foreignId('service_id')->constrained('services');
-            $table->foreignId('open_offer_id')->constrained('open_offers');
-            $table->foreignId('open_offer_bid_id')->constrained('open_offer_bids');
+            $table->foreignId('open_offer_id')->nullable()->constrained('open_offers');
+            $table->foreignId('open_offer_bid_id')->nullable()->constrained('open_offer_bids');
             $table->decimal('price', 10, 2);
             $table->decimal('platform_fee', 10, 2);
             $table->decimal('total_amount', 10, 2);
-            $table->string('status');
-            $table->string('payment_status');
+            $table->string('status')->default('pending');
+            $table->string('payment_status')->default('pending');
             $table->timestamp('cancelled_at')->nullable();
             $table->text('cancellation_reason')->nullable();
             $table->timestamps();
