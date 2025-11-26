@@ -87,6 +87,24 @@ class Service extends Model implements MediableInterface
         return $this->morphMany(ListingReview::class, 'listing');
     }
 
+    public function serviceReviews()
+    {
+        return $this->hasMany(ServiceReview::class, 'service_id');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(\App\Domains\Orders\Models\Order::class, 'service_id');
+    }
+
+    /**
+     * Get average rating from service reviews
+     */
+    public function getAverageRatingAttribute()
+    {
+        return $this->serviceReviews()->avg('rating') ?? 0;
+    }
+
     public function getThumbnailUrlAttribute()
     {
         return $this->getFirstMediaUrl('gallery');

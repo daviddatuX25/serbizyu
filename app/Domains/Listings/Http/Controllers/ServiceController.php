@@ -6,6 +6,7 @@ use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Services\CategoryService;
 use App\Domains\Common\Services\AddressService;
 use App\Domains\Listings\Services\ServiceService;
+use App\Domains\Listings\Services\ServiceReviewService;
 use App\Domains\Listings\Services\WorkflowTemplateService;
 use App\Domains\Orders\Services\OrderService;
 use App\Http\Controllers\Controller;
@@ -24,7 +25,8 @@ class ServiceController extends Controller
         private CategoryService $categoryService,
         private WorkflowTemplateService $workflowTemplateService,
         private AddressService $addressService,
-        private OrderService $orderService
+        private OrderService $orderService,
+        private ServiceReviewService $reviewService
     ) {}
 
     /**
@@ -74,15 +76,21 @@ class ServiceController extends Controller
 
     public function manage(Service $service) {
         $this->authorize('update', $service);
-        // Placeholder data as per the guide
-            $analytics = [
-                'total_revenue' => 0,
-                'today_clicks' => 0,
-                'wishlist_count' => 0,
-            ];
-            $orders = [];
-            $reviews = [];
-        return view('creator.services.show', compact('service', 'analytics', 'orders', 'reviews'));
+        // Fetch real data
+        $analytics = [
+            'total_revenue' => 0,
+            'today_clicks' => 0,
+            'wishlist_count' => 0,
+        ];
+        $orders = $service->orders()->latest()->paginate(10);
+        $reviews = $this->reviewService->getServiceReviews($service, 100);
+        $reviewStats = [
+            'average_rating' => $this->reviewService->getAverageRating($service),
+            'total_reviews' => $this->reviewService->getReviewCount($service),
+            'verified_reviews' => $this->reviewService->getVerifiedReviewCount($service),
+        ];
+        
+        return view('creator.services.show', compact('service', 'analytics', 'orders', 'reviews', 'reviewStats'));
     }
 
     /**

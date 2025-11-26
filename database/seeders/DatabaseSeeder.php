@@ -36,6 +36,10 @@ class DatabaseSeeder extends Seeder
             
             // 8. Optional: Create some bids on open offers
             // OpenOfferBidSeeder::class,
+            
+            // 9. Create reviews for users and services
+            UserReviewSeeder::class,
+            ServiceReviewSeeder::class,
         ]);
     }
 }

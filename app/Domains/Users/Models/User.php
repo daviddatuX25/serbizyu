@@ -82,6 +82,20 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
     {
         return $this->media->where('tag', 'profile_image')->first();
     }
+
+    /**
+     * Get the user's profile photo URL
+     */
+    public function getProfilePhotoUrlAttribute()
+    {
+        $profileImage = $this->getProfileImageAttribute();
+        if ($profileImage) {
+            return $profileImage->getUrl();
+        }
+        // Fallback to avatar with user's name
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name);
+    }
+
     protected static function newFactory()
     {
         return \Database\Factories\UserFactory::new();
@@ -130,5 +144,29 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
     public function orders()
     {
         return $this->hasMany(\App\Domains\Orders\Models\Order::class, 'buyer_id');
+    }
+
+    /**
+     * Get all reviews written by this user
+     */
+    public function reviewsGiven(): HasMany
+    {
+        return $this->hasMany(UserReview::class, 'reviewer_id');
+    }
+
+    /**
+     * Get all reviews received about this user
+     */
+    public function reviewsReceived(): HasMany
+    {
+        return $this->hasMany(UserReview::class, 'reviewee_id');
+    }
+
+    /**
+     * Get average rating from received reviews
+     */
+    public function getAverageRatingAttribute()
+    {
+        return $this->reviewsReceived()->avg('rating') ?? 0;
     }
 }
