@@ -18,11 +18,13 @@ class WorkInstancePolicy
 
     /**
      * Determine whether the user can view the model.
-     * Both buyer and seller can view the work instance
+     * Both buyer and seller can view the work instance and its progress
+     * - Seller: Can see their own work and fulfill steps
+     * - Buyer: Can see the work progress and send messages
      */
     public function view(User $user, WorkInstance $workInstance): bool
     {
-        return $user->id === $workInstance->order->buyer_id || 
+        return $user->id === $workInstance->order->buyer_id ||
                $user->id === $workInstance->order->seller_id;
     }
 
@@ -85,10 +87,11 @@ class WorkInstancePolicy
 
     /**
      * Determine whether the user can add activity messages
+     * Both buyer and seller can send and receive messages about work steps
      */
     public function addActivity(User $user, WorkInstance $workInstance): bool
     {
-        return $user->id === $workInstance->order->buyer_id || 
+        return $user->id === $workInstance->order->buyer_id ||
                $user->id === $workInstance->order->seller_id;
     }
 }

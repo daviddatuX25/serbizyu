@@ -2,6 +2,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Domains\Listings\Http\Controllers\ServiceController;
 use App\Domains\Users\Http\Controllers\ProfileController;
+use App\Domains\Users\Http\Controllers\CreatorDashboardController;
 use App\Domains\Users\Http\Controllers\UserVerificationController;
 use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
 use App\Domains\Admin\Http\Controllers\DashboardController;
@@ -24,6 +25,8 @@ use App\Domains\Payments\Http\Controllers\PaymentWebhookController;
 use App\Domains\Payments\Http\Controllers\DisbursementController;
 use App\Domains\Payments\Http\Controllers\RefundController;
 use App\Domains\Messaging\Http\Controllers\MessageController;
+use App\Domains\Orders\Http\Controllers\OrderMessageController;
+use App\Domains\Listings\Http\Controllers\BidMessageController;
 use App\Domains\Payments\Http\Controllers\CashPaymentController;
 
 
@@ -68,9 +71,7 @@ Route::get('/workflows', [PublicWorkflowController::class, 'index'])->name('work
 
 // Creator space
 Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
-    Route::get('/', function () {
-        return view('creator.dashboard');
-    })->name('dashboard');
+    Route::get('/', [CreatorDashboardController::class, 'index'])->name('dashboard');
 
     // Service Management
     Route::resource('services', ServiceController::class);
@@ -91,6 +92,16 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
         ]);
         Route::post('bids/{bid}/accept', [OpenOfferBidController::class, 'accept'])->name('bids.accept');
         Route::post('bids/{bid}/reject', [OpenOfferBidController::class, 'reject'])->name('bids.reject');
+    });
+
+    // Bid Messaging Routes (accessible by bidder and offer creator)
+    Route::prefix('bids')->name('bids.')->group(function () {
+        Route::prefix('{bid}/messages')->name('messages.')->group(function () {
+            Route::get('/', [BidMessageController::class, 'index'])->name('index');
+            Route::post('/', [BidMessageController::class, 'store'])->name('store');
+            Route::get('/thread', [BidMessageController::class, 'getOrCreateThread'])->name('thread');
+            Route::post('/read', [BidMessageController::class, 'markAsRead'])->name('markAsRead');
+        });
     });
 
     // Workflow Management
@@ -174,6 +185,14 @@ Route::middleware(['auth'])->prefix('orders')->name('orders.')->group(function (
     Route::delete('/{order}', [OrderController::class, 'destroy'])->name('destroy');
     Route::post('/from-bid/{bid}', [OrderController::class, 'createFromBid'])->name('fromBid');
     Route::post('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
+
+    // Order Messaging
+    Route::prefix('{order}/messages')->name('messages.')->group(function () {
+        Route::get('/', [OrderMessageController::class, 'index'])->name('index');
+        Route::post('/', [OrderMessageController::class, 'store'])->name('store');
+        Route::get('/thread', [OrderMessageController::class, 'getOrCreateThread'])->name('thread');
+        Route::post('/read', [OrderMessageController::class, 'markAsRead'])->name('markAsRead');
+    });
 });
 
 Route::middleware(['auth'])->prefix('payments')->name('payments.')->group(function () {
@@ -194,7 +213,7 @@ Route::middleware(['auth'])->prefix('payments')->name('payments.')->group(functi
 // Work Instance Management
 Route::middleware(['auth'])->prefix('work-instances')->name('work-instances.')->group(function () {
     Route::get('/{workInstance}', [WorkInstanceController::class, 'show'])->name('show');
-    
+
     // Work Instance Step Management
     Route::post('/{workInstance}/steps/{workInstanceStep}/start', [WorkInstanceController::class, 'startStep'])->name('steps.start');
     Route::post('/{workInstance}/steps/{workInstanceStep}/complete', [WorkInstanceController::class, 'completeStep'])->name('steps.complete');

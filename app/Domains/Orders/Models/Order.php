@@ -4,6 +4,7 @@ namespace App\Domains\Orders\Models;
 
 use App\Domains\Users\Models\User;
 use App\Domains\Listings\Models\Service;
+use App\Domains\Messaging\Models\MessageThread;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -70,6 +71,11 @@ class Order extends Model
     public function refund()
     {
         return $this->hasOne(\App\Domains\Payments\Models\Refund::class);
+    }
+
+    public function messageThread()
+    {
+        return $this->morphOne(MessageThread::class, 'parent');
     }
 
     protected static function newFactory()

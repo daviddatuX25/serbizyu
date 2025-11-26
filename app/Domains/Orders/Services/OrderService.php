@@ -5,6 +5,7 @@ namespace App\Domains\Orders\Services;
 use App\Domains\Listings\Models\OpenOfferBid;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Users\Models\User;
+use App\Domains\Messaging\Models\MessageThread;
 use App\Enums\OrderStatus;
 use App\Mail\OrderCreated;
 use Illuminate\Support\Facades\Mail;
@@ -37,6 +38,9 @@ class OrderService
 
         $order = Order::create($orderData);
 
+        // Create message thread for order communication
+        $this->createOrderMessageThread($order);
+
         if ($service->workflowTemplate) {
             $this->cloneWorkflowForOrder($order, $service->workflowTemplate);
         }
@@ -64,6 +68,9 @@ class OrderService
 
         $order = Order::create($orderData);
 
+        // Create message thread for order communication
+        $this->createOrderMessageThread($order);
+
         if ($service->workflowTemplate) {
             $this->cloneWorkflowForOrder($order, $service->workflowTemplate);
         }
@@ -76,6 +83,16 @@ class OrderService
     protected function calculatePlatformFee(float $amount): float
     {
         return $amount * 0.05;
+    }
+
+    protected function createOrderMessageThread(Order $order): void
+    {
+        MessageThread::create([
+            'creator_id' => $order->buyer_id,
+            'title' => "Order #{$order->id} - Discussion",
+            'parent_type' => Order::class,
+            'parent_id' => $order->id,
+        ]);
     }
 
     protected function cloneWorkflowForOrder(Order $order, WorkflowTemplate $workflowTemplate): void

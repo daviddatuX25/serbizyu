@@ -17,15 +17,32 @@ class ChatInterface extends Component
     public MessageThread $thread;
     public $newMessage = '';
     public $attachments = [];
-    public $messages;
+    public $messages = [];
 
-    protected $listeners = ['echo:message-thread.{thread.id},MessageSent' => 'mount'];
+    protected $listeners = [];
 
     public function mount()
     {
-        $this->messages = $this->thread->messages()->with('sender', 'attachments')->latest()->get();
+        $this->loadMessages();
         // Mark messages as read when mounting the component
         $this->markMessagesAsRead();
+    }
+
+    public function refreshMessages()
+    {
+        $this->loadMessages();
+        $this->markMessagesAsRead();
+    }
+
+    private function loadMessages()
+    {
+        $messages = $this->thread->messages()
+            ->with('sender', 'attachments')
+            ->latest()
+            ->get()
+            ->reverse() // Reverse to show oldest first, latest last
+            ->toArray();
+        $this->messages = $messages;
     }
 
     public function sendMessage()
@@ -53,11 +70,8 @@ class ChatInterface extends Component
             return $message;
         });
 
-        // Broadcast MessageSent event
-        // event(new MessageSent($message)); // Will implement this later in broadcasting setup
-
         $this->reset(['newMessage', 'attachments']);
-        $this->messages = $this->thread->messages()->with('sender', 'attachments')->latest()->get(); // Refresh messages
+        $this->loadMessages();
     }
 
     public function markMessagesAsRead()

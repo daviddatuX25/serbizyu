@@ -15,11 +15,17 @@ class WorkInstanceController extends Controller
 {
     /**
      * Display a listing of the resource.
+     * Shows work instances for both seller (they work on) and buyer (they purchased)
      */
     public function index()
     {
-        $workInstances = WorkInstance::whereHas('order', function ($query) {
-            $query->where('seller_id', Auth::id());
+        $currentUserId = Auth::id();
+
+        $workInstances = WorkInstance::whereHas('order', function ($query) use ($currentUserId) {
+            $query->where(function ($q) use ($currentUserId) {
+                $q->where('seller_id', $currentUserId)
+                  ->orWhere('buyer_id', $currentUserId);
+            });
         })->with('order')->get();
 
         return view('creator.work-dashboard', compact('workInstances'));
@@ -105,7 +111,7 @@ class WorkInstanceController extends Controller
 
         // Update parent work instance
         $workInstance->current_step_index = $workInstance->current_step_index + 1;
-        
+
         $allStepsCompleted = $workInstance->workInstanceSteps()->where('status', '!=', 'completed')->doesntExist();
 
         if ($allStepsCompleted) {

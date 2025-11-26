@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-creator-layout title="Work Instance">
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <div>
@@ -7,6 +7,15 @@
                 </h2>
                 <p class="mt-1 text-sm text-gray-600">
                     Order #{{ $workInstance->order->id }}
+                    @php
+                        $isSeller = auth()->id() === $workInstance->order->seller_id;
+                        $isBuyer = auth()->id() === $workInstance->order->buyer_id;
+                    @endphp
+                    @if($isSeller)
+                        <span class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded font-medium">Your Service to Deliver</span>
+                    @elseif($isBuyer)
+                        <span class="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded font-medium">Your Purchase</span>
+                    @endif
                 </p>
             </div>
             <span class="px-3 py-1 rounded-full text-sm font-medium {{ $workInstance->status === 'completed' ? 'bg-green-100 text-green-800' : ($workInstance->status === 'in_progress' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800') }}">
@@ -45,11 +54,24 @@
                 </div>
             </div>
 
+            <!-- Seller/Buyer Info Banner -->
+            @if($isBuyer)
+                <div class="bg-blue-50 border border-blue-200 rounded-lg mb-6 p-4">
+                    <h4 class="font-semibold text-blue-900 mb-2">📋 Work Progress - You're the Buyer</h4>
+                    <p class="text-sm text-blue-800">Track the seller's progress on your order. You can message the seller about any step and monitor real-time progress below.</p>
+                </div>
+            @elseif($isSeller)
+                <div class="bg-purple-50 border border-purple-200 rounded-lg mb-6 p-4">
+                    <h4 class="font-semibold text-purple-900 mb-2">⚙️ Work Fulfillment - You're the Seller</h4>
+                    <p class="text-sm text-purple-800">Work through each step and mark them complete as you finish. The buyer can see your progress and message you for clarifications.</p>
+                </div>
+            @endif
+
             <!-- Timeline View -->
             <div class="bg-white overflow-hidden shadow-sm rounded-lg mb-6">
                 <div class="p-6">
                     <h3 class="text-lg font-semibold mb-6 text-gray-900">Work Steps Timeline</h3>
-                    
+
                     <div class="relative">
                         @forelse($workInstance->workInstanceSteps as $step)
                             <div class="mb-8 relative pl-12">
@@ -110,7 +132,7 @@
                                                     {{ $step->activityThread->getMessageCount() }} message{{ $step->activityThread->getMessageCount() !== 1 ? 's' : '' }}
                                                 </span>
                                             </div>
-                                            
+
                                             @if($step->activityThread->description)
                                                 <p class="text-xs text-gray-600 mb-2">{{ $step->activityThread->description }}</p>
                                             @endif
@@ -126,7 +148,7 @@
                                         <div class="text-xs text-gray-400 italic">No activity thread yet</div>
                                     @endif
 
-                                    <!-- Step Actions (for seller) -->
+                                    <!-- Step Actions (for seller only) -->
                                     @if(auth()->id() === $workInstance->order->seller_id && !$step->isCompleted())
                                         <div class="flex gap-2 pt-2">
                                             @if(!$step->isInProgress())
@@ -145,6 +167,11 @@
                                                     </button>
                                                 </form>
                                             @endif
+                                        </div>
+                                    @elseif(auth()->id() === $workInstance->order->buyer_id && !$step->isCompleted())
+                                        <div class="text-xs text-gray-500 italic pt-2 flex items-center gap-2">
+                                            <span>💬</span>
+                                            <span>Only the seller can complete steps. You can message about this step below.</span>
                                         </div>
                                     @endif
                                 </div>
@@ -178,37 +205,50 @@
             </div>
 
             <!-- Participants Card -->
-            <div class="bg-white overflow-hidden shadow-sm rounded-lg">
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg mb-6">
                 <div class="p-6">
                     <h3 class="text-lg font-semibold mb-4 text-gray-900">Participants</h3>
                     <div class="grid grid-cols-2 gap-6">
-                        <div>
-                            <h4 class="font-medium text-gray-700 mb-2">Seller</h4>
+                        <div class="p-4 rounded-lg {{ $isSeller ? 'bg-blue-50 border-2 border-blue-300' : 'bg-gray-50 border border-gray-200' }}">
+                            <h4 class="font-medium {{ $isSeller ? 'text-blue-900' : 'text-gray-700' }} mb-2 flex items-center gap-2">
+                                👨‍💼 Seller
+                                @if($isSeller)
+                                    <span class="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded font-semibold">(You)</span>
+                                @endif
+                            </h4>
                             <div class="flex items-center">
-                                <img src="{{ $workInstance->order->seller->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($workInstance->order->seller->name) }}" 
-                                     alt="{{ $workInstance->order->seller->name }}" 
+                                <img src="{{ $workInstance->order->seller->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($workInstance->order->seller->name) }}"
+                                     alt="{{ $workInstance->order->seller->name }}"
                                      class="h-10 w-10 rounded-full mr-3">
                                 <div>
-                                    <p class="font-medium text-gray-900">{{ $workInstance->order->seller->firstname }}</p>
-                                    <p class="text-sm text-gray-600">{{ $workInstance->order->seller->email }}</p>
+                                    <p class="font-medium {{ $isSeller ? 'text-blue-900' : 'text-gray-900' }}">{{ $workInstance->order->seller->firstname }}</p>
+                                    <p class="text-sm {{ $isSeller ? 'text-blue-700' : 'text-gray-600' }}">{{ $workInstance->order->seller->email }}</p>
                                 </div>
                             </div>
                         </div>
-                        <div>
-                            <h4 class="font-medium text-gray-700 mb-2">Buyer</h4>
+                        <div class="p-4 rounded-lg {{ $isBuyer ? 'bg-green-50 border-2 border-green-300' : 'bg-gray-50 border border-gray-200' }}">
+                            <h4 class="font-medium {{ $isBuyer ? 'text-green-900' : 'text-gray-700' }} mb-2 flex items-center gap-2">
+                                👤 Buyer
+                                @if($isBuyer)
+                                    <span class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded font-semibold">(You)</span>
+                                @endif
+                            </h4>
                             <div class="flex items-center">
-                                <img src="{{ $workInstance->order->buyer->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($workInstance->order->buyer->name) }}" 
-                                     alt="{{ $workInstance->order->buyer->name }}" 
+                                <img src="{{ $workInstance->order->buyer->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($workInstance->order->buyer->name) }}"
+                                     alt="{{ $workInstance->order->buyer->name }}"
                                      class="h-10 w-10 rounded-full mr-3">
                                 <div>
-                                    <p class="font-medium text-gray-900">{{ $workInstance->order->buyer->firstname }}</p>
-                                    <p class="text-sm text-gray-600">{{ $workInstance->order->buyer->email }}</p>
+                                    <p class="font-medium {{ $isBuyer ? 'text-green-900' : 'text-gray-900' }}">{{ $workInstance->order->buyer->firstname }}</p>
+                                    <p class="text-sm {{ $isBuyer ? 'text-green-700' : 'text-gray-600' }}">{{ $workInstance->order->buyer->email }}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Work Chat -->
+            <livewire:work-chat :workInstance="$workInstance" />
         </div>
     </div>
-</x-app-layout>
+</x-creator-layout>
