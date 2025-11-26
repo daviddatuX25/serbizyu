@@ -46,7 +46,25 @@
     </div>
 </div>
 
-<!-- Item 4: Workflows -->
+<!-- Item 4: Orders -->
+<a href="{{ route('orders.index') }}" class="group flex items-center gap-4 md:justify-center lg:justify-start w-full">
+    <div class="w-12 h-12 border rotate-45 flex items-center justify-center transition-colors duration-300 shadow-sm shrink-0
+        {{ request()->routeIs('orders.*') ? 'bg-gray-800 border-gray-800' : 'bg-white border-gray-300 group-hover:bg-gray-800 group-hover:border-gray-800' }}">
+        <i data-lucide="shopping-cart" class="-rotate-45 w-5 h-5 {{ request()->routeIs('orders.*') ? 'text-white' : 'text-gray-600 group-hover:text-white' }}"></i>
+    </div>
+    <span class="font-medium md:hidden lg:block whitespace-nowrap {{ request()->routeIs('orders.*') ? 'text-gray-900' : 'text-gray-600 group-hover:text-gray-900' }}">Orders</span>
+</a>
+
+<!-- Item 5: Work System -->
+<a href="{{ route('creator.work-dashboard') }}" class="group flex items-center gap-4 md:justify-center lg:justify-start w-full">
+    <div class="w-12 h-12 border rotate-45 flex items-center justify-center transition-colors duration-300 shadow-sm shrink-0
+        {{ request()->routeIs('creator.work-dashboard') ? 'bg-gray-800 border-gray-800' : 'bg-white border-gray-300 group-hover:bg-gray-800 group-hover:border-gray-800' }}">
+        <i data-lucide="zap" class="-rotate-45 w-5 h-5 {{ request()->routeIs('creator.work-dashboard') ? 'text-white' : 'text-gray-600 group-hover:text-white' }}"></i>
+    </div>
+    <span class="font-medium md:hidden lg:block whitespace-nowrap {{ request()->routeIs('creator.work-dashboard') ? 'text-gray-900' : 'text-gray-600 group-hover:text-gray-900' }}">Work</span>
+</a>
+
+<!-- Item 6: Workflows -->
 <a href="{{ route('creator.workflows.index') }}" class="group flex items-center gap-4 md:justify-center lg:justify-start w-full">
     <div class="w-12 h-12 border rotate-45 flex items-center justify-center transition-colors duration-300 shadow-sm shrink-0
         {{ request()->routeIs('workflows.*') ? 'bg-gray-800 border-gray-800' : 'bg-white border-gray-300 group-hover:bg-gray-800 group-hover:border-gray-800' }}">

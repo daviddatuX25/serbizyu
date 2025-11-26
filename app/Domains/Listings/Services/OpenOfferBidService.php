@@ -5,6 +5,7 @@ namespace App\Domains\Listings\Services;
 use App\Domains\Listings\Models\OpenOffer;
 use App\Domains\Listings\Models\OpenOfferBid;
 use App\Domains\Users\Models\User;
+use App\Domains\Messaging\Models\MessageThread;
 use Illuminate\Support\Facades\DB;
 use App\Enums\OpenOfferStatus;
 use App\Enums\BidStatus;
@@ -32,7 +33,10 @@ class OpenOfferBidService
                 'message' => $data['message'] ?? null,
                 'status' => BidStatus::PENDING,
             ]);
-            
+
+            // Create message thread for bid discussion
+            $this->createBidMessageThread($bid);
+
             return $bid;
         } catch (\Exception $e) {
             throw new \Exception('Failed to create bid: ' . $e->getMessage());
@@ -111,5 +115,15 @@ class OpenOfferBidService
             }
             $bid->delete();
         });
+    }
+
+    protected function createBidMessageThread(OpenOfferBid $bid): void
+    {
+        MessageThread::create([
+            'creator_id' => $bid->bidder_id,
+            'title' => "Bid Discussion - {$bid->openOffer->title}",
+            'parent_type' => OpenOfferBid::class,
+            'parent_id' => $bid->id,
+        ]);
     }
 }

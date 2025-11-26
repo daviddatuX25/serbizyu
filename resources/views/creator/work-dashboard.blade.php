@@ -1,8 +1,8 @@
-<x-app-layout>
+<x-creator-layout title="Work Dashboard">
     <x-slot name="header">
         <div>
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('Seller Work Dashboard') }}
+                {{ __('Work Dashboard') }}
             </h2>
             <p class="mt-1 text-sm text-gray-600">
                 Manage your ongoing work and orders
@@ -97,6 +97,15 @@
                                                 <span class="px-2 py-1 text-xs font-medium rounded {{ $workInstance->status === 'completed' ? 'bg-green-100 text-green-800' : ($workInstance->status === 'in_progress' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800') }}">
                                                     {{ ucfirst(str_replace('_', ' ', $workInstance->status)) }}
                                                 </span>
+                                                @php
+                                                    $isSeller = auth()->id() === $workInstance->order->seller_id;
+                                                    $isBuyer = auth()->id() === $workInstance->order->buyer_id;
+                                                @endphp
+                                                @if($isSeller)
+                                                    <span class="px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-800">Seller</span>
+                                                @elseif($isBuyer)
+                                                    <span class="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-800">Buyer</span>
+                                                @endif
                                             </div>
                                             <p class="text-sm text-gray-600">
                                                 Order #{{ $workInstance->order->id }} • Buyer: {{ $workInstance->order->buyer->name }}
@@ -123,24 +132,28 @@
                                             <p class="text-xs font-medium text-blue-900">
                                                 Current: {{ $currentStep->workTemplate?->name ?? 'Step ' . ($currentStep->step_index + 1) }}
                                             </p>
-                                            <div class="flex gap-2 mt-2">
-                                                @if(!$currentStep->isInProgress())
-                                                    <form action="{{ route('work-instances.steps.start', [$workInstance, $currentStep]) }}" method="POST" class="inline">
-                                                        @csrf
-                                                        <button type="submit" class="px-2 py-1 text-xs bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition">
-                                                            Start
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                                @if($currentStep->isInProgress())
-                                                    <form action="{{ route('work-instances.steps.complete', [$workInstance, $currentStep]) }}" method="POST" class="inline">
-                                                        @csrf
-                                                        <button type="submit" class="px-2 py-1 text-xs bg-green-600 text-white font-medium rounded hover:bg-green-700 transition">
-                                                            Complete
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                            </div>
+                                            @if($isSeller)
+                                                <div class="flex gap-2 mt-2">
+                                                    @if(!$currentStep->isInProgress())
+                                                        <form action="{{ route('work-instances.steps.start', [$workInstance, $currentStep]) }}" method="POST" class="inline">
+                                                            @csrf
+                                                            <button type="submit" class="px-2 py-1 text-xs bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition">
+                                                                Start
+                                                            </button>
+                                                        </form>
+                                                    @endif
+                                                    @if($currentStep->isInProgress())
+                                                        <form action="{{ route('work-instances.steps.complete', [$workInstance, $currentStep]) }}" method="POST" class="inline">
+                                                            @csrf
+                                                            <button type="submit" class="px-2 py-1 text-xs bg-green-600 text-white font-medium rounded hover:bg-green-700 transition">
+                                                                Complete
+                                                            </button>
+                                                        </form>
+                                                    @endif
+                                                </div>
+                                            @elseif($isBuyer)
+                                                <p class="text-xs text-gray-600 mt-2 italic">👀 Waiting for seller to complete this step</p>
+                                            @endif
                                         </div>
                                     @elseif($workInstance->isCompleted())
                                         <div class="mb-3 p-2 bg-green-50 rounded border border-green-200">
@@ -167,4 +180,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-creator-layout>

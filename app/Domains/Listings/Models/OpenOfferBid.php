@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Users\Models\User;
+use App\Domains\Messaging\Models\MessageThread;
 use App\Enums\BidStatus;
 
 class OpenOfferBid extends Model
@@ -26,7 +27,7 @@ class OpenOfferBid extends Model
     protected $casts = [
         'status' => BidStatus::class,
     ];
-    
+
     public function service()
     {
         return $this->belongsTo(Service::class);
@@ -40,6 +41,11 @@ class OpenOfferBid extends Model
     public function bidder()
     {
         return $this->belongsTo(User::class, 'bidder_id');
+    }
+
+    public function messageThread()
+    {
+        return $this->morphOne(MessageThread::class, 'parent');
     }
 
     protected static function newFactory()

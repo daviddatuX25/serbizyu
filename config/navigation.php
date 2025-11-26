@@ -23,6 +23,16 @@ return [
             'icon'  => 'briefcase',
         ],
         [
+            'label' => 'Orders',
+            'route' => 'orders.index',
+            'icon'  => 'shopping-cart',
+        ],
+        [
+            'label' => 'Work',
+            'route' => 'creator.work-dashboard',
+            'icon'  => 'tasks',
+        ],
+        [
             'label' => 'Open Offers',
             'route' => 'creator.openoffers.index',
             'icon'  => 'megaphone',

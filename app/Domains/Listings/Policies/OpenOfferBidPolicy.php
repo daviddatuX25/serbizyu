@@ -78,4 +78,25 @@ class OpenOfferBidPolicy
     {
         return $user->id === $bid->openOffer->creator_id;
     }
+
+    /**
+     * Determine whether the user can view the message thread for a bid.
+     */
+    public function viewMessageThread(User $user, OpenOfferBid $bid): bool
+    {
+        return $user->id === $bid->bidder_id || $user->id === $bid->openOffer->creator_id;
+    }
+
+    /**
+     * Determine whether the user can send messages for a bid.
+     */
+    public function sendMessage(User $user, OpenOfferBid $bid): bool
+    {
+        // Don't allow messaging if bid is rejected
+        if ($bid->status === BidStatus::REJECTED) {
+            return false;
+        }
+
+        return $user->id === $bid->bidder_id || $user->id === $bid->openOffer->creator_id;
+    }
 }

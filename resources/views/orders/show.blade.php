@@ -38,27 +38,12 @@
                         </div>
                     </div>
 
-                    <!-- Details Tab -->
-                    <div id="details-tab" class="tab-content space-y-6">
-                        <!-- Service Details -->
-                        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                            <div class="p-6 bg-white border-b border-gray-200">
-                                <h2 class="text-lg font-semibold text-gray-900 mb-4">Service Details</h2>
-                                <div class="space-y-4">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <p class="text-sm text-gray-600">Service</p>
-                                            <p class="text-lg font-medium text-gray-900">{{ $order->service->name }}</p>
-                                        </div>
-                                        <p class="text-2xl font-bold text-gray-900">${{ number_format($order->price, 2) }}</p>
-                                    </div>
-                                    @if($order->service->description)
-                                        <div>
-                                            <p class="text-sm text-gray-600">Description</p>
-                                            <p class="text-gray-700">{{ $order->service->description }}</p>
-                                        </div>
-                                    @endif
-                                </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-700">Billing</h2>
+                        <dl class="mt-2 space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <dt class="text-gray-500">Price:</dt>
+                                <dd class="font-medium text-gray-800">₱{{ number_format($order->price, 2) }}</dd>
                             </div>
                         </div>
                         <div>
@@ -117,6 +102,41 @@
                         @endif
                     </div>
                     </div>
+
+                    <!-- Work Progress -->
+                    @if($order->workInstance)
+                        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                            <div class="p-6 bg-white border-b border-gray-200">
+                                <h2 class="text-lg font-semibold text-gray-900 mb-4">Work Progress</h2>
+                                <div class="space-y-3">
+                                    <div>
+                                        @php
+                                            $totalSteps = $order->workInstance->workInstanceSteps->count();
+                                            $currentStep = $order->workInstance->current_step_index + 1;
+                                            $progress = ($currentStep / $totalSteps) * 100;
+                                        @endphp
+                                        <p class="text-sm text-gray-600 mb-2">
+                                            Progress: <span class="font-medium text-gray-900">{{ $currentStep }} / {{ $totalSteps }}</span>
+                                        </p>
+                                    </div>
+                                    <p class="text-sm text-gray-600">
+                                        Current Status: <span class="font-medium text-gray-900 capitalize">{{ $order->workInstance->status }}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Messages -->
+                    @if($order->messageThread)
+                        <livewire:order-chat :order="$order" />
+                    @else
+                        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                            <div class="p-6 text-center">
+                                <p class="text-gray-600">No messages yet. Start a conversation!</p>
+                            </div>
+                        </div>
+                    @endif
 
                     <!-- Participants -->
                     <div class="grid grid-cols-2 gap-4">
@@ -212,8 +232,36 @@
 
     <script>
 document.addEventListener('DOMContentLoaded', () => {
-            initializeOrderReviews();
+        initializeOrderReviews();
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const tabName = this.getAttribute('data-tab');
+
+                // Hide all tabs
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+
+                // Remove active state from all buttons
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.classList.remove('border-blue-500');
+                    btn.classList.add('border-transparent');
+                });
+
+                // Show selected tab
+                document.getElementById(tabName + '-tab').classList.remove('hidden');
+
+                // Add active state to clicked button
+                this.classList.add('active');
+                this.classList.add('border-blue-500');
+                this.classList.remove('border-transparent');
+            });
         });
+    });
 
         function initializeOrderReviews() {
             // Service Review Star Rating
@@ -349,33 +397,6 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 
     document.addEventListener('DOMContentLoaded', function() {
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
 
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const tabName = this.getAttribute('data-tab');
-
-                // Hide all tabs
-                tabContents.forEach(content => {
-                    content.classList.add('hidden');
-                });
-
-                // Remove active state from all buttons
-                tabButtons.forEach(btn => {
-                    btn.classList.remove('active');
-                    btn.classList.remove('border-blue-500');
-                    btn.classList.add('border-transparent');
-                });
-
-                // Show selected tab
-                document.getElementById(tabName + '-tab').classList.remove('hidden');
-
-                // Add active state to clicked button
-                this.classList.add('active');
-                this.classList.add('border-blue-500');
-                this.classList.remove('border-transparent');
-            });
-        });
     });
 </script>
