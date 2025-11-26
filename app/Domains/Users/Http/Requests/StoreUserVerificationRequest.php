@@ -24,12 +24,11 @@ class StoreUserVerificationRequest extends FormRequest
     public function rules(): array
     {
         $mediaConfig = new MediaConfig;
-        $imageLimit = $mediaConfig->getUploadLimit('images');
 
         return [
             'id_type' => ['required', 'string', 'in:national_id,drivers_license,passport'],
-            'id_front' => ['required', 'image', "max:{$imageLimit}"],
-            'id_back' => ['required', 'image', "max:{$imageLimit}"],
+            'id_front' => ['required', $mediaConfig->getValidationRule('images')],
+            'id_back' => ['required', $mediaConfig->getValidationRule('images')],
         ];
     }
 

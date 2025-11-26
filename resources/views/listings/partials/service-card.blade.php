@@ -52,7 +52,7 @@
                         $avgRating = round($service->average_rating, 1);
                         $reviewCount = $service->serviceReviews()->count();
                     @endphp
-                    <span>{{ $avgRating > 0 ? $avgRating : '—' }} ({{ $reviewCount }})</span>
+                    <span>{{ $avgRating > 0 ? $avgRating : 'No reviews yet' }} ({{ $reviewCount }})</span>
                 </div>
                 {{-- Location --}}
                 <div class="flex items-center text-gray-600">
