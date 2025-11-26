@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Domains\Listings\Models\Category;
 use App\Domains\Listings\Models\Service;
+use App\Domains\Common\Models\Address;
 use App\Domains\Users\Models\User;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Work\Models\WorkInstance;
@@ -28,6 +29,7 @@ class OrderCreationTest extends TestCase
             'category_id' => $category->id,
             'creator_id' => $seller->id,
             'workflow_template_id' => $workflowTemplate->id,
+            'address_id' => Address::factory(),
         ]);
 
         // 2. Act
@@ -56,5 +58,52 @@ class OrderCreationTest extends TestCase
         $this->assertDatabaseHas('work_instance_steps', [
             'work_instance_id' => $workInstance->id,
         ]);
+    }
+
+    /** @test */
+    public function service_checkout_with_online_payment_redirects_to_checkout(): void
+    {
+        $buyer = User::factory()->create();
+        $seller = User::factory()->create();
+        $category = Category::factory()->create();
+        $workflowTemplate = WorkflowTemplate::factory()->create();
+        $service = Service::factory()->create([
+            'category_id' => $category->id,
+            'creator_id' => $seller->id,
+            'workflow_template_id' => $workflowTemplate->id,
+            'address_id' => Address::factory(),
+            'pay_first' => true,
+        ]);
+
+        $response = $this->actingAs($buyer)->post(route('services.checkout', $service), [
+            'payment_method' => 'online',
+        ]);
+
+        $order = \App\Domains\Orders\Models\Order::where('service_id', $service->id)->first();
+
+        $response->assertRedirect(route('payments.checkout', ['order' => $order, 'payment_method' => 'online']));
+    }
+
+    /** @test */
+    public function service_checkout_with_cash_payment_redirects_to_checkout_with_cash_selected(): void
+    {
+        $buyer = User::factory()->create();
+        $seller = User::factory()->create();
+        $category = Category::factory()->create();
+        $workflowTemplate = WorkflowTemplate::factory()->create();
+        $service = Service::factory()->create([
+            'category_id' => $category->id,
+            'creator_id' => $seller->id,
+            'workflow_template_id' => $workflowTemplate->id,
+            'address_id' => Address::factory(),
+            'pay_first' => true,
+        ]);
+
+        $response = $this->actingAs($buyer)->post(route('services.checkout', $service), [
+            'payment_method' => 'cash',
+        ]);
+
+        $order = \App\Domains\Orders\Models\Order::where('service_id', $service->id)->first();
+        $response->assertRedirect(route('payments.checkout', ['order' => $order, 'payment_method' => 'cash']));
     }
 }

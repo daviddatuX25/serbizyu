@@ -21,19 +21,14 @@ class OrderService
         $offer = $bid->openOffer;
         $service = $bid->service;
 
-        $orderData = [
-            'buyer_id' => $offer->creator_id,
-            'seller_id' => $service->creator_id,
-            'service_id' => $service->id,
-            'open_offer_id' => $bid->open_offer_id,
-            'open_offer_bid_id' => $bid->id,
-            'price' => $bid->amount,
-            'platform_fee' => $this->calculatePlatformFee($bid->amount),
-            'status' => OrderStatus::PENDING->value,
-            'payment_status' => 'pending',
-        ];
-
-        $orderData['total_amount'] = $orderData['price'] + $orderData['platform_fee'];
+        $orderData = $this->prepareOrderData(
+            buyer_id: $offer->creator_id,
+            seller_id: $service->creator_id,
+            price: $bid->amount,
+            service_id: $service->id,
+            open_offer_id: $bid->open_offer_id,
+            open_offer_bid_id: $bid->id,
+        );
 
         $order = Order::create($orderData);
 
@@ -50,17 +45,12 @@ class OrderService
     {
         $service->refresh();
 
-        $orderData = [
-            'buyer_id' => $buyer->id,
-            'seller_id' => $service->creator_id,
-            'service_id' => $service->id,
-            'price' => $service->price,
-            'platform_fee' => $this->calculatePlatformFee($service->price),
-            'status' => OrderStatus::PENDING->value,
-            'payment_status' => 'pending',
-        ];
-
-        $orderData['total_amount'] = $orderData['price'] + $orderData['platform_fee'];
+        $orderData = $this->prepareOrderData(
+            buyer_id: $buyer->id,
+            seller_id: $service->creator_id,
+            price: $service->price,
+            service_id: $service->id,
+        );
 
         $order = Order::create($orderData);
 
@@ -73,9 +63,32 @@ class OrderService
         return $order;
     }
 
+    private function prepareOrderData(
+        int $buyer_id,
+        int $seller_id,
+        float $price,
+        int $service_id,
+        ?int $open_offer_id = null,
+        ?int $open_offer_bid_id = null,
+    ): array {
+        return [
+            'buyer_id' => $buyer_id,
+            'seller_id' => $seller_id,
+            'service_id' => $service_id,
+            'open_offer_id' => $open_offer_id,
+            'open_offer_bid_id' => $open_offer_bid_id,
+            'price' => $price,
+            'platform_fee' => $this->calculatePlatformFee($price),
+            'total_amount' => $price + $this->calculatePlatformFee($price),
+            'status' => OrderStatus::PENDING->value,
+            'payment_status' => 'pending',
+        ];
+    }
+
     protected function calculatePlatformFee(float $amount): float
     {
-        return $amount * 0.05;
+        $percentage = config('payment.platform_fee.percentage', 5);
+        return $amount * ($percentage / 100);
     }
 
     protected function cloneWorkflowForOrder(Order $order, WorkflowTemplate $workflowTemplate): void

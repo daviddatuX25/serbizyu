@@ -3,6 +3,8 @@
 namespace App\Domains\Payments\Services;
 
 use App\Domains\Orders\Models\Order;
+use App\Events\CashHandshakeBuyerConfirmed;
+use App\Events\CashHandshakeSellerResponded;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
@@ -25,6 +27,7 @@ class CashPaymentService
             'status' => 'pending', // pending -> buyer_claimed -> seller_confirmed/rejected
             'buyer_claimed_at' => null,
             'seller_response_at' => null,
+            'rejection_reason' => null,
             'initiated_at' => now()->toDateTimeString(),
         ];
 
@@ -59,6 +62,13 @@ class CashPaymentService
 
         Cache::put($handshakeId, $data, self::CACHE_TTL);
 
+        // Broadcast event for realtime updates
+        event(new CashHandshakeBuyerConfirmed(
+            $handshakeId,
+            $data['order_id'],
+            $data['buyer_claimed_at']
+        ));
+
         Log::info('Buyer Claimed Payment', [
             'handshake_id' => $handshakeId,
             'order_id' => $data['order_id'],
@@ -69,12 +79,14 @@ class CashPaymentService
 
     /**
      * Seller confirms payment - "Yes, I received it"
+     * Supports both buyer_claimed (normal flow) and pending (fallback/manual record)
      */
     public function sellerConfirmedPayment(string $handshakeId, int $orderId): bool
     {
         $data = Cache::get($handshakeId);
 
-        if (!$data || $data['status'] !== 'buyer_claimed') {
+        // Allow confirmation from both buyer_claimed (normal) and pending (fallback manual record)
+        if (!$data || !in_array($data['status'], ['buyer_claimed', 'pending'])) {
             Log::warning('Invalid handshake state for seller confirmation', [
                 'handshake_id' => $handshakeId,
                 'current_status' => $data['status'] ?? 'not_found',
@@ -95,6 +107,14 @@ class CashPaymentService
 
         Cache::put($handshakeId, $data, self::CACHE_TTL);
 
+        // Broadcast event for realtime updates
+        event(new CashHandshakeSellerResponded(
+            $handshakeId,
+            $orderId,
+            'seller_confirmed',
+            $data['seller_response_at']
+        ));
+
         Log::info('Seller Confirmed Cash Payment', [
             'handshake_id' => $handshakeId,
             'order_id' => $orderId,
@@ -105,12 +125,14 @@ class CashPaymentService
 
     /**
      * Seller rejects payment - "I didn't receive it"
+     * Supports both buyer_claimed (normal) and pending (fallback/manual record)
      */
     public function sellerRejectedPayment(string $handshakeId, int $orderId, string $reason = ''): bool
     {
         $data = Cache::get($handshakeId);
 
-        if (!$data || $data['status'] !== 'buyer_claimed') {
+        // Allow rejection from both buyer_claimed (normal) and pending (fallback rejection)
+        if (!$data || !in_array($data['status'], ['buyer_claimed', 'pending'])) {
             Log::warning('Invalid handshake state for seller rejection', [
                 'handshake_id' => $handshakeId,
                 'current_status' => $data['status'] ?? 'not_found',
@@ -129,6 +151,15 @@ class CashPaymentService
         $data['rejection_reason'] = $reason;
 
         Cache::put($handshakeId, $data, self::CACHE_TTL);
+
+        // Broadcast event for realtime updates
+        event(new CashHandshakeSellerResponded(
+            $handshakeId,
+            $orderId,
+            'seller_rejected',
+            $data['seller_response_at'],
+            $reason
+        ));
 
         Log::warning('Seller Rejected Cash Payment', [
             'handshake_id' => $handshakeId,

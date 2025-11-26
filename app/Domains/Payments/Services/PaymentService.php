@@ -16,10 +16,10 @@ class PaymentService
 
     public function __construct()
     {
-        $this->isDevelopment = env('APP_ENV') === 'local' || env('PAYMENT_MODE') === 'test';
+        $this->isDevelopment = config('payment.is_test_mode');
         
         if (!$this->isDevelopment) {
-            $apiKey = env('XENDIT_API_KEY');
+            $apiKey = config('payment.xendit.api_key');
             
             if (!$apiKey) {
                 throw new \Exception('XENDIT_API_KEY is not configured in .env');
@@ -37,7 +37,7 @@ class PaymentService
 
     public function createInvoice(Order $order)
     {
-        $platformFeePercentage = 5; // Default 5%
+        $platformFeePercentage = config('payment.platform_fee.percentage', 5);
         $platformFee = ($order->price * $platformFeePercentage) / 100;
         $totalAmount = $order->price + $platformFee;
 

@@ -174,6 +174,34 @@ class OrderTest extends TestCase
     }
 
     /** @test */
+    public function creator_accepting_bid_redirects_to_checkout_with_online_payment(): void
+    {
+        // Set service to require payment first
+        $this->service->update(['pay_first' => true]);
+
+        // Acting as the open offer owner (creator) accept an unaccepted bid
+        $response = $this->actingAs($this->openOffer->creator)
+            ->post(route('creator.openoffers.bids.accept', ['openoffer' => $this->openOffer, 'bid' => $this->unacceptedBid]), ['payment_method' => 'online']);
+
+        $order = \App\Domains\Orders\Models\Order::where('open_offer_bid_id', $this->unacceptedBid->id)->first();
+        $this->assertNotNull($order);
+        $response->assertRedirect(route('payments.checkout', ['order' => $order, 'payment_method' => 'online']));
+    }
+
+    /** @test */
+    public function creator_accepting_bid_redirects_to_checkout_with_cash_payment(): void
+    {
+        $this->service->update(['pay_first' => true]);
+
+        $response = $this->actingAs($this->openOffer->creator)
+            ->post(route('creator.openoffers.bids.accept', ['openoffer' => $this->openOffer, 'bid' => $this->unacceptedBid]), ['payment_method' => 'cash']);
+
+        $order = \App\Domains\Orders\Models\Order::where('open_offer_bid_id', $this->unacceptedBid->id)->first();
+        $this->assertNotNull($order);
+        $response->assertRedirect(route('payments.checkout', ['order' => $order, 'payment_method' => 'cash']));
+    }
+
+    /** @test */
     public function buyer_cannot_create_order_from_unaccepted_bid(): void
     {
         Event::fake();

@@ -43,28 +43,23 @@ class OrderController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     * Routes based on pay_first requirement:
+     * Routes based on pay_first requirement and payment method:
      * - If pay_first = true: redirect to payment
      * - If pay_first = false: create order and redirect to show page with payment reminder
+     * - If payment_method = cash: redirect to cash handshake
      */
     public function store(Request $request)
     {
         $request->validate([
             'service_id' => 'required|exists:services,id',
+            'payment_method' => 'nullable|in:cash,online,any',
         ]);
 
         $service = \App\Domains\Listings\Models\Service::findOrFail($request->service_id);
-
-        if ($service->pay_first) {
-            // Create order in pending state, redirect to payment
-            $order = $this->orderService->createOrderFromService($service, Auth::user());
-            return redirect()->route('payments.checkout', $order);
-        }
-
-        // No pay_first required - create order and redirect to show page
         $order = $this->orderService->createOrderFromService($service, Auth::user());
-        return redirect()->route('orders.show', $order)
-            ->with('info', 'Order created! Please proceed with payment to start work.');
+        $paymentMethod = $request->payment_method ?? ($service->payment_method?->value);
+
+        return $this->handleOrderPaymentFlow($order, $service, $paymentMethod);
     }
 
     /**
@@ -120,11 +115,27 @@ class OrderController extends Controller
         return redirect()->route('orders.index')->with('success', 'Order deleted successfully');
     }
 
-    public function createFromBid(string $bid)
+    public function createFromBid(Request $request, string $bid)
     {
         $bidModel = OpenOfferBid::findOrFail($bid);
         $order = $this->orderService->createOrderFromBid($bidModel);
-        return redirect()->route('orders.show', $order);
+        $service = $bidModel->service;
+        $paymentMethod = $request->query('payment_method') ?? ($service->payment_method?->value);
+
+        return $this->handleOrderPaymentFlow($order, $service, $paymentMethod);
+    }
+
+    private function handleOrderPaymentFlow($order, $service, $paymentMethod)
+    {
+        if ($service->pay_first) {
+            if ($paymentMethod === 'cash') {
+                return redirect()->route('payments.cash-handshake', ['order' => $order]);
+            }
+            return redirect()->route('payments.checkout', $order);
+        }
+
+        return redirect()->route('orders.show', $order)
+            ->with('info', 'Order created! Please proceed with payment to start work.');
     }
 
     public function cancel(string $order)

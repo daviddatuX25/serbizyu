@@ -1,7 +1,7 @@
 <x-app-layout :jsFiles="['app.js', 'swiper-listings.js']">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="lg:grid lg:grid-cols-3 lg:gap-8 max-w-7xl mx-auto">
-            
+
             {{-- Left Column: Image Gallery and Creator Info --}}
             <div class="lg:col-span-2 space-y-6">
                 <div class="bg-white rounded-lg shadow-md overflow-hidden">
@@ -12,7 +12,7 @@
                                 <div class="swiper-wrapper">
                                     @foreach($service->media as $media)
                                         <div class="swiper-slide bg-gray-100 flex items-center justify-center">
-                                            <img src="{{ $media->getUrl() }}" alt="{{ $service->title }}" 
+                                            <img src="{{ $media->getUrl() }}" alt="{{ $service->title }}"
                                                 class="w-full h-full object-contain">
                                         </div>
                                     @endforeach
@@ -43,8 +43,8 @@
                     <div class="pt-4 border-t">
                         <h3 class="font-bold text-xl text-gray-800 mb-4">About the provider</h3>
                         <div class="flex items-center space-x-4">
-                            <img src="{{ $service->creator->profile_photo_url }}" 
-                                alt="{{ $service->creator->name }}" 
+                            <img src="{{ $service->creator->profile_photo_url }}"
+                                alt="{{ $service->creator->name }}"
                                 class="w-16 h-16 rounded-full">
                             <div>
                                 <h4 class="font-semibold text-lg text-gray-900">{{ $service->creator->name }}</h4>
@@ -76,7 +76,7 @@
                                 I found that transacting with serbisyo makes my work easier
                             </p>
                         </div>
-                        
+
                         {{-- No reviews state --}}
                         <p class="text-sm text-gray-500 text-center py-6">No reviews yet for this service.</p>
                     </div>
@@ -110,15 +110,53 @@
                                 Go to Manage
                             </a>
                         @else
-                            <form action="{{ route('services.checkout', $service) }}" method="POST">
-                                @csrf
-                                <button type="submit" 
+                            <div x-data="{ open: false }">
+                                <button @click="open = true" type="button"
                                     class="mt-6 w-full bg-green-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-green-700 transition shadow-md"
                                     @if(Auth::id() === $service->creator_id) disabled @endif>
                                     Proceed to Order
                                 </button>
-                            </form>
-                            <button type="button" 
+
+                                <!-- Payment Method Modal for Service Checkout -->
+                                <div x-show="open" x-cloak @click.away="open = false"
+                                     x-transition:enter="transition ease-out duration-300"
+                                     x-transition:enter-start="opacity-0"
+                                     x-transition:enter-end="opacity-100"
+                                     x-transition:leave="transition ease-in duration-200"
+                                     x-transition:leave-start="opacity-100"
+                                     x-transition:leave-end="opacity-0"
+                                     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                                    <div @click.stop
+                                         x-transition:enter="transition ease-out duration-300"
+                                         x-transition:enter-start="opacity-0 transform scale-95"
+                                         x-transition:enter-end="opacity-100 transform scale-100"
+                                         x-transition:leave="transition ease-in duration-200"
+                                         x-transition:leave-start="opacity-100 transform scale-100"
+                                         x-transition:leave-end="opacity-0 transform scale-95"
+                                         class="bg-white rounded-lg shadow-lg w-11/12 sm:w-96 p-6">
+                                        <h3 class="text-lg font-semibold mb-2">Choose Payment Method</h3>
+                                        <p class="text-sm text-gray-600 mb-4">How would you like to pay for this service?</p>
+                                        <form action="{{ route('services.checkout', $service) }}" method="POST">
+                                            @csrf
+                                            <div class="space-y-3">
+                                                <label class="flex items-center space-x-2">
+                                                    <input type="radio" name="payment_method" value="online" checked class="form-radio text-green-600">
+                                                    <span>Online (Xendit)</span>
+                                                </label>
+                                                <label class="flex items-center space-x-2">
+                                                    <input type="radio" name="payment_method" value="cash" class="form-radio text-green-600">
+                                                    <span>Cash payment</span>
+                                                </label>
+                                            </div>
+                                            <div class="mt-4 flex justify-end space-x-2">
+                                                <button type="button" @click="open = false" class="px-4 py-2 bg-gray-200 rounded text-sm">Cancel</button>
+                                                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded text-sm">Proceed</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button"
                                 class="mt-2 w-full text-center text-gray-600 font-medium hover:text-green-700 transition">
                                 Add to wishlist
                             </button>

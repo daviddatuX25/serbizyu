@@ -83,15 +83,27 @@ class OpenOfferBidController extends Controller
         }
     }
 
-    public function accept(OpenOffer $openoffer, OpenOfferBid $bid)
+    public function accept(Request $request, OpenOffer $openoffer, OpenOfferBid $bid)
     {
         $this->authorize('accept', $bid);
 
         try {
             $this->openOfferBidService->acceptBid($bid);
+            // Create the order for the accepted bid
             $order = $this->orderService->createOrderFromBid($bid);
-            
-            // Assuming an order details page exists
+
+            // Determine the payment method (form input or service default)
+            $service = $order->service;
+            $paymentMethod = $request->input('payment_method') ?? ($service->payment_method?->value ?? null);
+
+            // Handle redirection based on payment method and pay_first setting
+            if ($service->pay_first) {
+                if ($paymentMethod === 'cash') {
+                    return redirect()->route('payments.checkout', ['order' => $order, 'payment_method' => 'cash']);
+                }
+                return redirect()->route('payments.checkout', ['order' => $order, 'payment_method' => 'online']);
+            }
+
             return redirect()->route('orders.show', $order)->with('success', 'Bid accepted and order created successfully!');
 
         } catch (\Exception $e) {

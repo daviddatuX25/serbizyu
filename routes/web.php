@@ -184,6 +184,7 @@ Route::middleware(['auth'])->prefix('payments')->name('payments.')->group(functi
 
     // Cash Payment Handshake Routes
     Route::get('/cash/handshake', [PaymentController::class, 'cashHandshake'])->name('cash.handshake');
+    Route::get('/cash/handshake/status', [PaymentController::class, 'getHandshakeStatus'])->name('cash.handshake.status');
     Route::post('/cash/buyer-claimed', [PaymentController::class, 'buyerClaimedPayment'])->name('cash.buyer-claimed');
     Route::post('/cash/seller-confirmed', [PaymentController::class, 'sellerConfirmedPayment'])->name('cash.seller-confirmed');
     Route::post('/cash/seller-rejected', [PaymentController::class, 'sellerRejectedPayment'])->name('cash.seller-rejected');
@@ -194,7 +195,7 @@ Route::middleware(['auth'])->prefix('payments')->name('payments.')->group(functi
 // Work Instance Management
 Route::middleware(['auth'])->prefix('work-instances')->name('work-instances.')->group(function () {
     Route::get('/{workInstance}', [WorkInstanceController::class, 'show'])->name('show');
-    
+
     // Work Instance Step Management
     Route::post('/{workInstance}/steps/{workInstanceStep}/start', [WorkInstanceController::class, 'startStep'])->name('steps.start');
     Route::post('/{workInstance}/steps/{workInstanceStep}/complete', [WorkInstanceController::class, 'completeStep'])->name('steps.complete');

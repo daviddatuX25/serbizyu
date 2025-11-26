@@ -138,6 +138,8 @@ Buyer can claim again immediately
 5. Order active → Work begins
 ```
 
+Note: When accepting a bid or proceeding to order from a service page, the UI now prompts the user to select the payment method (online/Xendit or cash). The selected method is passed through to the checkout step and will either route to `payments.checkout` (online) or start the handshake flow for cash (through the checkout/pay flow).
+
 ### Developer Perspective
 
 **Automatic Payment Routing:**

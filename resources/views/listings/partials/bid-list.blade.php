@@ -21,7 +21,7 @@
                             </p>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
                                 @switch($bid->status)
                                     @case(\App\Enums\BidStatus::PENDING) bg-yellow-100 text-yellow-800 @break
                                     @case(\App\Enums\BidStatus::ACCEPTED) bg-green-100 text-green-800 @break
@@ -31,12 +31,50 @@
                             </span>
                             @if($bid->status === \App\Enums\BidStatus::PENDING)
                                 @can('accept', $bid)
-                                    <form action="{{ route('creator.openoffers.bids.accept', ['openoffer' => $openoffer, 'bid' => $bid]) }}" method="POST">
-                                        @csrf
-                                        <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    <div x-data="{ open: false }" class="inline-block">
+                                        <button @click="open = true" type="button" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                                             Accept
                                         </button>
-                                    </form>
+
+                                        <!-- Payment Method Modal -->
+                                        <div x-show="open" x-cloak @click.away="open = false"
+                                             x-transition:enter="transition ease-out duration-300"
+                                             x-transition:enter-start="opacity-0"
+                                             x-transition:enter-end="opacity-100"
+                                             x-transition:leave="transition ease-in duration-200"
+                                             x-transition:leave-start="opacity-100"
+                                             x-transition:leave-end="opacity-0"
+                                             class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                                            <div @click.stop
+                                                 x-transition:enter="transition ease-out duration-300"
+                                                 x-transition:enter-start="opacity-0 transform scale-95"
+                                                 x-transition:enter-end="opacity-100 transform scale-100"
+                                                 x-transition:leave="transition ease-in duration-200"
+                                                 x-transition:leave-start="opacity-100 transform scale-100"
+                                                 x-transition:leave-end="opacity-0 transform scale-95"
+                                                 class="bg-white rounded-lg shadow-lg w-11/12 sm:w-96 p-6">
+                                                <h3 class="text-lg font-semibold mb-2">Select Payment Method</h3>
+                                                <p class="text-sm text-gray-600 mb-4">Choose how the buyer will pay for this order.</p>
+                                                <form action="{{ route('creator.openoffers.bids.accept', ['openoffer' => $openoffer, 'bid' => $bid]) }}" method="POST">
+                                                    @csrf
+                                                    <div class="space-y-3">
+                                                        <label class="flex items-center space-x-2">
+                                                            <input type="radio" name="payment_method" value="online" checked class="form-radio text-green-600">
+                                                            <span>Online (Xendit)</span>
+                                                        </label>
+                                                        <label class="flex items-center space-x-2">
+                                                            <input type="radio" name="payment_method" value="cash" class="form-radio text-green-600">
+                                                            <span>Cash payment</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="mt-4 flex justify-end space-x-2">
+                                                        <button type="button" @click="open = false" class="px-4 py-2 bg-gray-200 rounded text-sm">Cancel</button>
+                                                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded text-sm">Proceed</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 @endcan
                                 @can('reject', $bid)
                                     <form action="{{ route('creator.openoffers.bids.reject', ['openoffer' => $openoffer, 'bid' => $bid]) }}" method="POST">
@@ -61,7 +99,7 @@
                                 </form>
                                 @endcan
                             @endif
-                            
+
                         </div>
                     </div>
                     <p class="mt-2 text-gray-700">{{ $bid->message }}</p>

@@ -35,7 +35,7 @@ class ServiceController extends Controller
         $services = $this->serviceService->getServicesForCreator(Auth::id(), $request->all());
         $categories = $this->categoryService->listAllCategories();
         return view('creator.services.index', compact('services', 'categories'));
-    }   
+    }
 
     /**
      * Show the form for creating a new resource.
@@ -45,7 +45,7 @@ class ServiceController extends Controller
         $categories = $this->categoryService->listAllCategories();
         $workflowTemplates = $this->workflowTemplateService->getWorkflowTemplatesByCreator(auth()->id());
         $addresses = $this->addressService->getAddressesForUser();
-        
+
         return view('creator.services.create', compact('categories', 'workflowTemplates', 'addresses'));
     }
 
@@ -61,14 +61,24 @@ class ServiceController extends Controller
     /**
      * Handle the checkout process for a service.
      */
-    public function checkout(Service $service)
+    public function checkout(Request $request, Service $service)
     {
         $this->authorize('purchase', $service); // Assuming a 'purchase' policy exists
 
+        // Create the order
         $order = $this->orderService->createOrderFromService($service, Auth::user());
 
-        // Assuming an order details page exists
-        return redirect()->route('orders.show', $order)->with('success', 'Order created successfully!');
+        // Determine payment method from the request (modal form) or default to the service setting
+        $paymentMethod = $request->input('payment_method') ?? ($service->payment_method?->value ?? null);
+
+        if ($service->pay_first) {
+            if ($paymentMethod === 'cash') {
+                return redirect()->route('payments.checkout', ['order' => $order, 'payment_method' => 'cash']);
+            }
+            return redirect()->route('payments.checkout', ['order' => $order, 'payment_method' => 'online']);
+        }
+
+        return redirect()->route('orders.show', $order)->with('info', 'Order created! Please proceed with payment to start work.');
     }
 
 

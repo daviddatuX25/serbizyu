@@ -8,11 +8,19 @@ use App\Domains\Orders\Models\Order;
 class PaymentHandler
 {
     /**
+     * Check if in test/development mode for Xendit
+     */
+    public static function isTestMode(): bool
+    {
+        return env('APP_ENV') === 'local' || env('PAYMENT_MODE') === 'test';
+    }
+
+    /**
      * Determine if payment is required before order creation
      */
     public static function isPayFirstRequired(): bool
     {
-        return config('payment.pay_first', true);
+        return filter_var(env('PAY_FIRST_ENABLED', true), FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
@@ -20,7 +28,15 @@ class PaymentHandler
      */
     public static function isCashEnabled(): bool
     {
-        return config('payment.cash_enabled', true);
+        return filter_var(env('CASH_PAYMENT_ENABLED', true), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Get platform fee percentage
+     */
+    public static function getPlatformFeePercentage(): float
+    {
+        return (float) config('payment.platform_fee.percentage', 5);
     }
 
     /**
@@ -32,7 +48,7 @@ class PaymentHandler
             return route('payments.checkout', $order);
         }
 
-        if ($paymentMethod === 'cash') {
+        if ($paymentMethod === 'cash' && self::isCashEnabled()) {
             return route('payments.cash-handshake', $order);
         }
 
@@ -53,23 +69,26 @@ class PaymentHandler
             return $orderData;
         }
 
-        // For card/online payments: payment must succeed before order is created
         $orderData['payment_status'] = 'pending';
         return $orderData;
     }
 
     /**
-     * Get payment methods available
+     * Get available payment methods based on service/offer configuration
      */
-    public static function getAvailableMethods(): array
+    public static function getAvailableMethods(?string $servicePaymentMethod = null): array
     {
-        $methods = ['card', 'gcash', 'bank_transfer'];
-
-        if (self::isCashEnabled()) {
-            $methods[] = 'cash';
+        if ($servicePaymentMethod === 'any') {
+            $methods = ['online', 'cash'];
+            return $methods;
         }
 
-        return $methods;
+        if ($servicePaymentMethod === 'cash') {
+            return ['cash'];
+        }
+
+        // Default to online (card, gcash, etc)
+        return ['online'];
     }
 
     /**

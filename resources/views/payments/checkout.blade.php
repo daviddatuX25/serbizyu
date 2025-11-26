@@ -38,6 +38,14 @@
 
                     <form action="{{ route('payments.pay', $order) }}" method="POST" class="mt-6">
                         @csrf
+                        <input type="hidden" name="payment_method" value="{{ request('payment_method', 'online') }}">
+                        <div class="mb-4">
+                            <label class="text-sm text-gray-600">Selected payment method</label>
+                            <div class="mt-2 flex items-center space-x-3">
+                                <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs">{{ strtoupper(request('payment_method', 'online')) }}</span>
+                                <span class="text-sm text-gray-500">You can change this by selecting another option on the checkout page.</span>
+                            </div>
+                        </div>
                         <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150">
                             Pay Now
                         </button>
