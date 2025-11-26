@@ -61,5 +61,5 @@
     @endif
 
     @error('newFileUploads.*') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
-    <p class="text-xs text-gray-500 mt-2">PNG, JPG, GIF up to 2MB</p>
+    <p class="text-xs text-gray-500 mt-2">PNG, JPG, GIF up to {{ (new \App\Support\MediaConfig())->getUploadLimitDisplay('images') }}</p>
 </div>

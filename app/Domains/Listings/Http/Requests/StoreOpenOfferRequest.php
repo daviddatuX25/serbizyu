@@ -2,6 +2,7 @@
 
 namespace App\Domains\Listings\Http\Requests;
 
+use App\Support\MediaConfig;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -24,15 +25,37 @@ class StoreOpenOfferRequest extends FormRequest
     {
         $maxDays = config('listings.open_offer_max_days', 30);
         $maxDate = now()->addDays($maxDays)->format('Y-m-d');
+        $mediaConfig = new MediaConfig;
+        $imageLimit = $mediaConfig->getUploadLimit('images');
 
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'budget' => ['required', 'numeric', 'min:0'],
             'category_id' => ['required', 'exists:categories,id'],
-            'deadline' => ['nullable', 'date', 'after_or_equal:today', 'before_or_equal:' . $maxDate],
+            'deadline' => ['nullable', 'date', 'after_or_equal:today', 'before_or_equal:'.$maxDate],
             'images' => ['array'],
-            'images.*' => ['nullable', 'image', 'max:5000'],  // Max 5MB per image
+            'images.*' => ['nullable', 'image', "max:{$imageLimit}"],
         ];
+    }
+
+    /**
+     * Get the error messages for the defined validation rules.
+     */
+    public function messages(): array
+    {
+        $mediaConfig = new MediaConfig;
+
+        return array_merge(
+            [
+                'title.required' => 'Open offer title is required.',
+                'description.required' => 'Description is required.',
+                'budget.required' => 'Budget is required.',
+                'budget.numeric' => 'Budget must be a valid number.',
+                'category_id.required' => 'Category is required.',
+                'deadline.after_or_equal' => 'Deadline must be today or later.',
+            ],
+            $mediaConfig->getValidationMessages('images', 'images')
+        );
     }
 }

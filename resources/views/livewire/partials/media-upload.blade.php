@@ -1,5 +1,5 @@
 <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-    
+
     {{-- Grid for existing and new images --}}
     <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 mb-4">
         {{-- Existing Images --}}
@@ -55,6 +55,6 @@
             <input id="file-upload-empty" type="file" wire:model="newFiles" multiple class="sr-only" accept="image/*" x-ref="fileInput">
         </label>
     @endif
-    
-    <p class="text-xs text-gray-500 mt-2">Max 5MB per image. PNG, JPG, GIF accepted.</p>
+
+    <p class="text-xs text-gray-500 mt-2">Max {{ (new \App\Support\MediaConfig())->getUploadLimitDisplay('images') }} per image. PNG, JPG, GIF accepted.</p>
 </div>

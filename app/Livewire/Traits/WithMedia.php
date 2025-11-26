@@ -2,10 +2,11 @@
 
 namespace App\Livewire\Traits;
 
-use Livewire\WithFileUploads;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use App\Support\MediaConfig;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 trait WithMedia
 {
@@ -16,13 +17,13 @@ trait WithMedia
 
     // Accumulates all new file uploads for the session
     public array $newFiles = [];
-    
+
     // Media IDs that user explicitly removed (marked for deletion)
     public array $imagesToRemove = [];
-    
+
     // Existing media currently attached to model
     public array $existingImages = [];
-    
+
     // Not used in non-destructive approach, but kept for compatibility
     public array $selectedImages = [];
 
@@ -31,19 +32,23 @@ trait WithMedia
      */
     public function updatedNewFileUploads()
     {
-        if (!$this->newFileUploads) {
+        if (! $this->newFileUploads) {
             return;
         }
 
-        // First, validate the newly uploaded files.
+        // First, validate the newly uploaded files using centralized MediaConfig
+        $mediaConfig = new MediaConfig;
+        $imageRule = $mediaConfig->getImageValidationRule(multiple: true);
+        $messages = $mediaConfig->getValidationMessages('images', 'newFileUploads');
+
         $this->validate([
-            'newFileUploads.*' => 'image|max:2048', // Adjust as needed
-        ]);
+            'newFileUploads.*' => $imageRule,
+        ], $messages);
 
         $filesToMerge = is_array($this->newFileUploads)
             ? $this->newFileUploads
             : [$this->newFileUploads];
-        
+
         // Merge the new valid files into the main array
         $this->newFiles = array_merge($this->newFiles, $filesToMerge);
 
@@ -59,12 +64,12 @@ trait WithMedia
     protected function loadExistingMedia(Model $model)
     {
         // Ensure the relation is loaded to avoid N+1 issues if called in a loop
-        if ($model->exists && !$model->relationLoaded('media')) {
+        if ($model->exists && ! $model->relationLoaded('media')) {
             $model->load('media');
         }
 
         if ($model->exists) {
-            $this->existingImages = $model->media->map(fn($m) => [
+            $this->existingImages = $model->media->map(fn ($m) => [
                 'id' => $m->id,
                 'url' => $m->getUrl(),
                 'filename' => $m->filename,
@@ -73,7 +78,7 @@ trait WithMedia
 
             Log::info('Loaded existing media', [
                 'model' => class_basename($model),
-                'count' => count($this->existingImages)
+                'count' => count($this->existingImages),
             ]);
         }
     }
@@ -85,7 +90,7 @@ trait WithMedia
     {
         if (isset($this->newFiles[$index])) {
             array_splice($this->newFiles, $index, 1);
-            
+
             Log::info('Removed new file', ['index' => $index]);
             session()->flash('info', 'New upload removed');
         }
@@ -96,7 +101,7 @@ trait WithMedia
      */
     public function removeExistingImage(int $id)
     {
-        if (!in_array($id, $this->imagesToRemove)) {
+        if (! in_array($id, $this->imagesToRemove)) {
             $this->imagesToRemove[] = $id;
             Log::info('Marked media for removal', ['media_id' => $id]);
         }
@@ -109,9 +114,9 @@ trait WithMedia
     {
         $this->imagesToRemove = array_filter(
             $this->imagesToRemove,
-            fn($mediaId) => $mediaId !== $id
+            fn ($mediaId) => $mediaId !== $id
         );
-        
+
         Log::info('Restored media from removal', ['media_id' => $id]);
         session()->flash('success', 'Image restored');
     }
@@ -121,9 +126,9 @@ trait WithMedia
      */
     protected function getUploadedFiles(): array
     {
-        return array_filter($this->newFiles, fn($file) => $file instanceof TemporaryUploadedFile);
+        return array_filter($this->newFiles, fn ($file) => $file instanceof TemporaryUploadedFile);
     }
-    
+
     /**
      * Reset media form state after save
      */
@@ -133,7 +138,7 @@ trait WithMedia
         $this->imagesToRemove = [];
         $this->selectedImages = [];
         $this->newFileUploads = null;
-        
+
         Log::info('Media form reset');
     }
 }

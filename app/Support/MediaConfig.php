@@ -4,7 +4,7 @@ namespace App\Support;
 
 /**
  * Centralized media configuration
- * 
+ *
  * Used by ServiceService, OpenOfferService, and Livewire forms
  * to ensure consistent file size limits and storage destinations
  */
@@ -72,14 +72,15 @@ class MediaConfig
     public function isExtensionAllowed(string $extension, string $type): bool
     {
         $allowed = $this->getAllowedExtensions($type);
+
         return in_array(strtolower($extension), $allowed);
     }
 
     /**
      * Generate validation rule for a media type
-     * 
-     * @param string $type Media type (images, videos, documents, audio)
-     * @param bool $nullable Allow null values
+     *
+     * @param  string  $type  Media type (images, videos, documents, audio)
+     * @param  bool  $nullable  Allow null values
      * @return string Validation rule
      */
     public function getValidationRule(string $type, bool $nullable = false): string
@@ -104,7 +105,42 @@ class MediaConfig
         $kb = $this->getUploadLimit($type);
         $mb = $kb / 1024;
 
-        return $mb >= 1 ? "{$mb}MB" : "{$kb}KB";
+        return $mb >= 1 ? intval($mb).'MB' : "{$kb}KB";
+    }
+
+    /**
+     * Get validation error messages for a media type
+     */
+    public function getValidationMessages(string $type, string $fieldName = 'file'): array
+    {
+        $limitDisplay = $this->getUploadLimitDisplay($type);
+        $extensions = implode(', ', $this->getAllowedExtensions($type));
+
+        return [
+            "{$fieldName}.required" => "A {$type} file is required.",
+            "{$fieldName}.file" => "The {$fieldName} must be a valid file.",
+            "{$fieldName}.max" => "The {$fieldName} must not exceed {$limitDisplay}.",
+            "{$fieldName}.mimes" => "The {$fieldName} must be one of: {$extensions}.",
+            "{$fieldName}.*.required" => "All {$type} files are required.",
+            "{$fieldName}.*.file" => "Each {$fieldName} must be a valid file.",
+            "{$fieldName}.*.max" => "Each {$fieldName} must not exceed {$limitDisplay}.",
+            "{$fieldName}.*.mimes" => "Each {$fieldName} must be one of: {$extensions}.",
+        ];
+    }
+
+    /**
+     * Get image validation rule for Livewire
+     * Specific for images only (used in media uploader)
+     */
+    public function getImageValidationRule(bool $multiple = false): string
+    {
+        $limitKb = $this->getUploadLimit('images');
+
+        if ($multiple) {
+            return "image|max:{$limitKb}";
+        }
+
+        return "image|max:{$limitKb}";
     }
 
     /**
