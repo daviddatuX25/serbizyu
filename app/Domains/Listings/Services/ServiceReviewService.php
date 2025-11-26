@@ -4,41 +4,69 @@ namespace App\Domains\Listings\Services;
 
 use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Models\ServiceReview;
-use App\DTO\CreateServiceReviewDTO;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Pagination\Paginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ServiceReviewService
 {
     /**
      * Create a new service review
      */
-    public function createReview(CreateServiceReviewDTO $dto): ServiceReview
+    public function createReview(array $data): ServiceReview
     {
-        return ServiceReview::create($dto->toArray());
+        $review = ServiceReview::create($data);
+
+        // Update the service's cached average rating
+        if ($review->service_id) {
+            $service = Service::find($review->service_id);
+            if ($service) {
+                $service->updateAverageRating();
+            }
+        }
+
+        return $review;
     }
 
     /**
      * Update an existing review
      */
-    public function updateReview(ServiceReview $review, CreateServiceReviewDTO $dto): ServiceReview
+    public function updateReview(ServiceReview $review, array $data): ServiceReview
     {
-        $review->update($dto->toArray());
-        return $review->fresh();
-    }
+        $review->update($data);
+        $review = $review->fresh();
 
-    /**
+        // Update the service's cached average rating
+        if ($review->service_id) {
+            $service = Service::find($review->service_id);
+            if ($service) {
+                $service->updateAverageRating();
+            }
+        }
+
+        return $review;
+    }    /**
      * Delete a review
      */
     public function deleteReview(ServiceReview $review): bool
     {
-        return $review->delete();
+        $serviceId = $review->service_id;
+        $deleted = $review->delete();
+
+        // Update the service's cached average rating
+        if ($deleted && $serviceId) {
+            $service = Service::find($serviceId);
+            if ($service) {
+                $service->updateAverageRating();
+            }
+        }
+
+        return $deleted;
     }
 
     /**
      * Get reviews for a service
      */
-    public function getServiceReviews(Service $service, int $perPage = 15): Paginator
+    public function getServiceReviews(Service $service, int $perPage = 15): LengthAwarePaginator
     {
         return $service->serviceReviews()
             ->with(['reviewer', 'service'])
@@ -49,7 +77,7 @@ class ServiceReviewService
     /**
      * Get verified purchase reviews only
      */
-    public function getVerifiedReviews(Service $service, int $perPage = 15): Paginator
+    public function getVerifiedReviews(Service $service, int $perPage = 15): LengthAwarePaginator
     {
         return $service->serviceReviews()
             ->where('is_verified_purchase', true)
@@ -98,7 +126,17 @@ class ServiceReviewService
     public function markAsVerifiedPurchase(ServiceReview $review): ServiceReview
     {
         $review->update(['is_verified_purchase' => true]);
-        return $review->fresh();
+        $review = $review->fresh();
+
+        // Update the service's cached average rating
+        if ($review->service_id) {
+            $service = Service::find($review->service_id);
+            if ($service) {
+                $service->updateAverageRating();
+            }
+        }
+
+        return $review;
     }
 
     /**

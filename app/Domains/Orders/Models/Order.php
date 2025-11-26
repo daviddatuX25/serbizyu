@@ -78,6 +78,22 @@ class Order extends Model
         return $this->morphOne(MessageThread::class, 'parent');
     }
 
+    /**
+     * Check if order is eligible for review
+     */
+    public function isEligibleForReview(): bool
+    {
+        return $this->status === 'completed';
+    }
+
+    /**
+     * Get reviews for this order
+     */
+    public function serviceReviews()
+    {
+        return $this->hasMany(\App\Domains\Listings\Models\ServiceReview::class);
+    }
+
     protected static function newFactory()
     {
         return \Database\Factories\OrderFactory::new();

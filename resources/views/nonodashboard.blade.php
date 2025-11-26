@@ -22,10 +22,7 @@
                         @endif
                         <div class="mt-4">
                             <a href="{{ route('orders.index') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                My Orders
-                            </a>
-                            <a href="{{ route('creator.work-dashboard') }}" class="ml-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
-                                Seller Work Dashboard
+                                My Orders & Work
                             </a>
                         </div>
                     </div>

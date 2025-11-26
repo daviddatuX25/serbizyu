@@ -37,7 +37,7 @@ class ServiceController extends Controller
         $services = $this->serviceService->getServicesForCreator(Auth::id(), $request->all());
         $categories = $this->categoryService->listAllCategories();
         return view('creator.services.index', compact('services', 'categories'));
-    }   
+    }
 
     /**
      * Show the form for creating a new resource.
@@ -47,7 +47,7 @@ class ServiceController extends Controller
         $categories = $this->categoryService->listAllCategories();
         $workflowTemplates = $this->workflowTemplateService->getWorkflowTemplatesByCreator(auth()->id());
         $addresses = $this->addressService->getAddressesForUser();
-        
+
         return view('creator.services.create', compact('categories', 'workflowTemplates', 'addresses'));
     }
 
@@ -76,9 +76,14 @@ class ServiceController extends Controller
 
     public function manage(Service $service) {
         $this->authorize('update', $service);
-        // Fetch real data
+
+        // Fetch real data - calculate total revenue from completed orders
+        $totalRevenue = $service->orders()
+            ->where('status', 'completed')
+            ->sum('price');
+
         $analytics = [
-            'total_revenue' => 0,
+            'total_revenue' => $totalRevenue,
             'today_clicks' => 0,
             'wishlist_count' => 0,
         ];
@@ -89,7 +94,7 @@ class ServiceController extends Controller
             'total_reviews' => $this->reviewService->getReviewCount($service),
             'verified_reviews' => $this->reviewService->getVerifiedReviewCount($service),
         ];
-        
+
         return view('creator.services.show', compact('service', 'analytics', 'orders', 'reviews', 'reviewStats'));
     }
 

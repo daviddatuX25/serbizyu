@@ -4,6 +4,8 @@ namespace App\Domains\Work\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Notifications\WorkStepCompleted;
+use App\Enums\OrderStatus;
+use App\Domains\Orders\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
@@ -49,15 +51,29 @@ class WorkInstanceController extends Controller
 
     /**
      * Display the specified resource.
+     * Handles both:
+     * - Old route: /work-instances/{workInstance}
+     * - New route: /orders/{order}/work
      */
-    public function show(WorkInstance $workInstance)
+    public function show(Order $order = null, WorkInstance $workInstance = null)
     {
+        // New nested route: /orders/{order}/work (order is injected)
+        if ($order !== null) {
+            $workInstance = $order->workInstance;
+            if (!$workInstance) {
+                abort(404, 'No work instance found for this order');
+            }
+        } elseif ($workInstance !== null) {
+            // Old route: /work-instances/{workInstance} (workInstance is injected)
+            // workInstance already set
+        } else {
+            abort(404, 'Invalid work instance request');
+        }
+
         $this->authorize('view', $workInstance);
         $workInstance->load('workInstanceSteps.activityThread.messages');
         return view('work.show', compact('workInstance'));
-    }
-
-    /**
+    }    /**
      * Show the form for editing the specified resource.
      */
     public function edit(string $id)
@@ -81,8 +97,16 @@ class WorkInstanceController extends Controller
         //
     }
 
-    public function startStep(WorkInstance $workInstance, WorkInstanceStep $workInstanceStep)
+    public function startStep(Order $order = null, WorkInstance $workInstance = null, WorkInstanceStep $workInstanceStep = null)
     {
+        // New nested route: /orders/{order}/work/steps/{step}/start
+        if ($order !== null && $workInstanceStep !== null) {
+            $workInstance = $order->workInstance;
+        } elseif ($workInstance === null) {
+            // Try to find from old route parameter
+            abort(404, 'Invalid work instance request');
+        }
+
         // Authorize using policy
         $this->authorize('completeStep', $workInstance);
 
@@ -100,8 +124,16 @@ class WorkInstanceController extends Controller
         return back()->with('success', 'Step started.');
     }
 
-    public function completeStep(WorkInstance $workInstance, WorkInstanceStep $workInstanceStep)
+    public function completeStep(Order $order = null, WorkInstance $workInstance = null, WorkInstanceStep $workInstanceStep = null)
     {
+        // New nested route: /orders/{order}/work/steps/{step}/complete
+        if ($order !== null && $workInstanceStep !== null) {
+            $workInstance = $order->workInstance;
+        } elseif ($workInstance === null) {
+            // Try to find from old route parameter
+            abort(404, 'Invalid work instance request');
+        }
+
         // Authorize using policy
         $this->authorize('completeStep', $workInstance);
 
@@ -117,6 +149,19 @@ class WorkInstanceController extends Controller
         if ($allStepsCompleted) {
             $workInstance->status = 'completed';
             $workInstance->completed_at = now();
+            $workInstance->save();
+
+            // ✅ SYNC ORDER STATUS - Critical for review system
+            // When all work steps are complete, mark the order as complete
+            $order = $workInstance->order;
+            $order->status = OrderStatus::COMPLETED;
+            $order->save();
+
+            // Send notifications to both buyer and seller
+            $notifyUsers = collect([$order->buyer, $order->seller])->unique('id');
+            Notification::send($notifyUsers, new WorkStepCompleted($workInstanceStep));
+
+            return back()->with('success', 'All work steps completed! Order is now complete. Buyer can now leave a review.');
         }
 
         $workInstance->save();

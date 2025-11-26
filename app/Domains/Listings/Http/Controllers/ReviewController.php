@@ -6,7 +6,7 @@ use App\Domains\Listings\Http\Requests\StoreServiceReviewRequest;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Models\ServiceReview;
 use App\Domains\Listings\Services\ServiceReviewService;
-use App\DTO\CreateServiceReviewDTO;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,12 +47,10 @@ class ReviewController extends Controller
      */
     public function store(StoreServiceReviewRequest $request): JsonResponse
     {
-        $dto = CreateServiceReviewDTO::from(array_merge(
-            $request->validated(),
-            ['reviewer_id' => Auth::id()]
-        ));
+        $validated = $request->validated();
+        $validated['reviewer_id'] = Auth::id();
 
-        $review = $this->reviewService->createReview($dto);
+        $review = $this->reviewService->createReview($validated);
 
         return response()->json([
             'success' => true,
@@ -79,8 +77,8 @@ class ReviewController extends Controller
     {
         $this->authorize('update', $review);
 
-        $dto = CreateServiceReviewDTO::from($request->validated());
-        $updatedReview = $this->reviewService->updateReview($review, $dto);
+        $validated = $request->validated();
+        $updatedReview = $this->reviewService->updateReview($review, $validated);
 
         return response()->json([
             'success' => true,

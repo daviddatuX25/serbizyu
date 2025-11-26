@@ -23,10 +23,11 @@ class Service extends Model implements MediableInterface
     use Searchable;
 
     protected $table = 'services';
-    protected $fillable = ['title', 'description', 'price', 'pay_first', 'payment_method', 'category_id', 'creator_id', 'workflow_template_id', 'address_id'];
+    protected $fillable = ['title', 'description', 'price', 'pay_first', 'payment_method', 'category_id', 'creator_id', 'workflow_template_id', 'address_id', 'average_rating'];
     protected $casts = [
         'pay_first' => 'boolean',
         'payment_method' => PaymentMethod::class,
+        'average_rating' => 'float',
     ];
 
     /**
@@ -34,7 +35,7 @@ class Service extends Model implements MediableInterface
      *
      * @var array
      */
-    protected $with = ['media'];
+    protected $with = ['media', 'address', 'category', 'creator'];
 
     /**
      * Get the indexable data array for the model.
@@ -47,6 +48,9 @@ class Service extends Model implements MediableInterface
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
+            'average_rating' => $this->average_rating,
+            'price' => $this->price,
+            'category_id' => $this->category_id,
         ];
     }
 
@@ -95,6 +99,15 @@ class Service extends Model implements MediableInterface
     public function orders()
     {
         return $this->hasMany(\App\Domains\Orders\Models\Order::class, 'service_id');
+    }
+
+    /**
+     * Update and cache the average rating
+     */
+    public function updateAverageRating(): void
+    {
+        $avgRating = $this->serviceReviews()->avg('rating') ?? 0;
+        $this->update(['average_rating' => round($avgRating, 2)]);
     }
 
     /**

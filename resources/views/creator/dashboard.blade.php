@@ -115,7 +115,7 @@
                                         <!-- Work Header -->
                                         <div class="flex justify-between items-start mb-3">
                                             <div>
-                                                <a href="{{ route('work-instances.show', $work) }}" class="text-sm font-semibold text-gray-900 hover:text-purple-600">Order #{{ $work->order->id }}</a>
+                                                <a href="{{ route('orders.work.show', $work->order) }}" class="text-sm font-semibold text-gray-900 hover:text-purple-600">Order #{{ $work->order->id }}</a>
                                                 <p class="text-xs text-gray-600">{{ $work->order->service?->title ?? 'Service' }}</p>
                                             </div>
                                             <div class="text-right">
@@ -175,7 +175,7 @@
                                         @endif
 
                                         <div class="mt-3 text-right">
-                                            <a href="{{ route('work-instances.show', $work) }}" class="text-xs text-purple-600 hover:text-purple-700 font-medium">View full details →</a>
+                                            <a href="{{ route('orders.work.show', $work->order) }}" class="text-xs text-purple-600 hover:text-purple-700 font-medium">View full details →</a>
                                         </div>
                                     </div>
                                 @endforeach
@@ -184,7 +184,7 @@
                             <p class="text-sm text-gray-500">No recent work items</p>
                         @endif
                         <div class="mt-4 text-right">
-                            <a href="{{ route('creator.work-dashboard') }}" class="inline-flex px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">View work dashboard</a>
+                            <a href="{{ route('orders.index') }}" class="inline-flex px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">View all work in orders</a>
                         </div>
                     </div>
                 </div>

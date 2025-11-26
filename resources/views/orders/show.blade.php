@@ -45,12 +45,17 @@
                     @if($order->workInstance)
                         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                             <div class="p-6 bg-white border-b border-gray-200">
-                                <h2 class="text-lg font-semibold text-gray-900 mb-4">Work Progress</h2>
+                                <div class="flex justify-between items-center mb-4">
+                                    <h2 class="text-lg font-semibold text-gray-900">Work Progress</h2>
+                                    <a href="{{ route('orders.work.show', $order) }}" class="inline-flex items-center px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                                        View Work Details →
+                                    </a>
+                                </div>
                                 <div class="space-y-3">
                                     <div>
                                         @php
                                             $totalSteps = $order->workInstance->workInstanceSteps->count();
-                                            $currentStep = $order->workInstance->current_step_index + 1;
+                                            $currentStep = $order->workInstance->current_step_index;
                                             $progress = ($currentStep / $totalSteps) * 100;
                                         @endphp
                                         <p class="text-sm text-gray-600 mb-2">
@@ -72,6 +77,48 @@
                         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                             <div class="p-6 text-center">
                                 <p class="text-gray-600">No messages yet. Start a conversation!</p>
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Review Section (when order is complete) -->
+                    @if($order->status === 'completed')
+                        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                            <div class="p-6 bg-white border-b border-gray-200">
+                                <h2 class="text-lg font-semibold text-gray-900 mb-4">Work Complete! ✓</h2>
+                                <p class="text-gray-600 mb-4">The seller has completed all work steps. Would you like to leave a review?</p>
+
+                                @if($canReview && Auth::user()->id === $order->buyer_id)
+                                    <div class="space-y-2">
+                                        @if(!$hasServiceReview)
+                                            <button type="button" onclick="document.getElementById('serviceReviewModal').showModal()"
+                                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition">
+                                                Leave Service Review
+                                            </button>
+                                        @else
+                                            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                                <p class="text-green-800 font-medium">✓ You've already reviewed this service</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @elseif($canReview && Auth::user()->id === $order->seller_id)
+                                    @if($buyerHasLeftServiceReview)
+                                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                            <p class="text-green-800 font-medium">✓ Buyer has reviewed this service</p>
+                                        </div>
+                                    @else
+                                        <p class="text-gray-600 italic">Waiting for buyer to leave a review...</p>
+                                    @endif
+                                @else
+                                    <p class="text-gray-600 italic">You're not eligible to leave a review for this order.</p>
+                                @endif
+                            </div>
+                        </div>
+                    @else
+                        <div class="bg-yellow-50 overflow-hidden shadow-sm sm:rounded-lg border border-yellow-200">
+                            <div class="p-6 bg-white">
+                                <h2 class="text-lg font-semibold text-yellow-900 mb-2">📋 Work In Progress</h2>
+                                <p class="text-yellow-800">Review options will appear once the seller completes all work steps.</p>
                             </div>
                         </div>
                     @endif
@@ -168,6 +215,78 @@
     </div>
 </x-creator-layout>
 
+<!-- Service Review Modal -->
+<dialog id="serviceReviewModal" class="backdrop:bg-gray-500/75 rounded-lg shadow-xl w-full max-w-md p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Review the Service</h2>
+        <button type="button" onclick="document.getElementById('serviceReviewModal').close()" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+    </div>
+
+    <form id="serviceReviewForm" method="POST" action="{{ route('api.service-reviews.store') }}" class="space-y-4">
+        @csrf
+        <input type="hidden" name="service_id" value="{{ $order->service_id }}">
+        <input type="hidden" name="order_id" value="{{ $order->id }}">
+
+        <!-- Rating -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+            <div class="flex space-x-2" id="serviceRatingSelector">
+                @for($i = 1; $i <= 5; $i++)
+                    <button type="button" class="service-rating-star text-3xl text-gray-300 hover:text-yellow-400 transition" data-rating="{{ $i }}">
+                        ★
+                    </button>
+                @endfor
+            </div>
+            <input type="hidden" name="rating" id="serviceRating" value="0">
+            <span id="serviceRatingError" class="text-xs text-red-600 hidden mt-1 block">Please select a rating</span>
+        </div>
+
+        <!-- Title -->
+        <div>
+            <label for="serviceTitle" class="block text-sm font-medium text-gray-700 mb-1">Review Title (Optional)</label>
+            <input type="text" name="title" id="serviceTitle" maxlength="255"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Summarize your experience">
+        </div>
+
+        <!-- Comment -->
+        <div>
+            <label for="serviceComment" class="block text-sm font-medium text-gray-700 mb-1">Your Review</label>
+            <textarea name="comment" id="serviceComment" rows="4" maxlength="2000" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Share your experience with this service..."></textarea>
+            <p class="text-xs text-gray-500 mt-1"><span class="serviceCharCount">0</span>/2000</p>
+        </div>
+
+        <!-- Tags -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Tags (Optional)</label>
+            <div class="flex flex-wrap gap-2">
+                @foreach(['Professional', 'Fast', 'Quality', 'Friendly', 'Reliable'] as $tag)
+                    <label class="flex items-center">
+                        <input type="checkbox" name="tags[]" value="{{ $tag }}"
+                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2 text-sm text-gray-700">{{ $tag }}</span>
+                    </label>
+                @endforeach
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-2 pt-4">
+            <button type="button" onclick="document.getElementById('serviceReviewModal').close()"
+                class="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium">
+                Cancel
+            </button>
+            <button type="submit" class="submitReviewBtn flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                Submit Review
+            </button>
+        </div>
+    </form>
+</dialog>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     initializeOrderReviews();
@@ -179,36 +298,19 @@ function initializeOrderReviews() {
         'serviceRatingSelector',
         'serviceRating',
         'serviceRatingError',
-        '.service-rating-star',
-        '.serviceCharCount'
+        '.service-rating-star'
     );
 
-    // User Review Star Rating
-    initializeStarRating(
-        'userRatingSelector',
-        'userRating',
-        'userRatingError',
-        '.user-rating-star',
-        '.userCharCount'
-    );
-
-    // Character counters
-    document.querySelectorAll('#serviceReviewForm textarea').forEach(ta => {
-        ta.addEventListener('input', () => {
-            const counter = document.querySelector('.serviceCharCount');
-            if (counter) counter.textContent = ta.value.length;
+    // Service character counter
+    const serviceComment = document.getElementById('serviceComment');
+    if (serviceComment) {
+        serviceComment.addEventListener('input', () => {
+            document.querySelector('.serviceCharCount').textContent = serviceComment.value.length;
         });
-    });
-
-    document.querySelectorAll('#userReviewForm textarea').forEach(ta => {
-        ta.addEventListener('input', () => {
-            const counter = document.querySelector('.userCharCount');
-            if (counter) counter.textContent = ta.value.length;
-        });
-    });
+    }
 }
 
-function initializeStarRating(selectorId, inputId, errorId, starClass, charCountClass) {
+function initializeStarRating(selectorId, inputId, errorId, starClass) {
     const container = document.getElementById(selectorId);
     if (!container) return;
 
@@ -218,7 +320,8 @@ function initializeStarRating(selectorId, inputId, errorId, starClass, charCount
     let selectedRating = 0;
 
     stars.forEach(star => {
-        star.addEventListener('click', () => {
+        star.addEventListener('click', (e) => {
+            e.preventDefault();
             selectedRating = parseInt(star.dataset.rating);
             input.value = selectedRating;
             if (errorMsg) errorMsg.classList.add('hidden');
@@ -249,63 +352,59 @@ function updateStars(stars, rating, isHover = false) {
     });
 }
 
-function submitReview() {
-    const modal = document.querySelector('dialog');
-    const reviewType = modal._reviewType || 'service';
-    const formId = reviewType === 'service' ? 'serviceReviewForm' : 'userReviewForm';
-    const form = document.getElementById(formId);
-    const ratingId = reviewType === 'service' ? 'serviceRating' : 'userRating';
-    const ratingInput = document.getElementById(ratingId);
-    const errorId = reviewType === 'service' ? 'serviceRatingError' : 'userRatingError';
-    const errorMsg = document.getElementById(errorId);
+// Handle form submission
+document.getElementById('serviceReviewForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ratingInput = document.getElementById('serviceRating');
+    const errorMsg = document.getElementById('serviceRatingError');
 
     if (!ratingInput.value || ratingInput.value === '0') {
         if (errorMsg) errorMsg.classList.remove('hidden');
         return;
     }
 
-    submitForm(form, reviewType === 'service' ? '/api/reviews/services' : '/api/reviews/users');
-}
+    await submitForm(e.target, '{{ route("api.service-reviews.store") }}');
+});
 
 async function submitForm(form, endpoint) {
-    const submitBtn = document.querySelector('.submitReviewBtn');
+    const submitBtn = form.querySelector('.submitReviewBtn');
     submitBtn.disabled = true;
+    const originalText = submitBtn.textContent;
     submitBtn.textContent = 'Submitting...';
 
     try {
         const formData = new FormData(form);
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken,
             },
-            body: formData
+            body: formData,
+            credentials: 'same-origin'
         });
 
         if (!response.ok) {
             const error = await response.json();
             alert('Error: ' + (error.message || 'Failed to submit review'));
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Submit Review';
+            submitBtn.textContent = originalText;
             return;
         }
 
         alert('Review submitted successfully!');
+        // Close the modal
+        const modal = form.closest('dialog');
+        if (modal) modal.close();
         location.reload();
     } catch (error) {
         console.error('Error:', error);
         alert('Error submitting review: ' + error.message);
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Review';
+        submitBtn.textContent = originalText;
     }
 }
-
-// Store review type in modal when clicking buttons
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('review-trigger')) {
-        const modal = document.querySelector('dialog');
-        modal._reviewType = e.target.dataset.type;
-    }
-});
 </script>

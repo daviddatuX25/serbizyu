@@ -5,7 +5,7 @@ namespace App\Domains\Orders\Http\Controllers;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Orders\Services\OrderService;
 use App\Domains\Listings\Models\OpenOfferBid;
-use App\Domains\Reviews\Models\UserReview;
+use App\Domains\Users\Models\UserReview;
 use App\Domains\Listings\Models\ServiceReview;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -76,30 +76,41 @@ class OrderController extends Controller
     {
         $order = Order::with(['buyer', 'seller', 'service'])->findOrFail($id);
         $this->authorize('view', $order);
-        
+
         // Check if order is completed and pass review eligibility data
         $authUser = Auth::user();
         $isCompleted = $order->status === 'completed';
         $canReview = $isCompleted && $authUser && ($authUser->id === $order->buyer_id || $authUser->id === $order->seller_id);
-        
+
         // Check if user has already left reviews
         $hasServiceReview = false;
         $hasUserReview = false;
+        $buyerHasLeftServiceReview = false;
+
         if ($canReview) {
             $hasServiceReview = ServiceReview::where([
                 ['reviewer_id', $authUser->id],
                 ['service_id', $order->service_id],
                 ['order_id', $order->id],
             ])->exists();
-            
+
             $revieweeId = $authUser->id === $order->buyer_id ? $order->seller_id : $order->buyer_id;
             $hasUserReview = UserReview::where([
                 ['reviewer_id', $authUser->id],
                 ['reviewee_id', $revieweeId],
             ])->exists();
+
+            // For seller view, check if buyer has left a service review
+            if ($authUser->id === $order->seller_id) {
+                $buyerHasLeftServiceReview = ServiceReview::where([
+                    ['reviewer_id', $order->buyer_id],
+                    ['service_id', $order->service_id],
+                    ['order_id', $order->id],
+                ])->exists();
+            }
         }
-        
-        return view('orders.show', compact('order', 'canReview', 'hasServiceReview', 'hasUserReview'));
+
+        return view('orders.show', compact('order', 'canReview', 'hasServiceReview', 'hasUserReview', 'buyerHasLeftServiceReview'));
     }
 
     /**
@@ -156,7 +167,7 @@ class OrderController extends Controller
     {
         $order = Order::findOrFail($order);
         $this->authorize('delete', $order);
-        
+
         $this->orderService->cancelOrder($order);
         return redirect()->route('orders.show', $order)->with('success', 'Order cancelled successfully');
     }

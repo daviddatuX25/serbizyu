@@ -34,35 +34,13 @@ Route::middleware('auth:sanctum')->prefix('messages')->name('api.messages.')->gr
     Route::get('unread/count', [\App\Domains\Messaging\Http\Controllers\MessageController::class, 'unreadCount'])->name('unread');
 });
 
-// User Reviews API
-Route::middleware('auth:sanctum')->prefix('reviews/users')->name('api.user-reviews.')->group(function () {
-    Route::post('/', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'store'])->name('store');
-    Route::get('{review}', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'show'])->name('show');
-    Route::put('{review}', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'update'])->name('update');
-    Route::delete('{review}', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'destroy'])->name('destroy');
-    Route::get('user/{user}/received', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'getUserReviews'])->name('received');
-    Route::get('user/{user}/written', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'getUserReviewsWritten'])->name('written');
-    Route::get('user/{user}/stats', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'getUserStats'])->name('stats');
-});
-
-// Service Reviews API
-Route::middleware('auth:sanctum')->prefix('reviews/services')->name('api.service-reviews.')->group(function () {
-    Route::get('service/{service}', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'index'])->name('index');
-    Route::post('/', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'store'])->name('store');
-    Route::get('{review}', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'show'])->name('show');
-    Route::put('{review}', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'update'])->name('update');
-    Route::delete('{review}', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'destroy'])->name('destroy');
-    Route::get('service/{service}/stats', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'getServiceStats'])->name('stats');
-    Route::post('{review}/helpful', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'markHelpful'])->name('helpful');
-});
-
 
 /*
 Route::middleware(['api', ForceJsonResponse::class])->group(function () {
     Route::middleware('auth')->get('/user', function (Request $request) {
         return $request->user();
     });
-    
+
     Route::apiResource('categories', CategoryController::class);
 });
 */

@@ -152,7 +152,7 @@
                                     @if(auth()->id() === $workInstance->order->seller_id && !$step->isCompleted())
                                         <div class="flex gap-2 pt-2">
                                             @if(!$step->isInProgress())
-                                                <form action="{{ route('work-instances.steps.start', [$workInstance, $step]) }}" method="POST" class="inline">
+                                                <form action="{{ route('orders.work.steps.start', [$workInstance->order, $step]) }}" method="POST" class="inline">
                                                     @csrf
                                                     <button type="submit" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition">
                                                         Start Step
@@ -160,7 +160,7 @@
                                                 </form>
                                             @endif
                                             @if($step->isInProgress())
-                                                <form action="{{ route('work-instances.steps.complete', [$workInstance, $step]) }}" method="POST" class="inline">
+                                                <form action="{{ route('orders.work.steps.complete', [$workInstance->order, $step]) }}" method="POST" class="inline">
                                                     @csrf
                                                     <button type="submit" class="inline-flex items-center px-3 py-1 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition">
                                                         Complete Step

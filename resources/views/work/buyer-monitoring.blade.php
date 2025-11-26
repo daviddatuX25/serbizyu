@@ -106,8 +106,8 @@
                         <div class="mb-4 p-3 bg-gray-50 rounded-lg">
                             <p class="text-xs text-gray-600 font-medium mb-2">SERVICE PROVIDER</p>
                             <div class="flex items-center">
-                                <img src="{{ $work->order->seller->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($work->order->seller->name) }}" 
-                                     alt="{{ $work->order->seller->name }}" 
+                                <img src="{{ $work->order->seller->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($work->order->seller->name) }}"
+                                     alt="{{ $work->order->seller->name }}"
                                      class="h-8 w-8 rounded-full mr-2">
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-gray-900">{{ $work->order->seller->name }}</p>
@@ -118,7 +118,7 @@
 
                         <!-- Action Button -->
                         <div class="flex gap-2">
-                            <a href="{{ route('work-instances.show', $work) }}" class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+                            <a href="{{ route('orders.work.show', $work->order) }}" class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
                                 View Details
                             </a>
                             @if($work->order->payment_status === 'paid' && $work->status === 'completed')

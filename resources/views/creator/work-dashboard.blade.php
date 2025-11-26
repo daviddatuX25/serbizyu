@@ -135,7 +135,7 @@
                                             @if($isSeller)
                                                 <div class="flex gap-2 mt-2">
                                                     @if(!$currentStep->isInProgress())
-                                                        <form action="{{ route('work-instances.steps.start', [$workInstance, $currentStep]) }}" method="POST" class="inline">
+                                                        <form action="{{ route('orders.work.steps.start', [$workInstance->order, $currentStep]) }}" method="POST" class="inline">
                                                             @csrf
                                                             <button type="submit" class="px-2 py-1 text-xs bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition">
                                                                 Start
@@ -143,7 +143,7 @@
                                                         </form>
                                                     @endif
                                                     @if($currentStep->isInProgress())
-                                                        <form action="{{ route('work-instances.steps.complete', [$workInstance, $currentStep]) }}" method="POST" class="inline">
+                                                        <form action="{{ route('orders.work.steps.complete', [$workInstance->order, $currentStep]) }}" method="POST" class="inline">
                                                             @csrf
                                                             <button type="submit" class="px-2 py-1 text-xs bg-green-600 text-white font-medium rounded hover:bg-green-700 transition">
                                                                 Complete
@@ -169,7 +169,7 @@
                                     </div>
 
                                     <!-- Action Button -->
-                                    <a href="{{ route('work-instances.show', $workInstance) }}" class="inline-flex items-center px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition">
+                                    <a href="{{ route('orders.work.show', $workInstance->order) }}" class="inline-flex items-center px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition">
                                         View Full Details →
                                     </a>
                                 </div>

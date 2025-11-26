@@ -41,6 +41,31 @@ Route::middleware('auth')->group(function () {
     Route::put('/messages/{thread}/read', [MessageController::class, 'markAsRead'])->name('messages.read');
 });
 
+// Reviews API Routes (using web middleware for session auth)
+Route::middleware('auth')->group(function () {
+    // Service Reviews
+    Route::prefix('api/reviews/services')->name('api.service-reviews.')->group(function () {
+        Route::get('service/{service}', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'index'])->name('index');
+        Route::post('/', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'store'])->name('store');
+        Route::get('{review}', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'show'])->name('show');
+        Route::put('{review}', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'update'])->name('update');
+        Route::delete('{review}', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'destroy'])->name('destroy');
+        Route::get('service/{service}/stats', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'getServiceStats'])->name('stats');
+        Route::post('{review}/helpful', [\App\Domains\Listings\Http\Controllers\ReviewController::class, 'markHelpful'])->name('helpful');
+    });
+
+    // User Reviews
+    Route::prefix('api/reviews/users')->name('api.user-reviews.')->group(function () {
+        Route::post('/', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'store'])->name('store');
+        Route::get('{review}', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'show'])->name('show');
+        Route::put('{review}', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'update'])->name('update');
+        Route::delete('{review}', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'destroy'])->name('destroy');
+        Route::get('user/{user}/received', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'getUserReviews'])->name('received');
+        Route::get('user/{user}/written', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'getUserReviewsWritten'])->name('written');
+        Route::get('user/{user}/stats', [\App\Domains\Users\Http\Controllers\ReviewController::class, 'getUserStats'])->name('stats');
+    });
+});
+
 // Home and static pages
     Route::get('/', function () {
         return view('home');
@@ -112,8 +137,8 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     Route::delete('workflows/{workflow}', [WorkflowTemplateController::class, 'destroy'])->name('workflows.destroy');
     Route::post('workflows/{workflow}/duplicate', [WorkflowTemplateController::class, 'duplicate'])->name('workflows.duplicate');
 
-    // Seller Work Dashboard
-    Route::get('/work-dashboard', [WorkInstanceController::class, 'index'])->name('work-dashboard');
+    // Note: Work Dashboard integrated into main dashboard and order views (Phase 3)
+    // Old route: /creator/work-dashboard (deprecated - work now accessed via /orders/{order}/work)
 });
 
 // Authenticated user actions (e.g., bookmarking)
@@ -215,15 +240,22 @@ Route::middleware(['auth'])->prefix('payments')->name('payments.')->group(functi
     Route::get('/cash/disputed', [PaymentController::class, 'paymentDisputed'])->name('cash.disputed');
 });
 
-// Work Instance Management
+// Work Instance Management - NEW HIERARCHICAL ROUTES (Phase 2: Order-Work Integration)
+// Work is now nested under Orders for proper hierarchy and context
+Route::middleware(['auth'])->prefix('orders/{order}/work')->name('orders.work.')->group(function () {
+    Route::get('/', [WorkInstanceController::class, 'show'])->name('show');
+    Route::post('/steps/{workInstanceStep}/start', [WorkInstanceController::class, 'startStep'])->name('steps.start');
+    Route::post('/steps/{workInstanceStep}/complete', [WorkInstanceController::class, 'completeStep'])->name('steps.complete');
+    Route::get('/activities', [ActivityController::class, 'index'])->name('activities.index');
+    Route::post('/steps/{workInstanceStep}/activities', [ActivityController::class, 'store'])->name('activities.store');
+});
+
+// Work Instance Management - OLD ROUTES (DEPRECATED but kept for backward compatibility)
+// These will eventually be removed in Phase 3 after full migration
 Route::middleware(['auth'])->prefix('work-instances')->name('work-instances.')->group(function () {
     Route::get('/{workInstance}', [WorkInstanceController::class, 'show'])->name('show');
-
-    // Work Instance Step Management
     Route::post('/{workInstance}/steps/{workInstanceStep}/start', [WorkInstanceController::class, 'startStep'])->name('steps.start');
     Route::post('/{workInstance}/steps/{workInstanceStep}/complete', [WorkInstanceController::class, 'completeStep'])->name('steps.complete');
-
-    // Activity Management
     Route::resource('/{workInstance}/steps/{workInstanceStep}/activities', ActivityController::class);
 });
 

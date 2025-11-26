@@ -16,7 +16,7 @@
                         </span>
                     </div>
                     <div class="mt-2 text-right">
-                        <p class="text-lg font-bold text-gray-900">₱{{ number_format($order->amount ?? 0, 2) }}</p>
+                        <p class="text-lg font-bold text-gray-900">₱{{ number_format($order->total_amount ?? 0, 2) }}</p>
                     </div>
                 </div>
             @empty
