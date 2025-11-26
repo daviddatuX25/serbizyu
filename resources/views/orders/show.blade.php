@@ -20,35 +20,11 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Main Content -->
                 <div class="lg:col-span-2 space-y-6">
-                    <!-- Navigation Tabs -->
-                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border-b border-gray-200">
-                        <div class="flex border-b border-gray-200">
-                            <button class="tab-button flex-1 py-4 px-6 text-center font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 transition active" data-tab="details">
-                                <i class="fas fa-info-circle mr-2"></i> Details
-                            </button>
-                            <button class="tab-button flex-1 py-4 px-6 text-center font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 transition" data-tab="messages">
-                                <i class="fas fa-comments mr-2"></i> Messages
-                                @php
-                                    $unreadCount = $order->messageThread?->messages()->where('read_at', null)->where('sender_id', '!=', Auth::id())->count() ?? 0;
-                                @endphp
-                                @if($unreadCount > 0)
-                                    <span class="ml-2 inline-block bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">{{ $unreadCount }}</span>
-                                @endif
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h2 class="text-lg font-semibold text-gray-700">Billing</h2>
-                        <dl class="mt-2 space-y-2 text-sm">
-                            <div class="flex justify-between">
-                                <dt class="text-gray-500">Price:</dt>
-                                <dd class="font-medium text-gray-800">₱{{ number_format($order->price, 2) }}</dd>
-                            </div>
-                        </div>
-                        <div>
-                            <h2 class="text-lg font-semibold text-gray-700">Billing</h2>
-                            <dl class="mt-2 space-y-2 text-sm">
+                    <!-- Billing -->
+                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                        <div class="p-6 bg-white border-b border-gray-200">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-4">Billing</h2>
+                            <dl class="space-y-2 text-sm">
                                 <div class="flex justify-between">
                                     <dt class="text-gray-500">Price:</dt>
                                     <dd class="font-medium text-gray-800">₱{{ number_format($order->price, 2) }}</dd>
@@ -57,50 +33,12 @@
                                     <dt class="text-gray-500">Platform Fee:</dt>
                                     <dd class="font-medium text-gray-800">₱{{ number_format($order->platform_fee, 2) }}</dd>
                                 </div>
-                                <div class="flex justify-between font-bold text-base">
+                                <div class="flex justify-between font-bold text-base pt-2 border-t border-gray-200">
                                     <dt class="text-gray-800">Total:</dt>
                                     <dd class="text-green-600">₱{{ number_format($order->total_amount, 2) }}</dd>
                                 </div>
                             </dl>
                         </div>
-
-                        <!-- Work Progress -->
-                        @if($order->workInstance)
-                            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                                <div class="p-6 bg-white border-b border-gray-200">
-                                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Work Progress</h2>
-                                    <div class="space-y-3">
-                                        <div>
-                                            @php
-                                                $totalSteps = $order->workInstance->workInstanceSteps->count();
-                                                $currentStep = $order->workInstance->current_step_index + 1;
-                                                $progress = ($currentStep / $totalSteps) * 100;
-                                            @endphp
-                                            <p class="text-sm text-gray-600 mb-2">
-                                                Progress: <span class="font-medium text-gray-900">{{ $currentStep }} / {{ $totalSteps }}</span>
-                                            </p>
-                                        </div>
-                                        <p class="text-sm text-gray-600">
-                                            Current Status: <span class="font-medium text-gray-900 capitalize">{{ $order->workInstance->status }}</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-                    </div>
-
-                    <!-- Messages Tab -->
-                    <div id="messages-tab" class="tab-content hidden">
-                        @if($order->messageThread)
-                            <livewire:order-chat :order="$order" />
-                        @else
-                            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                                <div class="p-6 text-center">
-                                    <p class="text-gray-600">No messages yet. Start a conversation!</p>
-                                </div>
-                            </div>
-                        @endif
-                    </div>
                     </div>
 
                     <!-- Work Progress -->
@@ -230,173 +168,144 @@
     </div>
 </x-creator-layout>
 
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
-        initializeOrderReviews();
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const tabName = this.getAttribute('data-tab');
-
-                // Hide all tabs
-                tabContents.forEach(content => {
-                    content.classList.add('hidden');
-                });
-
-                // Remove active state from all buttons
-                tabButtons.forEach(btn => {
-                    btn.classList.remove('active');
-                    btn.classList.remove('border-blue-500');
-                    btn.classList.add('border-transparent');
-                });
-
-                // Show selected tab
-                document.getElementById(tabName + '-tab').classList.remove('hidden');
-
-                // Add active state to clicked button
-                this.classList.add('active');
-                this.classList.add('border-blue-500');
-                this.classList.remove('border-transparent');
-            });
-        });
-    });
-
-        function initializeOrderReviews() {
-            // Service Review Star Rating
-            initializeStarRating(
-                'serviceRatingSelector',
-                'serviceRating',
-                'serviceRatingError',
-                '.service-rating-star',
-                '.serviceCharCount'
-            );
-
-            // User Review Star Rating
-            initializeStarRating(
-                'userRatingSelector',
-                'userRating',
-                'userRatingError',
-                '.user-rating-star',
-                '.userCharCount'
-            );
-
-            // Character counters
-            document.querySelectorAll('#serviceReviewForm textarea').forEach(ta => {
-                ta.addEventListener('input', () => {
-                    document.querySelector('.serviceCharCount').textContent = ta.value.length;
-                });
-            });
-
-            document.querySelectorAll('#userReviewForm textarea').forEach(ta => {
-                ta.addEventListener('input', () => {
-                    document.querySelector('.userCharCount').textContent = ta.value.length;
-                });
-            });
-        }
-
-        function initializeStarRating(selectorId, inputId, errorId, starClass, charCountClass) {
-            const container = document.getElementById(selectorId);
-            const input = document.getElementById(inputId);
-            const errorMsg = document.getElementById(errorId);
-            const stars = container.querySelectorAll(starClass);
-            let selectedRating = 0;
-
-            stars.forEach(star => {
-                star.addEventListener('click', () => {
-                    selectedRating = parseInt(star.dataset.rating);
-                    input.value = selectedRating;
-                    errorMsg.classList.add('hidden');
-                    updateStars(stars, selectedRating);
-                });
-
-                star.addEventListener('mouseenter', () => {
-                    const hoverRating = parseInt(star.dataset.rating);
-                    updateStars(stars, hoverRating, true);
-                });
-            });
-
-            container.addEventListener('mouseleave', () => {
-                updateStars(stars, selectedRating, false);
-            });
-        }
-
-        function updateStars(stars, rating, isHover = false) {
-            stars.forEach(star => {
-                const starRating = parseInt(star.dataset.rating);
-                if (starRating <= rating) {
-                    star.classList.remove('text-gray-300');
-                    star.classList.add('text-yellow-400');
-                } else {
-                    star.classList.add('text-gray-300');
-                    star.classList.remove('text-yellow-400');
-                }
-            });
-        }
-
-        function submitReview() {
-            const modal = document.querySelector('dialog');
-            const reviewType = modal._reviewType || 'service';
-            const formId = reviewType === 'service' ? 'serviceReviewForm' : 'userReviewForm';
-            const form = document.getElementById(formId);
-            const ratingId = reviewType === 'service' ? 'serviceRating' : 'userRating';
-            const ratingInput = document.getElementById(ratingId);
-            const errorId = reviewType === 'service' ? 'serviceRatingError' : 'userRatingError';
-            const errorMsg = document.getElementById(errorId);
-
-            if (!ratingInput.value || ratingInput.value === '0') {
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            submitForm(form, reviewType === 'service' ? '/api/reviews/services' : '/api/reviews/users');
-        }
-
-        async function submitForm(form, endpoint) {
-            const submitBtn = document.querySelector('.submitReviewBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
-
-            try {
-                const formData = new FormData(form);
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    alert('Error: ' + (error.message || 'Failed to submit review'));
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Submit Review';
-                    return;
-                }
-
-                alert('Review submitted successfully!');
-                location.reload();
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error submitting review: ' + error.message);
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Review';
-            }
-        }
-
-        // Store review type in modal when clicking buttons
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('review-trigger')) {
-                const modal = document.querySelector('dialog');
-                modal._reviewType = e.target.dataset.type;
-            }
-        });
 <script>
+document.addEventListener('DOMContentLoaded', () => {
+    initializeOrderReviews();
+});
 
-    document.addEventListener('DOMContentLoaded', function() {
+function initializeOrderReviews() {
+    // Service Review Star Rating
+    initializeStarRating(
+        'serviceRatingSelector',
+        'serviceRating',
+        'serviceRatingError',
+        '.service-rating-star',
+        '.serviceCharCount'
+    );
 
+    // User Review Star Rating
+    initializeStarRating(
+        'userRatingSelector',
+        'userRating',
+        'userRatingError',
+        '.user-rating-star',
+        '.userCharCount'
+    );
+
+    // Character counters
+    document.querySelectorAll('#serviceReviewForm textarea').forEach(ta => {
+        ta.addEventListener('input', () => {
+            const counter = document.querySelector('.serviceCharCount');
+            if (counter) counter.textContent = ta.value.length;
+        });
     });
+
+    document.querySelectorAll('#userReviewForm textarea').forEach(ta => {
+        ta.addEventListener('input', () => {
+            const counter = document.querySelector('.userCharCount');
+            if (counter) counter.textContent = ta.value.length;
+        });
+    });
+}
+
+function initializeStarRating(selectorId, inputId, errorId, starClass, charCountClass) {
+    const container = document.getElementById(selectorId);
+    if (!container) return;
+
+    const input = document.getElementById(inputId);
+    const errorMsg = document.getElementById(errorId);
+    const stars = container.querySelectorAll(starClass);
+    let selectedRating = 0;
+
+    stars.forEach(star => {
+        star.addEventListener('click', () => {
+            selectedRating = parseInt(star.dataset.rating);
+            input.value = selectedRating;
+            if (errorMsg) errorMsg.classList.add('hidden');
+            updateStars(stars, selectedRating);
+        });
+
+        star.addEventListener('mouseenter', () => {
+            const hoverRating = parseInt(star.dataset.rating);
+            updateStars(stars, hoverRating, true);
+        });
+    });
+
+    container.addEventListener('mouseleave', () => {
+        updateStars(stars, selectedRating, false);
+    });
+}
+
+function updateStars(stars, rating, isHover = false) {
+    stars.forEach(star => {
+        const starRating = parseInt(star.dataset.rating);
+        if (starRating <= rating) {
+            star.classList.remove('text-gray-300');
+            star.classList.add('text-yellow-400');
+        } else {
+            star.classList.add('text-gray-300');
+            star.classList.remove('text-yellow-400');
+        }
+    });
+}
+
+function submitReview() {
+    const modal = document.querySelector('dialog');
+    const reviewType = modal._reviewType || 'service';
+    const formId = reviewType === 'service' ? 'serviceReviewForm' : 'userReviewForm';
+    const form = document.getElementById(formId);
+    const ratingId = reviewType === 'service' ? 'serviceRating' : 'userRating';
+    const ratingInput = document.getElementById(ratingId);
+    const errorId = reviewType === 'service' ? 'serviceRatingError' : 'userRatingError';
+    const errorMsg = document.getElementById(errorId);
+
+    if (!ratingInput.value || ratingInput.value === '0') {
+        if (errorMsg) errorMsg.classList.remove('hidden');
+        return;
+    }
+
+    submitForm(form, reviewType === 'service' ? '/api/reviews/services' : '/api/reviews/users');
+}
+
+async function submitForm(form, endpoint) {
+    const submitBtn = document.querySelector('.submitReviewBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+
+    try {
+        const formData = new FormData(form);
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            alert('Error: ' + (error.message || 'Failed to submit review'));
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Review';
+            return;
+        }
+
+        alert('Review submitted successfully!');
+        location.reload();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error submitting review: ' + error.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Review';
+    }
+}
+
+// Store review type in modal when clicking buttons
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('review-trigger')) {
+        const modal = document.querySelector('dialog');
+        modal._reviewType = e.target.dataset.type;
+    }
+});
 </script>
