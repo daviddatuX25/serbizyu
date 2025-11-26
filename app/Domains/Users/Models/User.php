@@ -93,7 +93,8 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
             return $profileImage->getUrl();
         }
         // Fallback to avatar with user's name
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name);
+        $name = $this->name ?? 'User';
+        return 'https://ui-avatars.com/api/?name=' . urlencode($name);
     }
 
     protected static function newFactory()

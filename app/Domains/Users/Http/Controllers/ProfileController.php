@@ -4,6 +4,9 @@ namespace App\Domains\Users\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Domains\Users\Http\Requests\ProfileUpdateRequest;
+use App\Domains\Users\Models\User;
+use App\Domains\Users\Services\UserReviewService;
+use App\Domains\Orders\Models\Order;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +15,68 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
+    protected $reviewService;
+
+    public function __construct(UserReviewService $reviewService)
+    {
+        $this->reviewService = $reviewService;
+    }
+
+    /**
+     * Display a user's public profile with reviews.
+     */
+    public function show(User $user, Request $request): View
+    {
+        // Load reviews received with reviewer information
+        $reviews = $user->reviewsReceived()
+            ->with('reviewer')
+            ->latest()
+            ->paginate(10);
+
+        // Get average rating and stats
+        $averageRating = $user->average_rating ?? 0;
+        $totalReviews = $user->reviewsReceived()->count();
+
+        // Check if authenticated user has completed orders with this user
+        $authUser = Auth::user();
+        $hasCompletedOrders = false;
+        $canReviewUser = false;
+        $hasExistingReview = false;
+
+        if ($authUser && $authUser->id !== $user->id) {
+            // Check if they have completed orders together
+            $hasCompletedOrders = Order::where(function ($query) use ($authUser, $user) {
+                $query->where([
+                    ['buyer_id', $authUser->id],
+                    ['seller_id', $user->id],
+                ])
+                ->orWhere([
+                    ['buyer_id', $user->id],
+                    ['seller_id', $authUser->id],
+                ]);
+            })
+            ->where('status', 'completed')
+            ->exists();
+
+            // Can review if has completed orders and hasn't reviewed yet
+            if ($hasCompletedOrders) {
+                $hasExistingReview = $user->reviewsReceived()
+                    ->where('reviewer_id', $authUser->id)
+                    ->exists();
+                $canReviewUser = !$hasExistingReview;
+            }
+        }
+
+        return view('profile.show', [
+            'user' => $user,
+            'reviews' => $reviews,
+            'averageRating' => $averageRating,
+            'totalReviews' => $totalReviews,
+            'canReviewUser' => $canReviewUser,
+            'hasExistingReview' => $hasExistingReview,
+        ]);
+    }
+
     /**
      * Display the user's profile form.
      */

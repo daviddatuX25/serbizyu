@@ -125,16 +125,21 @@ Route::middleware(['auth'])->prefix('verification')->name('verification.')->grou
     Route::get('/status', [UserVerificationController::class, 'status'])->name('status');
 });
 
-// Profile editor
-   Route::middleware(['auth'])->prefix('profile')->group(function () {
-        Route::get('/', [ProfileController::class, 'edit'])
-            ->name('profile.edit');
+// Public Profile - viewable by anyone
+Route::get('/profile/{user}', [ProfileController::class, 'show'])
+    ->name('profile.show')
+    ->where('user', '[0-9]+');
 
-        Route::patch('/', [ProfileController::class, 'update'])
-            ->name('profile.update');
+// Profile editor - edit own profile
+Route::middleware(['auth'])->prefix('profile')->group(function () {
+    Route::get('/', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
 
-        Route::delete('/', [ProfileController::class, 'destroy'])
-            ->name('profile.destroy');
+    Route::patch('/', [ProfileController::class, 'update'])
+        ->name('profile.update');
+
+    Route::delete('/', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
 });
 
 // Admin Routes
