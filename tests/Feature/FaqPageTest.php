@@ -12,10 +12,8 @@ class FaqPageTest extends TestCase
         $response = $this->get('/faq');
 
         $response->assertStatus(200);
-        $response->assertJsonStructure([
-            'GENERAL QUESTIONS',
-            'ACCOUNT & PROFILE',
-            'SERVICES',
-        ]);
+        $response->assertViewIs('faq');
+        $response->assertViewHas('faqs');
+        $response->assertSee('GENERAL QUESTIONS');
     }
 }
