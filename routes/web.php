@@ -33,6 +33,7 @@ use App\Domains\Users\Http\Controllers\ProfileController;
 use App\Domains\Users\Http\Controllers\UserVerificationController;
 use App\Domains\Work\Http\Controllers\ActivityController;
 use App\Domains\Work\Http\Controllers\WorkInstanceController;
+use App\Http\Controllers\FaqController;
 use Illuminate\Support\Facades\Route;
 
 // require or include auth.php
@@ -86,12 +87,10 @@ Route::get('about', function () {
     return view('about');
 })->name('about');
 
-Route::get('faq', function () {
-    return view('faq');
-})->name('faq');
+Route::get('faq', [FaqController::class, 'index'])->name('faq');
 
 // Public-facing service page
-Route::get('/services/{service}', [ServiceController::class, 'show'])->where('service', '[0-9]+')->name('services.show');
+Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
 
 // Public-facing open offer page
 Route::get('/openoffers/{openoffer}', [OpenOfferController::class, 'show'])->name('openoffers.show');
@@ -106,7 +105,6 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     // Service Management
     Route::resource('services', ServiceController::class);
     Route::get('services/{service}/manage', [ServiceController::class, 'manage'])->name('services.manage');
-    Route::post('services/{service}/publish', [ServiceController::class, 'publish'])->name('services.publish');
 
     // Category Management
     Route::resource('categories', CategoryController::class);

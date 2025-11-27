@@ -1,0 +1,157 @@
+About Serbizyu
+Our Story
+Serbizyu was born from a simple observation: finding reliable local services in the Philippines is harder than it should be. Whether you need someone to fix your laptop, tutor your child, or clean your home, the process often involves endless phone calls, uncertain pricing, and questions about trustworthiness.
+We built Serbizyu to change that.
+Our platform connects customers with skilled service providers in a transparent, secure, and efficient way. With features like structured workflows, escrow payments, and real-time updates, we're making local services work the way they should—simple, safe, and satisfying for everyone.
+
+Our Mission
+To empower local service providers and make quality services accessible to everyone.
+We believe talented people are everywhere, but opportunities aren't. Serbizyu creates a level playing field where anyone with skills can build a business, and anyone who needs help can find it easily.
+
+What Makes Us Different
+🎯 Workflow System
+Unlike other platforms, we don't just connect people—we guide them through the entire work process. Structured workflows ensure clear expectations, progress tracking, and quality results.
+🔒 Secure Payments
+Money is held safely in escrow until work is completed. Both buyers and sellers are protected, reducing risk and building trust.
+⚡ Real-Time Everything
+See updates the moment they happen. New messages, order changes, workflow progress—all instant, no refresh needed.
+📱 Mobile-First Design
+Built for the way Filipinos actually use the internet—on their phones. Fast, responsive, and data-efficient.
+💬 Built-In Communication
+No need for separate chat apps. Everything you need to discuss is right there in the order page.
+⭐ Transparent Reviews
+Honest feedback from real users helps everyone make better decisions. Reviews are permanent and publicly visible.
+
+Our Values
+Trust
+We're building a community, not just a marketplace. Every feature is designed to create trust between strangers.
+Empowerment
+Whether you're earning or hiring, Serbizyu gives you the tools to succeed. No gatekeepers, no barriers.
+Quality
+Good enough isn't good enough. We push for excellence in every service, every interaction, every line of code.
+Transparency
+No hidden fees. No surprise charges. No unclear terms. What you see is what you get.
+Local First
+We understand Filipino culture, payment methods, and needs because we're built by Filipinos, for Filipinos.
+
+The Platform
+For Service Providers
+Turn Your Skills Into Income
+Whether you're a full-time professional or earning on the side, Serbizyu helps you:
+
+Showcase your services with photos and descriptions
+Set your own prices and payment terms
+Manage jobs with guided workflows
+Build your reputation through reviews
+Get paid securely and on time
+
+You're in control. No middlemen taking huge cuts. No unclear policies. Just you, your skills, and customers who need them.
+For Customers
+Find Reliable Help, Fast
+Stop asking for referrals or taking chances with strangers:
+
+Browse hundreds of services by category
+Compare prices and read real reviews
+Track work progress in real-time
+Pay safely with escrow protection
+Leave feedback to help others
+
+Know what you're getting before you commit. See the work process, communicate clearly, and pay only when satisfied.
+
+Current Features
+✅ User Accounts - Register as buyer, seller, or both
+✅ Service Listings - Create and browse service offerings
+✅ Open Offers - Post what you need, get bids from providers
+✅ Workflow System - Step-by-step work execution with tracking
+✅ Activity Threads - Post updates, photos, and progress reports
+✅ Smart Prompts - Ask and answer questions during work
+✅ Secure Payments - Online (Xendit) and cash options
+✅ Escrow Protection - Money held until work is complete
+✅ Real-Time Messaging - Instant communication between users
+✅ Review System - Rate services and users
+✅ Mobile Responsive - Works perfectly on any device
+✅ Real-Time Updates - See changes instantly via WebSockets
+
+Coming Soon
+🚀 Quick Deals - QR codes for instant service booking
+🚀 Enhanced Reporting - Better tools to flag inappropriate content
+🚀 Video Support - Upload video evidence and consultations
+🚀 Advanced Search - More filters and smarter results
+🚀 Analytics Dashboard - Track your earnings and performance
+🚀 Mobile App - Native iOS and Android applications
+
+The Technology
+Serbizyu is built with modern, reliable technology:
+
+Backend: Laravel 11 (PHP framework)
+Frontend: Alpine.js + Tailwind CSS
+Database: MySQL
+Real-Time: Soketi (WebSocket server)
+Payments: Xendit integration
+Hosting: Hostinger (production-ready)
+
+We chose these technologies for speed, security, and scalability. As we grow, the platform grows with us.
+
+The Team
+Serbizyu was created by a passionate team of developers and designers:
+David Datu Sarmiento
+Lead Developer & Architect
+Designed the system architecture and backend infrastructure. Passionate about clean code and scalable solutions.
+Joross Manzano
+Full-Stack Developer
+Built core features including the workflow system and real-time communications. Loves solving complex problems.
+Charlene Hipolito
+Frontend Developer & UI/UX Designer
+Crafted the user interface and experience. Obsessed with making things beautiful and intuitive.
+Rayver Leal
+Backend Developer
+Implemented payment systems and security features. Ensures every transaction is safe and reliable.
+Ella Estrella
+Developer & Quality Assurance
+Tests everything relentlessly and builds critical features. Breaks things so users don't have to.
+
+Our Commitment
+We're committed to:
+🎯 Continuous Improvement - Regular updates and new features based on your feedback
+🛡️ Security First - Your data and money are always protected
+💬 Responsive Support - Real humans ready to help when you need it
+🌱 Community Building - Creating a trusted marketplace for Filipinos
+📈 Fair Pricing - Low platform fees so more money goes to service providers
+
+The Journey
+This started as a school project—a vision of what local services could be. Today, it's a fully functional platform ready to serve thousands of Filipinos.
+But we're just getting started.
+Every feature we add, every bug we fix, and every user we onboard brings us closer to our goal: making quality local services accessible to everyone in the Philippines.
+
+Join Us
+Whether you're offering services or looking for help, we invite you to be part of the Serbizyu community.
+For Service Providers:
+Sign up, create your first service, and start earning. We'll be with you every step of the way.
+For Customers:
+Browse, book, and experience the difference of a platform built for your needs.
+For Everyone:
+Share your feedback. Tell us what works and what doesn't. This platform grows with your input.
+
+Get In Touch
+Email: support@serbizyu.com
+Facebook: [Coming Soon]
+Instagram: [Coming Soon]
+Twitter: [Coming Soon]
+Feedback & Suggestions: feedback@serbizyu.com
+Business Inquiries: business@serbizyu.com
+Press & Media: press@serbizyu.com
+
+Acknowledgments
+Special thanks to:
+
+Our early testers who provided invaluable feedback
+The Laravel and open-source communities
+Our school advisors who supported this project
+Every user who believes in our vision
+
+
+Legal
+Serbizyu is a school project developed for educational purposes, currently being prepared for public launch.
+Platform operated by: [Your School/Organization Name]
+Location: Philippines
+Established: 2025
