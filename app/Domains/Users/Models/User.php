@@ -2,28 +2,31 @@
 
 namespace App\Domains\Users\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Domains\Common\Models\Address;
+use App\Domains\Common\Models\Image;
+use App\Domains\Listings\Models\WorkflowTemplate;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Scout\Searchable;
-use Spatie\Permission\Traits\HasRoles;
-use App\Domains\Common\Models\UserAddress;
 use Plank\Mediable\Mediable;
 use Plank\Mediable\MediableInterface;
-use Plank\Mediable\Media;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Domains\Common\Models\Image;
-use App\Domains\Listings\Models\WorkflowTemplate;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements MustVerifyEmail, MediableInterface
+class User extends Authenticatable implements MediableInterface, MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, Mediable, Searchable;
+    use HasFactory, HasRoles, Mediable, Notifiable, Searchable;
 
     protected $guard_name = 'web';
+
+    /**
+     * The relations to always eager-load
+     */
+    protected $with = ['media'];
 
     /**
      * The attributes that are mass assignable.
@@ -56,8 +59,8 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
     public function addresses()
     {
         return $this->belongsToMany(Address::class, 'user_addresses')
-                    ->withPivot('is_primary')
-                    ->withTimestamps();
+            ->withPivot('is_primary')
+            ->withTimestamps();
     }
 
     /**
@@ -77,7 +80,6 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
     /**
      * Get the user's profile image (latest with tag 'profile_image')
      */
-
     public function getProfileImageAttribute()
     {
         return $this->media->where('tag', 'profile_image')->first();
@@ -94,7 +96,8 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
         }
         // Fallback to avatar with user's name
         $name = $this->name ?? 'User';
-        return 'https://ui-avatars.com/api/?name=' . urlencode($name);
+
+        return 'https://ui-avatars.com/api/?name='.urlencode($name);
     }
 
     protected static function newFactory()
@@ -110,6 +113,11 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
     public function verification()
     {
         return $this->hasOne(UserVerification::class);
+    }
+
+    public function flagStats()
+    {
+        return $this->hasOne(CreatorFlagStats::class);
     }
 
     public function openOffers()
@@ -141,7 +149,7 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
             'workflow_template_id'
         );
     }
-    
+
     public function orders()
     {
         return $this->hasMany(\App\Domains\Orders\Models\Order::class, 'buyer_id');
@@ -169,5 +177,11 @@ class User extends Authenticatable implements MustVerifyEmail, MediableInterface
     public function getAverageRatingAttribute()
     {
         return $this->reviewsReceived()->avg('rating') ?? 0;
+    }
+
+    // static factory
+    public static function factory()
+    {
+        return \Database\Factories\UserFactory::new();
     }
 }

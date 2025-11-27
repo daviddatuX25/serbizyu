@@ -2,7 +2,6 @@
 
 namespace App\Domains\Users\Http\Requests;
 
-use App\Support\MediaConfig;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,12 +22,10 @@ class StoreUserVerificationRequest extends FormRequest
      */
     public function rules(): array
     {
-        $mediaConfig = new MediaConfig;
-
         return [
             'id_type' => ['required', 'string', 'in:national_id,drivers_license,passport'],
-            'id_front' => ['required', $mediaConfig->getValidationRule('images')],
-            'id_back' => ['required', $mediaConfig->getValidationRule('images')],
+            'id_front' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png,gif,heic'],
+            'id_back' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png,gif,heic'],
         ];
     }
 
@@ -37,17 +34,35 @@ class StoreUserVerificationRequest extends FormRequest
      */
     public function messages(): array
     {
-        $mediaConfig = new MediaConfig;
+        return [
+            'id_type.required' => 'Please select an ID type.',
+            'id_type.in' => 'Invalid ID type selected.',
+            'id_front.required' => 'Front side photo is required.',
+            'id_front.file' => 'Front side must be a valid image file.',
+            'id_front.max' => 'Front side image must not exceed 5MB.',
+            'id_front.mimes' => 'Front side must be JPG, PNG, GIF, or HEIC.',
+            'id_back.required' => 'Back side photo is required.',
+            'id_back.file' => 'Back side must be a valid image file.',
+            'id_back.max' => 'Back side image must not exceed 5MB.',
+            'id_back.mimes' => 'Back side must be JPG, PNG, GIF, or HEIC.',
+        ];
+    }
 
-        return array_merge(
-            [
-                'id_type.required' => 'Please select a valid ID type.',
-                'id_type.in' => 'Invalid ID type selected.',
-                'id_front.required' => 'Front side of your ID is required.',
-                'id_back.required' => 'Back side of your ID is required.',
-            ],
-            $mediaConfig->getValidationMessages('images', 'id_front'),
-            $mediaConfig->getValidationMessages('images', 'id_back')
-        );
+    /**
+     * Handle a failed validation attempt.
+     */
+    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator): void
+    {
+        $errors = $validator->errors();
+
+        // Check for missing files which typically means upload size exceeded
+        if (! $this->hasFile('id_front') && $this->input('id_front_name')) {
+            $errors->add('id_front', 'Front side image file size is greater than 5MB.');
+        }
+        if (! $this->hasFile('id_back') && $this->input('id_back_name')) {
+            $errors->add('id_back', 'Back side image file size is greater than 5MB.');
+        }
+
+        parent::failedValidation($validator);
     }
 }

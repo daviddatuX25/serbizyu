@@ -3,17 +3,17 @@
 namespace App\Domains\Orders\Services;
 
 use App\Domains\Listings\Models\OpenOfferBid;
-use App\Domains\Orders\Models\Order;
-use App\Domains\Users\Models\User;
-use App\Domains\Messaging\Models\MessageThread;
-use App\Enums\OrderStatus;
-use App\Mail\OrderCreated;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Log;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Messaging\Models\MessageThread;
+use App\Domains\Orders\Models\Order;
+use App\Domains\Users\Models\User;
 use App\Domains\Work\Models\WorkInstance;
 use App\Domains\Work\Models\WorkInstanceStep;
+use App\Enums\OrderStatus;
+use App\Mail\OrderCreated;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class OrderService
 {
@@ -24,7 +24,7 @@ class OrderService
 
         $orderData = [
             'buyer_id' => $offer->creator_id,
-            'seller_id' => $service->creator_id,
+            'seller_id' => $bid->bidder_id,
             'service_id' => $service->id,
             'open_offer_id' => $bid->open_offer_id,
             'open_offer_bid_id' => $bid->id,

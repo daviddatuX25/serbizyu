@@ -1,0 +1,783 @@
+MAP: Generated 2025-11-27 11:42:08
+--postcss.config.js
+export default {
+    plugins: {
+        tailwindcss: {},
+        autoprefixer: {},
+    },
+};
+----
+--tailwind.config.js
+import defaultTheme from 'tailwindcss/defaultTheme'
+import forms from '@tailwindcss/forms'
+
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
+    './storage/framework/views/*.php',
+    './resources/views/**/*.blade.php',
+  ],
+  darkMode: 'media', // or 'class' if you want to toggle manually
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          DEFAULT: '#10b981',   // Emerald 500
+          dark: '#047857',      // Emerald 700
+          light: '#6ee7b7',     // Emerald 300
+        },
+        secondary: {
+          DEFAULT: '#6b7280',   // Gray 500
+          dark: '#374151',      // Gray 700
+          light: '#d1d5db',     // Gray 300
+        },
+        background: {
+          DEFAULT: '#ffffff',
+          secondary: '#f3f4f6', // Gray 100
+          dark: '#111827',      // Gray 900 (if dark mode later)
+        },
+        text: {
+          DEFAULT: '#1f2937',   // Gray 800
+          secondary: '#6b7280', // Gray 500
+          inverted: '#ffffff',  // White text on dark bg
+        },
+        error: '#ef4444', // Red 500
+      },
+      fontFamily: {
+        display: ['Poppins', ...defaultTheme.fontFamily.sans],
+        body: ['Inter', ...defaultTheme.fontFamily.sans],
+      },
+      borderRadius: {
+        md: '0.5rem',
+        xl: '0.75rem',
+        '2xl': '1rem',
+      },
+      boxShadow: {
+        sm: '0 1px 2px rgba(0, 0, 0, 0.05)',
+        md: '0 4px 6px rgba(0, 0, 0, 0.1)',
+        lg: '0 10px 15px rgba(0, 0, 0, 0.15)',
+      },
+      zIndex: {
+        modal: 999,
+        overlay: 998,
+      },
+    },
+  },
+  plugins: [forms],
+}
+----
+--resources/css/app.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import './navbar.css';
+
+
+@layer components {
+  /* Button Component */
+  .btn {
+    @apply rounded-md font-semibold transition duration-200 px-4 py-2;
+  }
+
+  .btn-primary {
+    @apply bg-brand text-white hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 dark:focus:ring-offset-secondary-dark;
+  }
+
+  .btn-secondary {
+    @apply border border-secondary-dark text-secondary hover:bg-secondary-dark hover:text-white focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 dark:focus:ring-offset-secondary-dark;
+  }
+
+  .btn-outline-white {
+    @apply px-4 py-2 border border-white text-white rounded-lg bg-transparent
+           hover:bg-white hover:text-black transition;
+  }
+
+  .btn-danger {
+    @apply bg-error text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2 dark:focus:ring-offset-secondary-dark;
+  }
+
+
+  /* Dropdown Component */
+  .dropdown-link {
+    @apply block w-full px-4 py-2 text-sm leading-5 text-left font-body;
+  }
+
+  .dropdown-active {
+    @apply text-brand bg-background-secondary dark:text-brand dark:bg-secondary-dark;
+  }
+  .dropdown-active:hover {
+    @apply bg-brand/10 dark:bg-brand-dark/10;
+  }
+
+  .dropdown-inactive {
+    @apply text-text-secondary dark:text-text;
+  }
+  .dropdown-inactive:hover {
+    @apply bg-background-secondary text-text dark:bg-secondary-dark dark:text-text-secondary;
+  }
+
+  /* Status Component */
+  .status-message {
+    @apply font-medium text-sm font-body;
+  }
+
+  .status-success {
+    @apply text-brand dark:text-brand-dark;
+  }
+
+/* ================================
+  FORM LAYOUT WRAPPERS
+  ================================ */
+
+  /* Listing Card Component */
+  .listing-card {
+    @apply bg-white rounded-xl shadow hover:shadow-md transition p-5 flex flex-col;
+  }
+
+  /* Card top row (badge + right info) */
+  .card-top {
+    @apply flex items-center justify-between mb-3;
+  }
+
+  /* Badges */
+  .badge-service {
+    @apply px-2 py-1 text-xs bg-green-100 text-green-700 rounded;
+  }
+  .badge-offer {
+    @apply px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded;
+  }
+
+  /* Card Titles & Description */
+  .card-desc {
+    @apply text-gray-500 text-sm mb-2;
+  }
+  .card-meta {
+    @apply text-gray-600 text-sm;
+  }
+
+  /* Card Footer */
+  .card-footer {
+    @apply mt-3 flex justify-between items-center;
+  }
+  .card-footer span {
+    @apply text-xs text-gray-500;
+  }
+
+  /* Avatar/Icon inside card */
+  .card-avatar {
+    @apply w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center;
+  }
+
+  /* Card Titles & Description */
+  .card-title {
+    @apply text-lg font-bold;
+  }
+
+  /* ================================
+     FORM LAYOUT WRAPPERS
+     ================================ */
+  .form-wrapper {
+    @apply flex items-center min-h-screen bg-gradient-to-br from-green-50 via-white to-gray-100;
+  }
+
+  .form-wrapper-centered {
+    @apply justify-center;
+  }
+
+  .form-wrapper-left {
+    @apply justify-start;
+  }
+
+  .form-wrapper-right {
+    @apply justify-end;
+  }
+
+  /* ================================
+     FORM CARD CONTAINER
+     ================================ */
+  .form-container {
+    @apply bg-white shadow-2xl rounded-3xl p-10 w-full max-w-md border border-gray-100;
+  }
+
+  /* Card variants for dashboard use */
+  .form-container-neutral {
+    @apply bg-background shadow-md rounded-md p-6 w-full border border-secondary dark:bg-secondary-dark dark:border-secondary-dark;
+  }
+
+  /* ================================
+     FORM HEADERS
+     ================================ */
+  .form-header {
+    @apply flex flex-col items-center mb-8;
+  }
+
+  .form-icon {
+    @apply bg-green-100 rounded-full p-3 mb-3;
+  }
+
+  .form-title {
+    @apply text-xl font-bold text-gray-800;
+  }
+
+  .form-subtitle {
+    @apply text-gray-500 text-sm mt-1 text-center;
+  }
+
+  /* ================================
+     LABELS, INPUTS, AND ERRORS
+     ================================ */
+  .form-label {
+    @apply block font-medium text-sm text-gray-700 mb-2 font-body;
+  }
+
+  .form-input {
+    @apply w-full px-4 py-3 border border-gray-200 rounded-lg bg-white
+           focus:outline-none focus:ring-2 focus:ring-green-400 transition;
+  }
+
+  .form-error {
+    @apply text-error dark:text-error/80 text-sm mt-1 font-body;
+  }
+
+  /* ================================
+     BUTTONS
+     ================================ */
+  .form-button {
+    @apply w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-lg
+           font-semibold shadow hover:from-green-600 hover:to-green-700 transition;
+  }
+
+  .form-button-danger {
+    @apply w-full bg-red-600 text-white py-3 rounded-lg font-semibold shadow
+           hover:bg-red-700 transition;
+  }
+
+  .form-alt-button {
+    @apply w-full flex items-center justify-center gap-2 border border-gray-300 py-2 rounded-lg
+           hover:bg-gray-50 transition;
+  }
+
+  /* ================================
+     DIVIDERS AND FOOTERS
+     ================================ */
+  .form-divider {
+    @apply flex items-center my-6;
+  }
+
+  .form-divider-line {
+    @apply flex-grow border-t border-gray-200;
+  }
+
+  .form-divider-text {
+    @apply mx-3 text-gray-400 text-xs;
+  }
+
+  .form-footer {
+    @apply text-center text-gray-600 mt-6 text-sm;
+  }
+
+  /* Modal Component */
+  /* ================================
+   MODAL EXTENSIONS
+   ================================ */
+
+  /* Modal header */
+  .modal-header {
+    @apply flex items-center justify-between mb-6 pb-4 border-b border-secondary dark:border-secondary-dark;
+  }
+
+  .modal-title {
+    @apply text-xl font-bold text-text dark:text-text-secondary;
+  }
+
+  .modal-close {
+    @apply text-text-secondary hover:text-text dark:text-text dark:hover:text-text-secondary transition;
+  }
+
+  /* Modal body */
+  .modal-body {
+    @apply space-y-4;
+  }
+
+  /* Modal footer */
+  .modal-footer {
+    @apply flex items-center justify-end gap-3 mt-6 pt-4 border-t border-secondary dark:border-secondary-dark;
+  }
+
+  /* Delete confirmation modal variant */
+  .modal-danger {
+    @apply text-center;
+  }
+
+  .modal-danger-icon {
+    @apply w-12 h-12 mx-auto mb-4 text-error;
+  }
+
+  .modal-danger-title {
+    @apply text-lg font-semibold mb-2 text-text dark:text-text-secondary;
+  }
+
+  .modal-danger-text {
+    @apply text-text-secondary dark:text-text mb-6;
+  }
+
+  /* Loading skeleton */
+  .skeleton-item {
+    @apply h-10 bg-secondary dark:bg-secondary-dark rounded animate-pulse;
+  }
+
+  /* Status Component */
+  .status-message {
+    @apply font-medium text-sm font-body;
+  }
+
+  .status-success {
+    @apply text-brand dark:text-brand-dark;
+  }
+
+  /* ===== Modal Core Styles ===== */
+  .modal-overlay {
+      @apply fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50;
+  }
+
+  .modal-content {
+      @apply bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 sm:p-8 w-full max-w-md transform transition-all duration-300;
+  }
+
+  .modal-enter {
+      @apply opacity-0 scale-95;
+  }
+  .modal-enter-active {
+      @apply opacity-100 scale-100;
+  }
+  .modal-leave {
+      @apply opacity-100 scale-100;
+  }
+  .modal-leave-active {
+      @apply opacity-0 scale-95;
+  }
+
+}
+
+@layer utilities {
+  /* hide scrollbar (Chrome/Safari/Edge/Opera + Firefox + IE/Edge) */
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* WebKit */
+  }
+
+  /* optional: smooth touch scrolling on iOS */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+[x-cloak] {
+    display: none !important;
+}
+----
+--resources/css/browse.css
+@import './app.css';
+@layer components {
+  /* =======================
+    Browse Section & Cards
+    ======================= */
+
+  /* Section wrapper */
+  .browse-section {
+    @apply py-12 px-6 bg-gray-50;
+  }
+
+  /* Inner container */
+  .browse-inner {
+    @apply max-w-6xl mx-auto;
+  }
+
+  /* Header Row */
+  .browse-header {
+    @apply flex flex-col lg:flex-row md:items-center md:justify-between mb-8;
+  }
+
+  .browse-title {
+    @apply text-3xl font-bold;
+  }
+
+  /* Filters */
+  .browse-filters {
+    @apply flex flex-wrap gap-3 mt-4;
+  }
+
+  /* Buttons */
+  .filter-btn {
+    @apply px-2 p-1 md:px-4 md:py-2 rounded-lg border text-xs md:text-sm transition;
+  }
+  .filter-btn-primary {
+    @apply bg-green-600 text-white hover:bg-green-700 text-base md:text-sm;
+  }
+  .filter-btn-outline {
+    @apply bg-white border hover:bg-gray-200 text-gray-700;
+  }
+
+  /* Selects */
+  .filter-select {
+    @apply px-3 py-2 pr-8 border rounded-lg text-xs md:text-sm bg-white text-gray-900;
+  }
+
+  .filter-select option {
+    @apply bg-white text-gray-900;
+  }
+
+  /* Card Grid */
+  .browse-grid {
+    @apply grid gap-6 sm:grid-cols-2 lg:grid-cols-3;
+  }
+
+  /* Single Card */
+  .browse-card {
+    @apply bg-white rounded-xl shadow hover:shadow-md transition p-5 flex flex-col;
+  }
+
+  /* Card top row (badge + right info) */
+  .card-top {
+    @apply flex items-center justify-between mb-3;
+  }
+
+  /* Badges */
+  .badge-service {
+    @apply px-2 py-1 text-xs bg-green-100 text-green-700 rounded;
+  }
+  .badge-offer {
+    @apply px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded;
+  }
+
+  /* Card Titles & Description */
+  .card-title {
+    @apply text-lg font-bold;
+  }
+  .card-desc {
+    @apply text-gray-500 text-sm mb-2;
+  }
+  .card-meta {
+    @apply text-gray-600 text-sm;
+  }
+
+  /* Card Footer */
+  .card-footer {
+    @apply mt-3 flex justify-between items-center;
+  }
+  .card-footer span {
+    @apply text-xs text-gray-500;
+  }
+
+  /* Avatar/Icon inside card */
+  .card-avatar {
+    @apply w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center;
+  }
+
+  /* "View More" Button */
+  .browse-viewmore {
+    @apply px-6 py-3 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition;
+  }
+
+  /* Address/Location display in cards */
+  .card-location {
+    @apply flex items-center text-gray-600 min-w-0;
+  }
+
+  .card-location svg {
+    @apply h-4 w-4 mr-1.5 text-gray-400 flex-shrink-0;
+  }
+
+  .card-location span {
+    @apply truncate;
+  }
+}
+----
+--resources/css/home.css
+@tailwind components;
+@tailwind utilities;
+@tailwind base;
+
+
+@import './app.css';
+@import "swiper/css";
+@import "swiper/css/navigation";
+@import "swiper/css/pagination";
+
+@layer components {
+
+    /* Hero search input */
+  .hero-search {
+    @apply px-4 py-3 sm:w-[300px] md:w-[450px] w-[200px] text-sm rounded-l-lg text-black
+           focus:outline-none focus:ring-2 focus:ring-brand
+           placeholder-gray-400 ;
+  }
+
+  /* Transparent white outline button */
+  .btn-outline-white {
+    @apply px-4 py-2 rounded-lg border border-white text-white
+           bg-transparent hover:bg-white hover:text-black
+           transition duration-300;
+  }
+
+  /* Swiper arrows */
+  .swiper-button-next,
+  .swiper-button-prev {
+    @apply w-12 h-12 flex items-center justify-center rounded-full !text-white transition duration-300;
+  }
+
+  /* Swiper pagination dots */
+  .swiper-pagination-bullet {
+    @apply w-3 h-3 bg-white opacity-60;
+  }
+  .swiper-pagination-bullet-active {
+    @apply bg-white opacity-100;
+  }
+
+  /* Explore Categories Section */
+  .section-categories {
+    @apply py-12 px-6 bg-background;
+  }
+
+  .section-categories-title {
+    @apply text-3xl font-bold text-center mb-8 font-display text-text;
+  }
+
+  .categories-scroll {
+    @apply flex space-x-4 overflow-x-auto px-4 scrollbar-hide;
+  }
+
+  .category-card {
+    @apply flex-shrink-0 w-48 bg-background-secondary shadow-sm p-6 rounded-lg text-center
+           hover:shadow-md transition cursor-pointer;
+  }
+
+  .category-icon {
+    @apply text-3xl;
+  }
+
+  .category-label {
+    @apply mt-2 font-medium text-text;
+  }
+
+
+    /* =======================
+    Create Section
+    ======================= */
+
+    /* Section Wrapper */
+    .create-section {
+    @apply py-16 px-6 bg-gray-50;
+    }
+
+    /* Section Container */
+    .create-container {
+    @apply max-w-4xl mx-auto text-center;
+    }
+
+    .create-container h2 {
+    @apply text-3xl font-bold mb-6;
+    }
+
+    .create-container p {
+    @apply text-gray-600 mb-10;
+    }
+
+    /* Grid Layout */
+    .create-grid {
+    @apply grid md:grid-cols-2 gap-6;
+    }
+
+    /* Card */
+    .create-card {
+    @apply bg-white rounded-xl shadow hover:shadow-md transition p-6 flex flex-col;
+    }
+
+    .create-card h3 {
+    @apply text-lg font-semibold mb-4;
+    }
+
+    /* Textarea */
+    .create-card textarea {
+    @apply w-full border px-4 py-3 rounded-lg mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-green-600;
+    }
+
+    /* Button */
+    .create-card button {
+    @apply w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition;
+    }
+
+        /* =======================
+    Featured Workflows Section
+    ======================= */
+
+    /* Section */
+    .workflows-section {
+    @apply py-12 px-6 bg-white;
+    }
+
+    /* Container */
+    .workflows-container {
+    @apply max-w-6xl mx-auto text-center;
+    }
+
+    .workflows-container h2 {
+    @apply text-3xl font-bold mb-8;
+    }
+
+    .workflows-container p {
+    @apply text-gray-600 mb-10;
+    }
+
+    /* Grid */
+    .workflows-grid {
+    @apply grid gap-6 sm:grid-cols-2 lg:grid-cols-3;
+    }
+
+    /* Card */
+    .workflow-card {
+    @apply bg-gray-50 rounded-xl shadow hover:shadow-md transition p-5 flex flex-col text-left;
+    }
+
+    .workflow-card h3 {
+    @apply text-lg font-bold mb-2;
+    }
+
+    .workflow-card p {
+    @apply text-gray-600 text-sm mb-4;
+    }
+
+    /* Card Footer */
+    .workflow-actions {
+    @apply flex justify-end mt-auto gap-2;
+    }
+
+    /* Buttons */
+    .workflow-actions .btn-service {
+    @apply px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700;
+    }
+
+    .workflow-actions .btn-offer {
+    @apply px-3 py-1 border text-xs rounded-lg hover:bg-gray-200;
+    }
+
+
+}
+----
+--resources/css/navbar.css
+@layer components {
+  /* Navbar container */
+  .navbar {
+    @apply sticky top-0 z-50 bg-background shadow;
+  }
+
+  .navbar-inner {
+    @apply max-w-7xl mx-auto flex justify-between items-center px-6 py-4;
+  }
+
+  /* Brand */
+  .navbar-brand {
+    @apply text-2xl font-bold flex items-center hover:opacity-50;
+  }
+  .navbar-brand-text {
+    @apply text-text;
+  }
+  .navbar-brand-accent {
+    @apply text-brand;
+  }
+
+  /* Desktop nav links */
+  .navbar-nav {
+    @apply hidden md:flex items-center space-x-6 text-text-secondary;
+  }
+  .navbar-link {
+    @apply hover:text-brand transition;
+  }
+
+  /* Auth section */
+  .navbar-auth {
+    @apply flex items-center space-x-4 pl-7;
+  }
+  .navbar-auth-link {
+    @apply hover:text-brand transition;
+  }
+  .navbar-auth-button {
+    @apply px-4 py-1 border border-text rounded hover:bg-text hover:text-background transition;
+  }
+
+  /* Mobile hamburger */
+  .navbar-toggle {
+    @apply md:hidden text-text focus:outline-none;
+  }
+
+  /* Mobile menu */
+  .navbar-mobile {
+    @apply md:hidden px-6 py-4 space-y-3 absolute w-full text-text-secondary bg-background border-t;
+  }
+  .navbar-mobile-link {
+    @apply block hover:text-brand transition;
+  }
+  .navbar-mobile-auth {
+    @apply pt-3 border-t;
+  }
+  .navbar-mobile-button {
+    @apply  w-full mt-2 px-4 py-2 border border-text rounded hover:bg-text hover:text-background transition;
+  }
+
+  /* hide until Alpine is ready */
+  [x-cloak] { display: none !important; }
+
+  /* Profile trigger */
+  .navbar-profile-trigger {
+    @apply flex items-center justify-center w-10 h-10 rounded-full hover:opacity-80 transition;
+  }
+
+  /* Profile image */
+  .navbar-profile-img {
+    @apply w-10 h-10 rounded-full object-cover;
+  }
+
+  /* Profile fallback */
+  .navbar-profile-fallback {
+    @apply flex items-center justify-center w-10 h-10 rounded-full bg-black;
+  }
+
+  /* Dropdown menu */
+  .navbar-profile-dropdown {
+    @apply absolute right-0 top-12 mt-2 w-48 bg-background shadow-lg rounded-lg border border-gray-200 z-50;
+  }
+
+  /* Dropdown item */
+  .navbar-profile-item {
+    @apply block px-4 py-2 text-sm text-text hover:bg-gray-100 transition;
+  }
+
+  /* Creator button */
+  .navbar-creator-btn {
+    @apply px-4 py-1 rounded bg-brand text-background font-semibold hover:opacity-90 transition;
+  }
+
+  .navbar-creator-link {
+    @apply block text-center bg-brand text-white rounded-md p-2 my-2 hover:bg-brand-dark transition-colors;
+}
+
+  /* Mobile button override (if needed) */
+  .navbar-mobile-button { @apply mt-2 px-4 py-2 border border-text rounded hover:bg-text hover:text-background transition; }
+
+
+
+  /* Active  */
+  .navbar-link.active,
+    .navbar-auth-link.active, 
+      .navbar-mobile-link.active {
+          @apply font-bold text-green-600;
+      }
+}
+----
+--SUMMARY
+Text:6 Binary:0 Skipped:5098

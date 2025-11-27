@@ -5,38 +5,30 @@ namespace App\Http\Controllers\Api;
 use App\Domains\Common\Interfaces\AddressProviderInterface;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class AddressController extends Controller
 {
-    protected AddressProviderInterface $addressProvider;
+    public function __construct(private AddressProviderInterface $addressProvider) {}
 
-    public function __construct(AddressProviderInterface $addressProvider)
+    public function hierarchy(): JsonResponse
     {
-        $this->addressProvider = $addressProvider;
-    }
-
-    public function regions(): JsonResponse
-    {
-        $regions = $this->addressProvider->getRegions();
-        return response()->json($regions);
+        return response()->json([
+            'regions' => $this->addressProvider->getRegions(),
+        ]);
     }
 
     public function provinces(string $regionCode): JsonResponse
     {
-        $provinces = $this->addressProvider->getProvinces($regionCode);
-        return response()->json($provinces);
+        return response()->json($this->addressProvider->getProvinces($regionCode));
     }
 
     public function cities(string $provinceCode): JsonResponse
     {
-        $cities = $this->addressProvider->getCities($provinceCode);
-        return response()->json($cities);
+        return response()->json($this->addressProvider->getCities($provinceCode));
     }
 
     public function barangays(string $cityCode): JsonResponse
     {
-        $barangays = $this->addressProvider->getBarangays($cityCode);
-        return response()->json($barangays);
+        return response()->json($this->addressProvider->getBarangays($cityCode));
     }
 }

@@ -4,7 +4,6 @@ namespace App\Domains\Listings\Services;
 
 use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Models\ServiceReview;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ServiceReviewService
@@ -44,7 +43,9 @@ class ServiceReviewService
         }
 
         return $review;
-    }    /**
+    }
+
+    /**
      * Delete a review
      */
     public function deleteReview(ServiceReview $review): bool
@@ -69,7 +70,7 @@ class ServiceReviewService
     public function getServiceReviews(Service $service, int $perPage = 15): LengthAwarePaginator
     {
         return $service->serviceReviews()
-            ->with(['reviewer', 'service'])
+            ->with(['reviewer', 'reviewer.media', 'service'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -81,7 +82,7 @@ class ServiceReviewService
     {
         return $service->serviceReviews()
             ->where('is_verified_purchase', true)
-            ->with(['reviewer'])
+            ->with(['reviewer', 'reviewer.media'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -145,6 +146,7 @@ class ServiceReviewService
     public function incrementHelpful(ServiceReview $review): ServiceReview
     {
         $review->increment('helpful_count');
+
         return $review->fresh();
     }
 }

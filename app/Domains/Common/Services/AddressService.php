@@ -2,12 +2,12 @@
 
 namespace App\Domains\Common\Services;
 
+use App\Domains\Common\Interfaces\AddressProviderInterface;
 use App\Domains\Common\Models\Address;
 use App\Domains\Users\Models\User;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Collection;
-use App\Domains\Common\Interfaces\AddressProviderInterface; // Added
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB; // Added
 
 class AddressService
 {
@@ -17,15 +17,15 @@ class AddressService
     {
         $this->addressProvider = $addressProvider; // Added
     }
+
     /**
      * Get all addresses for the currently authenticated user.
-     *
-     * @return Collection
      */
     public function getAddressesForUser(): Collection
     {
         /** @var \App\Domains\Users\Models\User $user */
         $user = Auth::user();
+
         return $user->addresses()->withPivot('is_primary')->get();
     }
 
@@ -36,9 +36,6 @@ class AddressService
 
     /**
      * Create a new address for the authenticated user.
-     *
-     * @param array $data
-     * @return Address
      */
     public function createAddressForUser(array $data): Address
     {
@@ -49,12 +46,21 @@ class AddressService
 
         // Prepare address data for creation/finding
         $addressData = [
+            'label' => $data['label'] ?? null,
             'full_address' => $data['full_address'],
             'address_hash' => $this->generateAddressHash($data),
             'api_source' => $data['api_source'] ?? null,
             'api_id' => $data['api_id'] ?? null,
             'lat' => $data['lat'] ?? null,
             'lng' => $data['lng'] ?? null,
+            // Store individual address components
+            'street_address' => $data['street_address'] ?? null,
+            'barangay' => $data['barangay'] ?? null,
+            'city' => $data['city'] ?? null,
+            'province' => $data['province'] ?? null,
+            'region' => $data['region'] ?? null,
+            'province_name' => $data['province_name'] ?? null,
+            'region_name' => $data['region_name'] ?? null,
         ];
 
         return DB::transaction(function () use ($user, $addressData, $isPrimary) {
@@ -70,7 +76,7 @@ class AddressService
             }
 
             // Attach to user with pivot data, unless already attached
-            if (!$user->addresses->contains($address->id)) {
+            if (! $user->addresses->contains($address->id)) {
                 $user->addresses()->attach($address->id, [
                     'is_primary' => $isPrimary,
                 ]);
@@ -88,16 +94,13 @@ class AddressService
     /**
      * Update an existing address for a user.
      *
-     * @param int $addressId
-     * @param array $data
-     * @return Address
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
     public function updateUserAddress(int $addressId, array $data): Address
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Find the current address to be updated and verify it belongs to the user
         $currentAddress = $user->addresses()->findOrFail($addressId);
 
@@ -105,12 +108,21 @@ class AddressService
 
         // Prepare address data for new/updated address
         $newAddressData = [
+            'label' => $data['label'] ?? null,
             'full_address' => $data['full_address'],
             'address_hash' => $this->generateAddressHash($data),
             'api_source' => $data['api_source'] ?? null,
             'api_id' => $data['api_id'] ?? null,
             'lat' => $data['lat'] ?? null,
             'lng' => $data['lng'] ?? null,
+            // Store individual address components
+            'street_address' => $data['street_address'] ?? null,
+            'barangay' => $data['barangay'] ?? null,
+            'city' => $data['city'] ?? null,
+            'province' => $data['province'] ?? null,
+            'region' => $data['region'] ?? null,
+            'province_name' => $data['province_name'] ?? null,
+            'region_name' => $data['region_name'] ?? null,
         ];
 
         return DB::transaction(function () use ($user, $currentAddress, $newAddressData, $isPrimary) {
@@ -129,7 +141,7 @@ class AddressService
                 $this->deleteOrphanedAddress($currentAddress->id);
 
                 // Attach the new address to the user, unless already attached
-                if (!$user->addresses->contains($newAddress->id)) {
+                if (! $user->addresses->contains($newAddress->id)) {
                     $user->addresses()->attach($newAddress->id, [
                         'is_primary' => $isPrimary,
                     ]);
@@ -159,15 +171,13 @@ class AddressService
     /**
      * Delete an address for a user.
      *
-     * @param int $addressId
-     * @return void
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
     public function deleteUserAddress(int $addressId): void
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Verify the address belongs to the user
         $user->addresses()->findOrFail($addressId);
 
@@ -183,22 +193,20 @@ class AddressService
     /**
      * Set a specific address as the primary one for the user.
      *
-     * @param int $addressId
-     * @return void
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
     public function setPrimaryAddress(int $addressId): void
     {
         /** @var User $user */
         $user = Auth::user();
-        
+
         // Verify the address belongs to the user
         $user->addresses()->findOrFail($addressId);
 
         DB::transaction(function () use ($user, $addressId) {
             // Unset all primary addresses
             $this->unsetAllPrimaryAddresses($user);
-            
+
             // Set the specified address as primary
             $user->addresses()->updateExistingPivot($addressId, [
                 'is_primary' => true,
@@ -208,9 +216,6 @@ class AddressService
 
     /**
      * Unset all primary addresses for a user.
-     *
-     * @param User $user
-     * @return void
      */
     private function unsetAllPrimaryAddresses(User $user): void
     {
@@ -229,9 +234,6 @@ class AddressService
 
     /**
      * Generates a consistent hash for an address.
-     *
-     * @param array $addressData
-     * @return string
      */
     private function generateAddressHash(array $addressData): string
     {
@@ -258,16 +260,13 @@ class AddressService
 
     /**
      * Helper to delete orphaned addresses.
-     *
-     * @param int $addressId
-     * @return void
      */
     private function deleteOrphanedAddress(int $addressId): void
     {
         $relatedUsersCount = DB::table('user_addresses')
             ->where('address_id', $addressId)
             ->count();
-            
+
         if ($relatedUsersCount === 0) {
             Address::destroy($addressId);
         }

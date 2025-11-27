@@ -14,7 +14,7 @@ class MediaConfig
      * Upload size limits in KB for each media type
      */
     public const UPLOAD_LIMITS = [
-        'images' => 2048,      // 2MB
+        'images' => 5120,      // 5MB
         'documents' => 5120,   // 5MB
         'videos' => 10240,     // 10MB
         'audio' => 5120,       // 5MB

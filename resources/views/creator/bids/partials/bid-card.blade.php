@@ -3,7 +3,7 @@
     <div class="p-6">
         <div class="flex flex-col sm:flex-row justify-between sm:items-center">
             <div class="flex items-center mb-4 sm:mb-0">
-                <img class="h-12 w-12 rounded-full object-cover" src="{{ $bid->bidder->profile_photo_url }}" alt="{{ $bid->bidder->name }}">
+                <img class="h-12 w-12 rounded-full object-cover" src="{{ $bid->bidder->media()->where('tag', 'profile_image')->first()?->getUrl() ?? 'https://ui-avatars.com/api/?name=' . urlencode($bid->bidder->name) }}" alt="{{ $bid->bidder->name }}">
                 <div class="ml-4">
                     <div class="text-sm font-semibold text-gray-900">{{ $bid->bidder->name }}</div>
                     <div class="text-xs text-gray-500">Placed on {{ $bid->created_at->format('M d, Y') }}</div>
@@ -24,7 +24,7 @@
 
     <div class="px-6 py-3 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-2">
         <div>
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
                 @switch($bid->status)
                     @case('pending') bg-yellow-100 text-yellow-800 @break
                     @case('accepted') bg-green-100 text-green-800 @break
@@ -33,7 +33,7 @@
                 {{ ucfirst($bid->status) }}
             </span>
         </div>
-        
+
         @if($bid->status == 'pending')
             <div class="flex items-center space-x-3 mt-3 sm:mt-0">
                 <form action="{{ route('creator.openoffers.bids.reject', ['openoffer' => $bid->openOffer, 'bid' => $bid]) }}" method="POST" onsubmit="return confirm('Are you sure you want to reject this bid?');">

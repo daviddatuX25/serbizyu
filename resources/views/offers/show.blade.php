@@ -4,17 +4,17 @@
 
             {{-- Left Column: Offer Details --}}
             <div class="lg:col-span-2 space-y-6">
-                
+
                 <div class="bg-white rounded-lg shadow-md overflow-hidden">
                     <!-- Image Carousel -->
-                    <div class="relative h-64 md:h-96 bg-gray-200" 
+                    <div class="relative h-64 md:h-96 bg-gray-200"
                          data-loop="{{ $offer->media->count() > 1 ? 'true' : 'false' }}">
                         @if($offer->media->isNotEmpty())
                             <div class="swiper serviceSwiper h-full">
                                 <div class="swiper-wrapper">
                                     @foreach($offer->media as $media)
                                         <div class="swiper-slide bg-gray-100 flex items-center justify-center">
-                                            <img src="{{ $media->getUrl() }}" alt="{{ $offer->title }}" 
+                                            <img src="{{ $media->getUrl() }}" alt="{{ $offer->title }}"
                                                 class="w-full h-full object-contain">
                                         </div>
                                     @endforeach
@@ -42,7 +42,7 @@
                             </div>
                             <div class="ml-3">
                                 <p class="text-sm text-blue-700">
-                                    You are the creator of this offer. 
+                                    You are the creator of this offer.
                                     <a href="{{ route('creator.openoffers.edit', $offer) }}" class="font-medium underline text-blue-700 hover:text-blue-600">Manage bids and settings here.</a>
                                 </p>
                             </div>
@@ -54,10 +54,19 @@
                     <div>
                         <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider">{{ $offer->category->name }}</p>
                         <h1 class="text-3xl font-bold text-gray-900 mt-2">{{ $offer->title }}</h1>
-                        
+
                         @if ($offer->deadline)
                             <p class="text-sm text-gray-500 mt-2">
                                 Offer closes on: <span class="font-medium text-gray-700">{{ $offer->deadline->format('M d, Y') }}</span>
+                            </p>
+                        @endif
+
+                        @if ($offer->address)
+                            <p class="text-sm text-gray-500 mt-2 flex items-center space-x-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="font-medium text-gray-700">{{ $offer->address->full_address }}</span>
                             </p>
                         @endif
                     </div>
@@ -83,6 +92,16 @@
                         <div class="mt-1 text-sm text-gray-500">
                             Status: <span class="font-medium text-gray-900">{{ ucfirst($offer->status->value) }}</span>
                         </div>
+
+                        <!-- Flag Button -->
+                        <button type="button"
+                                @click="$dispatch('open-flag-modal', { id: {{ $offer->id }}, title: '{{ $offer->title }}' })"
+                                class="mt-4 w-full bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4a6 6 0 016-6h4a6 6 0 016 6v4M9 9a3 3 0 100-6 3 3 0 000 6zm6 0a3 3 0 100-6 3 3 0 000 6z"></path>
+                            </svg>
+                            Report Issue
+                        </button>
                     </div>
 
                     {{-- Bidding Section --}}
@@ -112,7 +131,7 @@
                                     <h3 class="text-lg font-semibold text-gray-800">Your Bid Status</h3>
                                     <div class="mt-2 flex items-center justify-between">
                                         <p class="text-2xl font-bold">₱{{ number_format($userBid->amount, 2) }}</p>
-                                        <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full 
+                                        <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full
                                             @switch($userBid->status)
                                                 @case(\App\Enums\BidStatus::PENDING) bg-yellow-100 text-yellow-800 @break
                                                 @case(\App\Enums\BidStatus::ACCEPTED) bg-green-100 text-green-800 @break
@@ -138,7 +157,7 @@
                     </div>
                  </div>
             </div>
-            
+
             {{-- Bid List (Full Width Below) --}}
             @can('viewAny', [App\Domains\Listings\Models\OpenOfferBid::class, $offer])
                 <div class="lg:col-span-3 mt-8">
@@ -149,3 +168,6 @@
         </div>
     </div>
 </x-app-layout>
+
+<!-- Flag Modal Component -->
+<x-flag-modal contentType="OpenOffer" />

@@ -1,8 +1,6 @@
-<x-app-layout>
+<x-admin-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Review Verification for {{ $verification->user->firstname }} {{ $verification->user->lastname }}
-        </h2>
+        Review Verification for {{ $verification->user->firstname }} {{ $verification->user->lastname }}
     </x-slot>
 
     <div class="py-12">
@@ -70,4 +68,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-admin-layout>

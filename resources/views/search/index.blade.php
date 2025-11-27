@@ -26,7 +26,7 @@
         </template>
     </div>
 </div>
-                            
+
                             <select name="category_id" class="rounded-md border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                                 <option value="">All Categories</option>
                                 @foreach ($categories as $category)
@@ -35,9 +35,9 @@
                             </select>
 
                             <input type="text" name="address_id" value="{{ $addressId }}" placeholder="Address ID" class="rounded-md border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                            
+
                             <input type="number" name="min_price" value="{{ $minPrice }}" placeholder="Min Price" class="rounded-md border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                            
+
                             <input type="number" name="max_price" value="{{ $maxPrice }}" placeholder="Max Price" class="rounded-md border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
 
                             <select name="sort_by" class="rounded-md border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
@@ -62,8 +62,8 @@
                                     <!-- Service Image -->
                                     <div class="relative h-48 bg-gray-200">
                                         @if($service->media->isNotEmpty())
-                                            <img src="{{ $service->media->first()->getUrl() }}" 
-                                                alt="{{ $service->title }}" 
+                                            <img src="{{ $service->media->first()->getUrl() }}"
+                                                alt="{{ $service->title }}"
                                                 class="w-full h-full object-cover">
                                         @else
                                             <div class="flex items-center justify-center h-full">
@@ -77,11 +77,20 @@
                                     <!-- Service Details -->
                                     <div class="p-4 space-y-3">
                                         <h3 class="text-lg font-bold text-gray-800 line-clamp-2">{{ $service->title }}</h3>
-                                        
-                                        <div class="flex items-center justify-between text-sm">
+
+                                        <div class="flex items-center justify-between text-sm mb-2">
                                             <span class="text-gray-600">{{ $service->category->name ?? 'N/A' }}</span>
-                                            <span class="font-bold text-gray-800">${{ number_format($service->price, 2) }}</span>
+                                            <span class="font-bold text-gray-800">₱{{ number_format($service->price, 2) }}</span>
                                         </div>
+
+                                        @if($service->address)
+                                            <div class="flex items-center text-xs text-gray-500 space-x-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                                </svg>
+                                                <span class="truncate">{{ $service->address->full_address }}</span>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             @endforeach

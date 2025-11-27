@@ -2,11 +2,12 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Domains\Users\Models\User;
-use App\Domains\Listings\Models\Service;
+use App\Domains\Common\Models\Address;
 use App\Domains\Listings\Models\Category;
+use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Users\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ServiceFactory extends Factory
 {
@@ -27,6 +28,7 @@ class ServiceFactory extends Factory
             'category_id' => Category::factory(),
             'creator_id' => User::factory(),
             'workflow_template_id' => WorkflowTemplate::factory(),
+            'address_id' => Address::factory(),
         ];
     }
 }

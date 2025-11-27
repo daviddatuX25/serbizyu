@@ -37,3 +37,6 @@
         </div>
     </div>
 </div>
+
+<!-- Flag Modal Component -->
+<x-flag-modal contentType="Review" />

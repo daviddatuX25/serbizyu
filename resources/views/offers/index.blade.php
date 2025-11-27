@@ -5,6 +5,46 @@
         </h2>
     </x-slot>
 
+    <style>
+        @media (max-width: 768px) {
+            .responsive-table thead {
+                display: none;
+            }
+            .responsive-table tbody,
+            .responsive-table tr,
+            .responsive-table td {
+                display: block;
+                width: 100%;
+            }
+            .responsive-table tr {
+                margin-bottom: 1rem;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.5rem;
+                overflow: hidden;
+                box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            }
+            .responsive-table td {
+                padding-left: 50%;
+                position: relative;
+                text-align: left;
+                white-space: normal;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .responsive-table td:last-child {
+                border-bottom: none;
+            }
+            .responsive-table td:before {
+                position: absolute;
+                left: 0.75rem;
+                width: 45%;
+                padding-right: 0.75rem;
+                white-space: nowrap;
+                font-weight: 600;
+                content: attr(data-label);
+            }
+        }
+    </style>
+
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -25,7 +65,7 @@
                         <p>You haven't created any open offers yet.</p>
                     @else
                         <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
+                            <table class="min-w-full divide-y divide-gray-200 responsive-table">
                                 <thead class="bg-gray-50">
                                     <tr>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -45,24 +85,24 @@
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
+                                <tbody class="bg-white divide-y divide-gray-200 md:divide-y-0">
                                     @foreach ($openOffers as $offer)
                                         <tr>
-                                            <td class="px-6 py-4 whitespace-nowrap">
+                                            <td data-label="Title" class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm font-medium text-gray-900">{{ $offer->title }}</div>
                                             </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
+                                            <td data-label="Budget" class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm text-gray-900">${{ number_format($offer->budget, 2) }}</div>
                                             </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
+                                            <td data-label="Status" class="px-6 py-4 whitespace-nowrap">
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                                     {{ ucfirst($offer->status->value) }}
                                                 </span>
                                             </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <td data-label="Deadline" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {{ $offer->deadline ? $offer->deadline->format('M d, Y') : 'N/A' }}
                                             </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <td data-label="Actions" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <a href="{{ route('creator.openoffers.show', $offer) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">View</a>
                                                 <a href="{{ route('creator.openoffers.edit', $offer) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
                                                 <form action="{{ route('creator.openoffers.destroy', $offer) }}" method="POST" class="inline-block">
@@ -86,5 +126,3 @@
         </div>
     </div>
 </x-app-layout>
-
-

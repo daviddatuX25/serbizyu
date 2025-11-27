@@ -3,13 +3,14 @@
 namespace App\Domains\Payments\Models;
 
 use App\Domains\Orders\Models\Order;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Refund extends Model
 {
-    use LogsActivity;
+    use HasFactory, LogsActivity;
 
     protected $fillable = [
         'payment_id',
@@ -33,7 +34,7 @@ class Refund extends Model
     {
         return LogOptions::defaults()
             ->logOnly(['status', 'amount', 'reason'])
-            ->setDescriptionForEvent(fn(string $eventName) => "Refund has been {$eventName}");
+            ->setDescriptionForEvent(fn (string $eventName) => "Refund has been {$eventName}");
     }
 
     /**
@@ -86,7 +87,7 @@ class Refund extends Model
      */
     public function getFormattedAmount(): string
     {
-        return '₱' . number_format($this->amount, 2);
+        return '₱'.number_format($this->amount, 2);
     }
 
     /**
@@ -94,7 +95,7 @@ class Refund extends Model
      */
     public function getStatusBadgeClass(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'requested' => 'bg-blue-100 text-blue-800',
             'approved' => 'bg-green-100 text-green-800',
             'rejected' => 'bg-red-100 text-red-800',
@@ -133,5 +134,10 @@ class Refund extends Model
     public function complete(): void
     {
         $this->update(['status' => 'completed', 'processed_at' => now()]);
+    }
+
+    public static function factory()
+    {
+        return \Database\Factories\Domains\Payments\Models\RefundFactory::new();
     }
 }

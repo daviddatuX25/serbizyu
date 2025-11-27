@@ -1,10 +1,10 @@
-<x-app-layout header="Welcome to Serbizyu" :cssFiles='["home.css", "browse.css"]' :jsFiles="['app.js', 'home.js']">
+<x-app-layout header="Welcome to Serbizyu" :jsFiles="['app.js', 'home.js']">
     <!-- Single Hero Section Container with Swiper -->
     <section class="hero-section relative">
     <!-- Swiper Container -->
     <div class="swiper heroSwiper h-[80vh]">
         <div class="swiper-wrapper">
-        
+
         <!-- Slide 1: Services Hero -->
         <div class="swiper-slide">
             <div class="relative h-[80vh] bg-cover bg-center flex items-center justify-center"
@@ -14,7 +14,7 @@
                 <h1 class="text-4xl md:text-6xl font-bold mb-5">
                 Kami na ang bahala sa inyong mga pangangailangan.
                 </h1>
-                
+
                 <!-- Search Bar -->
                 <div class="flex justify-center mb-6">
                 <input type="text" placeholder="Search for any service..."
@@ -34,7 +34,7 @@
             </div>
             </div>
         </div>
-        
+
         <!-- Slide 2: Open Offers Hero -->
         <div class="swiper-slide">
             <div class="relative h-[80vh] bg-cover bg-center flex items-center justify-center"
@@ -65,11 +65,11 @@
             </div>
         </div>
         </div>
-        
+
         <!-- Swiper Navigation -->
         <div class="swiper-button-next"></div>
         <div class="swiper-button-prev"></div>
-        
+
         <!-- Swiper Pagination -->
         <div class="swiper-pagination"></div>
     </div>
@@ -82,7 +82,7 @@
 
     <!-- Horizontal scroll -->
     <div class="categories-scroll">
-        
+
         <div class="category-card">
         <p class="category-icon">💻</p>
         <p class="category-label">Programming & Tech</p>
@@ -127,7 +127,7 @@
         <p class="category-icon">📊</p>
         <p class="category-label">Consulting</p>
         </div>
-        
+
     </div>
     </section>
 

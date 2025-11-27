@@ -3,29 +3,26 @@
 namespace App\Providers;
 
 use App\Domains\Common\Interfaces\AddressProviderInterface;
+use App\Domains\Common\Services\AddressService;
 use App\Domains\Common\Services\PhilippineAddressProvider;
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\View;
+use App\Domains\Listings\Services\CategoryService;
+use App\Domains\Listings\Services\OpenOfferBidService;
+use App\Domains\Listings\Services\OpenOfferService;
+use App\Domains\Listings\Services\ServiceService;
+use App\Domains\Listings\Services\WorkCatalogService;
+use App\Domains\Listings\Services\WorkflowTemplateService;
+// Listings Domain Services
+use App\Domains\Listings\Services\WorkTemplateService;
+use App\Domains\Users\Services\UserService;
 use Illuminate\Auth\Middleware\Authenticate;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-
-// Listings Domain Services
-use App\Domains\Listings\Services\ServiceService;
-use App\Domains\Listings\Services\CategoryService;
-use App\Domains\Listings\Services\WorkflowTemplateService;
-use App\Domains\Common\Services\ImageService;
-use App\Domains\Listings\Services\OpenOfferService;
-use App\Domains\Listings\Services\OpenOfferBidService;
-use App\Domains\Listings\Services\WorkCatalogService;
-use App\Domains\Listings\Services\WorkTemplateService;
-
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 // Users Domain Services
-use App\Domains\Users\Services\UserService;
-
+use Illuminate\Support\Facades\View;
 // Common Domain Services
-use App\Domains\Common\Services\AddressService;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -98,23 +95,9 @@ class AppServiceProvider extends ServiceProvider
             return route('auth.signin');
         });
 
-        // Share authenticat    ion data with navbar across all views
+        // Share authentication data with navbar across all views
         View::composer('layouts.navbar', function ($view) {
-            $authProfileData = [
-                'greeting' => null,
-                'email' => null,
-                'img_path' => null,
-            ];
-
-            if (auth()->check()) {
-                $user = auth()->user();
-                $authProfileData = [
-                    'greeting' => 'Hi, ' . ($user->firstname ?? 'User') . '!',
-                    'email' => $user->email,
-                    'img_path' => $user->profileImage?->path ?? null, // Use the new relationship
-                ];
-            }
-
+            $authProfileData = Auth::user();
             $view->with('authProfileData', $authProfileData);
         });
 

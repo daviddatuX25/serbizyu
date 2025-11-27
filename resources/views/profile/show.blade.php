@@ -7,14 +7,14 @@
                 <div class="flex items-start space-x-6">
                     <!-- Profile Photo -->
                     <div class="flex-shrink-0">
-                        <img src="{{ $user->profile_photo_url }}" alt="{{ $user->name }}"
+                        <img src="{{ $user->media()->where('tag', 'profile_image')->first()?->getUrl() ?? 'https://ui-avatars.com/api/?name=' . urlencode($user->name) }}" alt="{{ $user->name }}"
                             class="h-32 w-32 rounded-full object-cover border-4 border-blue-500">
                     </div>
 
                     <!-- Profile Info -->
                     <div class="flex-1">
                         <h1 class="text-3xl font-bold text-gray-900">{{ $user->name }}</h1>
-                        
+
                         @if($user->bio)
                             <p class="mt-2 text-gray-600">{{ $user->bio }}</p>
                         @endif
@@ -97,19 +97,17 @@
                                 <div class="flex items-start justify-between">
                                     <div class="flex items-start space-x-4">
                                         <!-- Reviewer Avatar -->
-                                        <img src="{{ $review->reviewer->profile_photo_url }}" 
+                                        <img src="{{ $review->reviewer->media()->where('tag', 'profile_image')->first()?->getUrl() ?? 'https://ui-avatars.com/api/?name=' . urlencode($review->reviewer->name) }}"
                                             alt="{{ $review->reviewer->name }}"
-                                            class="h-12 w-12 rounded-full object-cover">
-                                        
-                                        <div class="flex-1 min-w-0">
+                                            class="h-12 w-12 rounded-full object-cover">                                        <div class="flex-1 min-w-0">
                                             <div class="flex items-center space-x-2">
                                                 <h3 class="font-semibold text-gray-900">
-                                                    <a href="{{ route('profile.show', $review->reviewer) }}" 
+                                                    <a href="{{ route('profile.show', $review->reviewer) }}"
                                                         class="hover:text-blue-600 transition">
                                                         {{ $review->reviewer->name }}
                                                     </a>
                                                 </h3>
-                                                
+
                                                 <!-- Star Rating -->
                                                 <div class="flex items-center">
                                                     @for($i = 1; $i <= 5; $i++)
@@ -181,7 +179,7 @@
                 <div class="p-6 overflow-y-auto flex-1">
                     <form id="userReviewForm" class="space-y-6">
                         @csrf
-                        
+
                         <!-- Hidden reviewee_id -->
                         <input type="hidden" name="reviewee_id" value="{{ $user->id }}">
 
@@ -224,7 +222,7 @@
                             <div class="space-y-2">
                                 @foreach(['Professional', 'Responsive', 'Reliable', 'Skilled', 'Friendly', 'Affordable', 'Punctual'] as $tag)
                                     <label class="flex items-center">
-                                        <input type="checkbox" name="tags[]" value="{{ $tag }}" 
+                                        <input type="checkbox" name="tags[]" value="{{ $tag }}"
                                             class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                                         <span class="ml-2 text-sm text-gray-700">{{ $tag }}</span>
                                     </label>

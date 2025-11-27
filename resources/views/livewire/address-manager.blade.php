@@ -1,7 +1,7 @@
 <div>
     <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-medium text-gray-900">Your Addresses</h3>
-        <button wire:click="addAddress()" type="button" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150">
+        <button wire:click="addAddress()" type="button" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-900 focus:outline-none focus:border-green-900 focus:ring ring-green-300 disabled:opacity-25 transition ease-in-out duration-150">
             Add New Address
         </button>
     </div>
@@ -18,10 +18,10 @@
                     @endif
                 </div>
                 <div class="flex space-x-2">
-                    <button wire:click="edit({{ $address->id }})" type="button" class="text-sm font-medium text-indigo-600 hover:text-indigo-900">Edit</button>
+                    <button wire:click="edit({{ $address->id }})" type="button" class="text-sm font-medium text-green-600 hover:text-green-900">Edit</button>
                     <button wire:click="confirmDelete({{ $address->id }})" type="button" class="text-sm font-medium text-red-600 hover:text-red-900">Delete</button>
                     @if (!$address->pivot || !$address->pivot->is_primary)
-                        <button wire:click="setPrimary({{ $address->id }})" type="button" class="text-sm font-medium text-gray-600 hover:text-gray-900">Set as Primary</button>
+                        <button wire:click="setPrimary({{ $address->id }})" type="button" class="text-sm font-medium text-green-600 hover:text-green-900">Set as Primary</button>
                     @endif
                 </div>
             </div>

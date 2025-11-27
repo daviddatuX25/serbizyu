@@ -7,8 +7,8 @@
         <div class="relative h-48">
             {{-- Image --}}
             @if($offer->media->isNotEmpty())
-                <img src="{{ $offer->media->first()->getUrl() }}" 
-                     alt="{{ $offer->title }}" 
+                <img src="{{ $offer->media->first()->getUrl() }}"
+                     alt="{{ $offer->title }}"
                      class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
             @else
                 <div class="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -27,7 +27,7 @@
         <div class="p-4">
             {{-- Category --}}
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ $offer->category->name }}</p>
-            
+
             {{-- Title --}}
             <h3 class="mt-2 text-lg font-bold text-gray-800 line-clamp-2 h-14 group-hover:text-green-600 transition-colors">
                 {{ $offer->title }}
@@ -35,7 +35,7 @@
 
             {{-- Creator Info --}}
             <div class="flex items-center mt-3 text-sm text-gray-600">
-                <img src="{{ $offer->creator->profile_photo_url }}" alt="{{ $offer->creator->firstname }}" class="w-6 h-6 rounded-full mr-2">
+                <img src="{{ $offer->creator->media()->where('tag', 'profile_image')->first()?->getUrl() ?? 'https://ui-avatars.com/api/?name=' . urlencode($offer->creator->firstname) }}" alt="{{ $offer->creator->firstname }}" class="w-6 h-6 rounded-full mr-2">
                 <span>by {{ $offer->creator->firstname }}</span>
                 @if($offer->creator->verification && $offer->creator->verification->status === 'approved')
                     <span class="ml-1.5 text-green-500" title="Verified Creator">
@@ -45,7 +45,7 @@
             </div>
 
             {{-- Meta Info --}}
-            <div class="mt-4 flex items-center justify-between text-sm">
+            <div class="mt-4 flex items-center justify-between text-sm gap-2">
                 {{-- Bids --}}
                 <div class="flex items-center text-gray-600">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -55,11 +55,11 @@
                 </div>
                 {{-- Location --}}
                 @if($offer->address)
-                    <div class="flex items-center text-gray-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <div class="card-location">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                         </svg>
-                        <span class="truncate">{{ $offer->address->town }}</span>
+                        <span>{{ $offer->address->full_address }}</span>
                     </div>
                 @endif
             </div>

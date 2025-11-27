@@ -4,11 +4,10 @@ namespace App\Domains\Listings\Services;
 
 use App\Domains\Listings\Models\OpenOffer;
 use App\Domains\Users\Models\User;
-use Illuminate\Support\Facades\DB;
-use Plank\Mediable\MediaUploader;
-use Illuminate\Support\Facades\Storage;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use App\Enums\OpenOfferStatus;
+use Illuminate\Support\Facades\DB;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Plank\Mediable\MediaUploader;
 
 class OpenOfferService
 {
@@ -44,7 +43,7 @@ class OpenOfferService
         ]);
 
         // Handle images to remove
-        if (isset($data['images_to_remove']) && !empty($data['images_to_remove'])) {
+        if (isset($data['images_to_remove']) && ! empty($data['images_to_remove'])) {
             $openOffer->media()->whereIn('id', $data['images_to_remove'])->delete();
         }
 
@@ -69,7 +68,7 @@ class OpenOfferService
                     $openOffer->attachMedia($media, 'images');
                 } catch (\Exception $e) {
                     // Log error but continue
-                    \Log::error('Failed to upload media for open offer: ' . $e->getMessage());
+                    \Log::error('Failed to upload media for open offer: '.$e->getMessage());
                 }
             }
         }
@@ -86,6 +85,7 @@ class OpenOfferService
     public function closeOpenOffer(OpenOffer $openOffer): OpenOffer
     {
         $openOffer->update(['status' => OpenOfferStatus::CLOSED]);
+
         return $openOffer;
     }
 
@@ -109,22 +109,34 @@ class OpenOfferService
     {
         $query = OpenOffer::whereHas('creator')->with(['creator.verification', 'creator.media', 'address', 'media', 'bids']);
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(fn($q) => $q
+            $query->where(fn ($q) => $q
                 ->where('title', 'like', "%{$search}%")
                 ->orWhere('description', 'like', "%{$search}%")
             );
         }
 
-        if (!empty($filters['category'])) {
+        if (! empty($filters['category'])) {
             $query->where('category_id', $filters['category']);
         }
 
-        if (!empty($filters['location_code'])) {
-            $locationCode = $filters['location_code'];
-            $query->whereHas('address', function ($q) use ($locationCode) {
-                $q->where('api_id', 'like', "{$locationCode}%");
+        // Filter by region, province, and/or city
+        if (! empty($filters['region']) || ! empty($filters['province']) || ! empty($filters['city'])) {
+            $query->whereHas('address', function ($q) use ($filters) {
+                if (! empty($filters['city'])) {
+                    // Normalize city code from 9 digits to 6 digits for database matching
+                    $cityCode = strlen($filters['city']) === 9 ? substr($filters['city'], 0, 6) : $filters['city'];
+                    $q->where('city', $cityCode);
+                } elseif (! empty($filters['province'])) {
+                    // Normalize province code from 9 digits to 6 digits for database matching
+                    $provinceCode = strlen($filters['province']) === 9 ? substr($filters['province'], 0, 6) : $filters['province'];
+                    $q->where('province', $provinceCode);
+                } elseif (! empty($filters['region'])) {
+                    // Normalize region code from 9 digits to 6 digits for database matching
+                    $regionCode = strlen($filters['region']) === 9 ? substr($filters['region'], 0, 6) : $filters['region'];
+                    $q->where('region', $regionCode);
+                }
             });
         }
 

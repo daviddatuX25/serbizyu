@@ -101,7 +101,7 @@
 
   /* Active  */
   .navbar-link.active,
-    .navbar-auth-link.active, 
+    .navbar-auth-link.active,
       .navbar-mobile-link.active {
           @apply font-bold text-green-600;
       }

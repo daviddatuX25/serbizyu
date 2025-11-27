@@ -2,13 +2,16 @@
 
 namespace Database\Factories;
 
-use App\Domains\Users\Models\User;
 use App\Domains\Listings\Models\Service;
+use App\Domains\Orders\Models\Order;
+use App\Domains\Users\Models\User;
 use App\Enums\OrderStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class OrderFactory extends Factory
 {
+    protected $model = Order::class;
+
     /**
      * Define the model's default state.
      *

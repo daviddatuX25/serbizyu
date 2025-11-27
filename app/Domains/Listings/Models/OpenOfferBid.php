@@ -2,19 +2,19 @@
 
 namespace App\Domains\Listings\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Domains\Listings\Models\Service;
-use App\Domains\Users\Models\User;
 use App\Domains\Messaging\Models\MessageThread;
+use App\Domains\Users\Models\User;
 use App\Enums\BidStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class OpenOfferBid extends Model
 {
     use hasFactory, SoftDeletes;
 
     protected $table = 'open_offer_bids';
+
     protected $fillable = [
         'open_offer_id',
         'bidder_id',
@@ -23,6 +23,11 @@ class OpenOfferBid extends Model
         'message',
         'status',
     ];
+
+    /**
+     * The relations to always eager-load
+     */
+    protected $with = ['bidder.media'];
 
     protected $casts = [
         'status' => BidStatus::class,

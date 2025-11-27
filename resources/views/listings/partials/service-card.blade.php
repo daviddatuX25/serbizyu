@@ -32,7 +32,7 @@
 
             {{-- Creator Info --}}
             <div class="flex items-center mt-3 text-sm text-gray-600">
-                <img src="{{ $service->creator->profile_photo_url }}" alt="{{ $service->creator->firstname }}" class="w-6 h-6 rounded-full mr-2">
+                <img src="{{ $service->creator->media()->where('tag', 'profile_image')->first()?->getUrl() ?? 'https://ui-avatars.com/api/?name=' . urlencode($service->creator->firstname) }}" alt="{{ $service->creator->firstname }}" class="w-6 h-6 rounded-full mr-2">
                 <span>by {{ $service->creator->firstname }}</span>
                 @if($service->creator->verification && $service->creator->verification->status === 'approved')
                     <span class="ml-1.5 text-green-500" title="Verified Creator">
@@ -42,7 +42,7 @@
             </div>
 
             {{-- Meta Info --}}
-            <div class="mt-4 flex items-center justify-between text-sm">
+            <div class="mt-4 flex items-center justify-between text-sm gap-2">
                 {{-- Rating --}}
                 <div class="flex items-center text-gray-600">
                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
@@ -55,11 +55,11 @@
                     <span>{{ $avgRating > 0 ? $avgRating : 'No reviews yet' }} ({{ $reviewCount }})</span>
                 </div>
                 {{-- Location --}}
-                <div class="flex items-center text-gray-600">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                <div class="card-location">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                     </svg>
-                    <span class="truncate">{{ $service->address?->town ?? 'N/A' }}</span>
+                    <span>{{ $service->address?->full_address ?? 'N/A' }}</span>
                 </div>
             </div>
 

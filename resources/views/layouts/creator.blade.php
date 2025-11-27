@@ -32,7 +32,7 @@
         @vite("resources/css/{$css}")
     @endforeach
     @stack('styles')
-    
+
     @livewireStyles
 
     <style>
@@ -41,9 +41,10 @@
 </head>
 <body class="h-full text-gray-700 font-sans antialiased overflow-x-hidden">
 
-    <aside 
-        x-data="{ 
-            mobileMenuOpen: false, 
+    <aside
+        x-cloak
+        x-data="{
+            mobileMenuOpen: false,
             activePopover: null,
             togglePopover(id) { this.activePopover = this.activePopover === id ? null : id; }
         }"
@@ -54,7 +55,7 @@
             '-translate-x-full w-64': !mobileMenuOpen,
             'md:translate-x-0 md:w-20 lg:w-72': true
         }">
-        
+
         <div x-show="mobileMenuOpen"
              x-transition.opacity
              class="fixed inset-0z-[-1] lg:hidden"
@@ -77,13 +78,13 @@
         <nav class="flex-1 overflow-y-auto md:overflow-visible py-6 flex flex-col gap-2 px-4 md:px-0 lg:px-4 relative">
             @foreach($creatorMenu as $item)
                 @php $isActive = request()->routeIs($item['route']); @endphp
-                <a href="{{ route($item['route']) }}" 
+                <a href="{{ route($item['route']) }}"
                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group md:justify-center lg:justify-start
                    {{ $isActive ? 'bg-green-800 text-white shadow-md' : 'text-gray-600 hover:bg-green-100 hover:text-gray-900' }}">
-                    
-                    <i data-lucide="{{ $item['icon'] }}" 
+
+                    <i data-lucide="{{ $item['icon'] }}"
                        class="w-5 h-5 shrink-0 {{ $isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-900' }}"></i>
-                    
+
                     <span class="text-sm font-medium whitespace-nowrap md:hidden lg:block">
                         {{ $item['label'] }}
                     </span>
@@ -112,9 +113,9 @@
                 x-transition:enter-start="opacity-0 translate-y-2"
                 x-transition:enter-end="opacity-100 translate-y-0"
                 class="absolute z-[100] bg-white border border-green-200 shadow-xl rounded-2xl p-1 w-full bottom-[calc(100%+0.5rem)] left-0 right-0 md:bottom-2 md:left-[4.5rem] md:w-48 lg:bottom-[calc(100%+0.5rem)] lg:left-0 lg:w-full" x-cloak>
-                
+
                 <div class="flex flex-col gap-1">
-                    
+
                     {{-- DYNAMIC PROFILE LINKS --}}
                     @foreach($creatorProfileMenu as $item)
                         <a href="{{ route($item['route']) }}" class="flex items-center gap-3 px-3 py-2 hover:bg-green-50 rounded-xl text-sm font-medium text-gray-700 transition-colors">
@@ -140,7 +141,7 @@
 
 
     <main class="min-h-screen transition-all duration-300 ease-in-out md:ml-20 lg:ml-72">
-        
+
         <header x-data="{ searchActive: false, mobileNavOpen: false }"
                 class="sticky top-0 z-30 bg-green-50/90 backdrop-blur-sm px-4 py-4 md:px-8 md:py-6 border-b border-green-100 md:border-none">
             <div class="flex items-center justify-between relative h-14">
@@ -156,7 +157,7 @@
 
                 <div class="flex items-center gap-2 md:gap-4 transition-all duration-500 z-20 ml-auto"
                      :class="{'w-[95%] justify-end': searchActive, 'w-auto justify-end': !searchActive}">
-                    
+
                     <div class="relative flex items-center transition-all duration-500 ease-out shrink-0"
                         :class="{'flex-1 h-12 bg-white border-2 border-green-800 rounded-full px-4 shadow-sm': searchActive, 'bg-white border-2 border-green-800 rounded-full px-1 py-1': !searchActive}">
 
@@ -187,7 +188,7 @@
                                 @if(isset($item['auth']) && $item['auth'])
                                     @auth
                                         @if(!Str::startsWith(request()->route()->getName(), 'creator.'))
-                                            <a href="{{ route($item['route']) }}" 
+                                            <a href="{{ route($item['route']) }}"
                                                class="px-5 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ml-1
                                                {{ request()->routeIs($item['route']) ? 'bg-green-800 text-white' : 'hover:bg-green-100 text-gray-600' }}">
                                                 {{ $item['label'] }}
@@ -195,7 +196,7 @@
                                         @endif
                                     @endauth
                                 @else
-                                    <a href="{{ route($item['route']) }}" 
+                                    <a href="{{ route($item['route']) }}"
                                        class="px-5 py-2 rounded-full text-sm font-medium transition-all shrink-0 whitespace-nowrap ml-1
                                        {{ request()->routeIs($item['route']) ? 'bg-green-800 text-white' : 'hover:bg-green-100 text-gray-600' }}">
                                         {{ $item['label'] }}
@@ -204,16 +205,16 @@
                             @endforeach
                         </div>
 
-                        <div x-show="mobileNavOpen" 
+                        <div x-show="mobileNavOpen"
                              @click.away="mobileNavOpen = false"
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 translate-y-2"
                              x-transition:enter-end="opacity-100 translate-y-0"
                              class="absolute top-full right-0 mt-3 w-56 bg-white border border-green-200 shadow-xl rounded-2xl p-2 z-50 sm:hidden" x-cloak>
-                            
+
                             <div class="flex flex-col gap-1">
                                 @foreach($mainMenu as $item)
-                                    <a href="{{ route($item['route']) }}" 
+                                    <a href="{{ route($item['route']) }}"
                                        class="px-4 py-2.5 rounded-xl text-sm font-medium
                                        {{ request()->routeIs($item['route']) ? 'bg-green-800 text-white' : 'hover:bg-green-50 text-gray-600' }}">
                                         {{ $item['label'] }}
@@ -224,7 +225,7 @@
                     </div>
                 </div>
                 <!-- AI Prompt Suggestions (Dropdown) -->
-                <div x-show="searchActive" 
+                <div x-show="searchActive"
                      x-transition:enter="transition ease-out duration-300 delay-100"
                      x-transition:enter-start="opacity-0 -translate-y-2"
                      x-transition:enter-end="opacity-100 translate-y-0"

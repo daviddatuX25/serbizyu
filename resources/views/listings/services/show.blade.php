@@ -43,7 +43,7 @@
                     <div class="pt-4 border-t">
                         <h3 class="font-bold text-xl text-gray-800 mb-4">About the provider</h3>
                         <div class="flex items-center space-x-4">
-                            <img src="{{ $service->creator->profile_photo_url }}"
+                            <img src="{{ $service->creator->media()->where('tag', 'profile_image')->first()?->getUrl() ?? 'https://ui-avatars.com/api/?name=' . urlencode($service->creator->name) }}"
                                 alt="{{ $service->creator->name }}"
                                 class="w-16 h-16 rounded-full">
                             <div>
@@ -98,7 +98,12 @@
                             <span class="text-2xl font-bold text-gray-900">₱{{ number_format($service->price, 2) }}</span>
                         </div>
                         <div class="mt-1 text-sm text-gray-500 text-right">
-                            Location: {{ $service->address->town }}
+                            <div class="flex items-center justify-end space-x-1.5 text-gray-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                </svg>
+                                <span>{{ $service->address->full_address ?? 'Location not specified' }}</span>
+                            </div>
                         </div>
 
                          @can('update', $service)
@@ -115,8 +120,9 @@
                                 </button>
                             </form>
                             <button type="button"
-                                class="mt-2 w-full text-center text-gray-600 font-medium hover:text-green-700 transition">
-                                Add to wishlist
+                                @click="$dispatch('open-flag-modal', { id: {{ $service->id }}, title: '{{ $service->title }}' })"
+                                class="mt-2 w-full text-center text-red-600 font-medium hover:text-red-700 hover:bg-red-50 py-2 rounded-lg transition">
+                                Report This Service
                             </button>
                         @endcan
                     </div>
@@ -125,3 +131,7 @@
         </div>
     </div>
 </x-app-layout>
+
+<!-- Flag Modal Components -->
+<x-flag-modal contentType="Service" />
+<x-flag-modal contentType="Review" />

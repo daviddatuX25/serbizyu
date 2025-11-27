@@ -19,6 +19,11 @@ class ServiceReview extends Model
         'is_verified_purchase',
     ];
 
+    /**
+     * The relations to always eager-load
+     */
+    protected $with = ['reviewer.media'];
+
     protected $casts = [
         'rating' => 'integer',
         'helpful_count' => 'integer',

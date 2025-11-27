@@ -2,28 +2,27 @@
 
 namespace App\Domains\Listings\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use App\Domains\Users\Models\User;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Domains\Common\Models\Address;
-use App\Domains\Listings\Models\ListingReview;
+use App\Domains\Users\Models\User;
+use App\Enums\PaymentMethod;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Scout\Searchable;
 use Plank\Mediable\Mediable;
 use Plank\Mediable\MediableInterface;
-use Laravel\Scout\Searchable;
-
-use App\Domains\Common\Models\Image;
-use App\Enums\PaymentMethod;
 
 class Service extends Model implements MediableInterface
 {
     use HasFactory;
-    use SoftDeletes;
     use Mediable;
     use Searchable;
+    use SoftDeletes;
 
     protected $table = 'services';
-    protected $fillable = ['title', 'description', 'price', 'pay_first', 'payment_method', 'category_id', 'creator_id', 'workflow_template_id', 'address_id', 'average_rating'];
+
+    protected $fillable = ['title', 'description', 'price', 'pay_first', 'payment_method', 'category_id', 'creator_id', 'workflow_template_id', 'address_id', 'average_rating', 'status'];
+
     protected $casts = [
         'pay_first' => 'boolean',
         'payment_method' => PaymentMethod::class,
@@ -35,7 +34,7 @@ class Service extends Model implements MediableInterface
      *
      * @var array
      */
-    protected $with = ['media', 'address', 'category', 'creator'];
+    protected $with = ['media', 'address', 'category', 'creator.media'];
 
     /**
      * Get the indexable data array for the model.
@@ -102,6 +101,14 @@ class Service extends Model implements MediableInterface
     }
 
     /**
+     * Get all flags for this service
+     */
+    public function flags()
+    {
+        return $this->morphMany(Flag::class, 'flaggable');
+    }
+
+    /**
      * Update and cache the average rating
      */
     public function updateAverageRating(): void
@@ -121,6 +128,11 @@ class Service extends Model implements MediableInterface
     public function getThumbnailUrlAttribute()
     {
         return $this->getFirstMediaUrl('gallery');
+    }
+
+    public function getIsActiveAttribute()
+    {
+        return $this->status === 'active';
     }
 
     protected static function newFactory()

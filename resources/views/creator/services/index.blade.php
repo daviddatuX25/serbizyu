@@ -72,6 +72,12 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <a href="{{ route('services.show', $service) }}" class="text-blue-600 hover:text-blue-900">View</a>
                                             <a href="{{ route('creator.services.edit', $service) }}" class="text-indigo-600 hover:text-indigo-900 ml-4">Edit</a>
+                                            @if(!$service->is_active)
+                                                <form action="{{ route('creator.services.publish', $service) }}" method="POST" class="inline-block ml-4" onsubmit="return confirm('Are you sure you want to publish this service?');">
+                                                    @csrf
+                                                    <button type="submit" class="text-green-600 hover:text-green-900">Publish</button>
+                                                </form>
+                                            @endif
                                             <form action="{{ route('creator.services.destroy', $service) }}" method="POST" class="inline-block ml-4" onsubmit="return confirm('Are you sure you want to delete this service?');">
                                                 @csrf
                                                 @method('DELETE')

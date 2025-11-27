@@ -2,19 +2,25 @@
 
 namespace App\Domains\Work\Http\Controllers;
 
+use App\Domains\Orders\Models\Order;
+use App\Domains\Orders\Services\OrderCompletionService;
+use App\Domains\Work\Models\WorkInstance;
+use App\Domains\Work\Models\WorkInstanceStep;
 use App\Http\Controllers\Controller;
 use App\Notifications\WorkStepCompleted;
-use App\Enums\OrderStatus;
-use App\Domains\Orders\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 
-use App\Domains\Work\Models\WorkInstance;
-use App\Domains\Work\Models\WorkInstanceStep;
-
 class WorkInstanceController extends Controller
 {
+    protected OrderCompletionService $orderCompletionService;
+
+    public function __construct(OrderCompletionService $orderCompletionService)
+    {
+        $this->orderCompletionService = $orderCompletionService;
+    }
+
     /**
      * Display a listing of the resource.
      * Shows work instances for both seller (they work on) and buyer (they purchased)
@@ -26,7 +32,7 @@ class WorkInstanceController extends Controller
         $workInstances = WorkInstance::whereHas('order', function ($query) use ($currentUserId) {
             $query->where(function ($q) use ($currentUserId) {
                 $q->where('seller_id', $currentUserId)
-                  ->orWhere('buyer_id', $currentUserId);
+                    ->orWhere('buyer_id', $currentUserId);
             });
         })->with('order')->get();
 
@@ -55,12 +61,12 @@ class WorkInstanceController extends Controller
      * - Old route: /work-instances/{workInstance}
      * - New route: /orders/{order}/work
      */
-    public function show(Order $order = null, WorkInstance $workInstance = null)
+    public function show(?Order $order = null, ?WorkInstance $workInstance = null)
     {
         // New nested route: /orders/{order}/work (order is injected)
         if ($order !== null) {
             $workInstance = $order->workInstance;
-            if (!$workInstance) {
+            if (! $workInstance) {
                 abort(404, 'No work instance found for this order');
             }
         } elseif ($workInstance !== null) {
@@ -72,8 +78,11 @@ class WorkInstanceController extends Controller
 
         $this->authorize('view', $workInstance);
         $workInstance->load('workInstanceSteps.activityThread.messages');
+
         return view('work.show', compact('workInstance'));
-    }    /**
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit(string $id)
@@ -97,7 +106,7 @@ class WorkInstanceController extends Controller
         //
     }
 
-    public function startStep(Order $order = null, WorkInstance $workInstance = null, WorkInstanceStep $workInstanceStep = null)
+    public function startStep(?Order $order = null, ?WorkInstance $workInstance = null, ?WorkInstanceStep $workInstanceStep = null)
     {
         // New nested route: /orders/{order}/work/steps/{step}/start
         if ($order !== null && $workInstanceStep !== null) {
@@ -115,7 +124,7 @@ class WorkInstanceController extends Controller
         $workInstanceStep->save();
 
         // Mark work instance as started if not already
-        if (!$workInstance->hasStarted()) {
+        if (! $workInstance->hasStarted()) {
             $workInstance->started_at = now();
             $workInstance->status = 'in_progress';
             $workInstance->save();
@@ -124,7 +133,7 @@ class WorkInstanceController extends Controller
         return back()->with('success', 'Step started.');
     }
 
-    public function completeStep(Order $order = null, WorkInstance $workInstance = null, WorkInstanceStep $workInstanceStep = null)
+    public function completeStep(?Order $order = null, ?WorkInstance $workInstance = null, ?WorkInstanceStep $workInstanceStep = null)
     {
         // New nested route: /orders/{order}/work/steps/{step}/complete
         if ($order !== null && $workInstanceStep !== null) {
@@ -151,17 +160,25 @@ class WorkInstanceController extends Controller
             $workInstance->completed_at = now();
             $workInstance->save();
 
-            // ✅ SYNC ORDER STATUS - Critical for review system
-            // When all work steps are complete, mark the order as complete
+            // Get the order
             $order = $workInstance->order;
-            $order->status = OrderStatus::COMPLETED;
-            $order->save();
+
+            // Attempt to complete the order if payment is settled
+            $orderCompleted = $this->orderCompletionService->attemptCompletion($order);
+
+            if (! $orderCompleted && $order->payment_status !== 'paid') {
+                return back()->with('error', 'Cannot mark work complete: Payment must be settled first. The buyer needs to complete payment before you can finalize the order.');
+            }
 
             // Send notifications to both buyer and seller
             $notifyUsers = collect([$order->buyer, $order->seller])->unique('id');
             Notification::send($notifyUsers, new WorkStepCompleted($workInstanceStep));
 
-            return back()->with('success', 'All work steps completed! Order is now complete. Buyer can now leave a review.');
+            $message = $orderCompleted
+                ? 'All work steps completed and payment settled! Order is now complete. Buyer can now leave a review.'
+                : 'All work steps completed. Order will be marked complete once payment is settled.';
+
+            return back()->with('success', $message);
         }
 
         $workInstance->save();

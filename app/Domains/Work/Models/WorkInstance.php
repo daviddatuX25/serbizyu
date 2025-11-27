@@ -2,8 +2,9 @@
 
 namespace App\Domains\Work\Models;
 
-use App\Domains\Orders\Models\Order;
 use App\Domains\Listings\Models\WorkflowTemplate;
+use App\Domains\Orders\Models\Order;
+use Illuminate\Container\Attributes\Database;
 use Illuminate\Database\Eloquent\Model;
 
 class WorkInstance extends Model
@@ -72,6 +73,7 @@ class WorkInstance extends Model
             return 0;
         }
         $completed = $this->workInstanceSteps()->where('status', 'completed')->count();
+
         return round(($completed / $total) * 100);
     }
 
@@ -97,5 +99,10 @@ class WorkInstance extends Model
     public function getActivityThreads()
     {
         return ActivityThread::whereIn('work_instance_step_id', $this->workInstanceSteps()->pluck('id'))->get();
+    }
+
+    public static function factory()
+    {
+        // return new Database\Factories\WorkInstanceFactory();
     }
 }

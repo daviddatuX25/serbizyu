@@ -1,43 +1,59 @@
-<x-app-layout>
+<x-admin-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Admin Dashboard') }}
-        </h2>
+        {{ __('Admin Dashboard') }}
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2 lg:grid-cols-3">
-                <!-- Total Users Card -->
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 bg-white border-b border-gray-200">
-                        <h3 class="text-lg font-medium text-gray-900">Total Users</h3>
-                        <p class="mt-2 text-3xl font-bold text-gray-900">{{ $stats['total_users'] }}</p>
+    <div class="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2 lg:grid-cols-3">
+        <!-- Total Users Card -->
+        <div class="bg-slate-800 overflow-hidden rounded-lg shadow-md border border-slate-700 hover:border-slate-600 transition-colors">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-slate-400">Total Users</p>
+                        <p class="mt-2 text-3xl font-bold text-white">{{ $stats['total_users'] }}</p>
                     </div>
-                </div>
-
-                <!-- Total Orders Card -->
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 bg-white border-b border-gray-200">
-                        <h3 class="text-lg font-medium text-gray-900">Total Orders</h3>
-                        <p class="mt-2 text-3xl font-bold text-gray-900">{{ $stats['total_orders'] }}</p>
-                    </div>
-                </div>
-
-                <!-- Total Revenue Card -->
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 bg-white border-b border-gray-200">
-                        <h3 class="text-lg font-medium text-gray-900">Total Revenue</h3>
-                        <p class="mt-2 text-3xl font-bold text-gray-900">${{ number_format($stats['total_revenue'], 2) }}</p>
+                    <div class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                        <i data-lucide="users" class="w-6 h-6 text-blue-400"></i>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
-                    <canvas id="analyticsChart"></canvas>
+        <!-- Total Orders Card -->
+        <div class="bg-slate-800 overflow-hidden rounded-lg shadow-md border border-slate-700 hover:border-slate-600 transition-colors">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-slate-400">Total Orders</p>
+                        <p class="mt-2 text-3xl font-bold text-white">{{ $stats['total_orders'] }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
+                        <i data-lucide="shopping-cart" class="w-6 h-6 text-green-400"></i>
+                    </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Total Revenue Card -->
+        <div class="bg-slate-800 overflow-hidden rounded-lg shadow-md border border-slate-700 hover:border-slate-600 transition-colors">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-slate-400">Total Revenue</p>
+                        <p class="mt-2 text-3xl font-bold text-white">${{ number_format($stats['total_revenue'], 2) }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                        <i data-lucide="credit-card" class="w-6 h-6 text-purple-400"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-slate-800 overflow-hidden rounded-lg shadow-md border border-slate-700 mt-6">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold text-white mb-4">Analytics</h3>
+            <canvas id="analyticsChart"></canvas>
         </div>
     </div>
 
@@ -51,16 +67,42 @@
             type: 'bar',
             data: {
                 labels: chartData.labels,
-                datasets: chartData.datasets
+                datasets: chartData.datasets.map(dataset => ({
+                    ...dataset,
+                    backgroundColor: dataset.backgroundColor || 'rgba(59, 130, 246, 0.5)',
+                    borderColor: dataset.borderColor || 'rgb(59, 130, 246)',
+                }))
             },
             options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#cbd5e1'
+                        }
+                    }
+                },
                 scales: {
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        grid: {
+                            color: '#1e293b'
+                        },
+                        ticks: {
+                            color: '#cbd5e1'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: '#1e293b'
+                        },
+                        ticks: {
+                            color: '#cbd5e1'
+                        }
                     }
                 }
             }
         });
     </script>
     @endpush
-</x-app-layout>
+</x-admin-layout>

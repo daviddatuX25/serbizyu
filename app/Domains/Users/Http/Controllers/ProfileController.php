@@ -2,11 +2,11 @@
 
 namespace App\Domains\Users\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Domains\Orders\Models\Order;
 use App\Domains\Users\Http\Requests\ProfileUpdateRequest;
 use App\Domains\Users\Models\User;
 use App\Domains\Users\Services\UserReviewService;
-use App\Domains\Orders\Models\Order;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,9 +27,9 @@ class ProfileController extends Controller
      */
     public function show(User $user, Request $request): View
     {
-        // Load reviews received with reviewer information
+        // Load reviews received with reviewer information and media
         $reviews = $user->reviewsReceived()
-            ->with('reviewer')
+            ->with(['reviewer', 'reviewer.media'])
             ->latest()
             ->paginate(10);
 
@@ -50,20 +50,20 @@ class ProfileController extends Controller
                     ['buyer_id', $authUser->id],
                     ['seller_id', $user->id],
                 ])
-                ->orWhere([
-                    ['buyer_id', $user->id],
-                    ['seller_id', $authUser->id],
-                ]);
+                    ->orWhere([
+                        ['buyer_id', $user->id],
+                        ['seller_id', $authUser->id],
+                    ]);
             })
-            ->where('status', 'completed')
-            ->exists();
+                ->where('status', 'completed')
+                ->exists();
 
             // Can review if has completed orders and hasn't reviewed yet
             if ($hasCompletedOrders) {
                 $hasExistingReview = $user->reviewsReceived()
                     ->where('reviewer_id', $authUser->id)
                     ->exists();
-                $canReviewUser = !$hasExistingReview;
+                $canReviewUser = ! $hasExistingReview;
             }
         }
 
@@ -105,8 +105,6 @@ class ProfileController extends Controller
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
-
-
 
     /**
      * Delete the user's account.

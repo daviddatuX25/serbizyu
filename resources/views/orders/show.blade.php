@@ -183,19 +183,30 @@
                     </div>
 
                     <!-- Actions -->
-                    @if($order->status === 'pending' && Auth::user()->id === $order->buyer_id)
-                        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                            <div class="p-6 bg-white">
-                                <h3 class="text-sm font-semibold text-gray-900 uppercase mb-3">Actions</h3>
+                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                        <div class="p-6 bg-white space-y-3">
+                            <h3 class="text-sm font-semibold text-gray-900 uppercase mb-3">Actions</h3>
+
+                            @if($order->status === 'pending' && Auth::user()->id === $order->buyer_id)
                                 <form action="{{ route('orders.cancel', $order) }}" method="POST">
                                     @csrf
                                     <button type="submit" class="w-full bg-red-50 hover:bg-red-100 text-red-700 font-medium py-2 px-4 rounded-lg transition" onclick="return confirm('Are you sure you want to cancel this order?')">
                                         Cancel Order
                                     </button>
                                 </form>
-                            </div>
+                            @endif
+
+                            <!-- Flag Button (available to any user) -->
+                            <button type="button"
+                                    @click="$dispatch('open-flag-modal', { id: {{ $order->id }}, title: 'Order #{{ $order->id }}' })"
+                                    class="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4a6 6 0 016-6h4a6 6 0 016 6v4M9 9a3 3 0 100-6 3 3 0 000 6zm6 0a3 3 0 100-6 3 3 0 000 6z"></path>
+                                </svg>
+                                Report Issue
+                            </button>
                         </div>
-                    @endif
+                    </div>
 
                     <!-- Activity Log (if available) -->
                     @if(isset($order->activity))
@@ -408,3 +419,6 @@ async function submitForm(form, endpoint) {
     }
 }
 </script>
+
+<!-- Flag Modal Component -->
+<x-flag-modal contentType="Order" />

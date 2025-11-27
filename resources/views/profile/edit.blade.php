@@ -4,6 +4,11 @@
       <h2 class="pt-4 text-2xl font-bold text-center mb-10 text-gray-800">Account Settings</h2>
 
       <div class="flex flex-col md:flex-row gap-8 items-start">
+        {{-- Profile Photo --}}
+        <div class="w-full md:flex-1">
+          <livewire:profile-photo-upload />
+        </div>
+
         {{-- Profile Information --}}
         <div class="w-full md:flex-1">
           @include('profile.partials.update-profile-information-form')
@@ -25,7 +30,7 @@
             <p class="mt-1 text-sm text-gray-600">
               {{ __('Submit your documents to get your account verified.') }}
             </p>
-            <a href="{{ route('verification.status') }}" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-500 active:bg-blue-700 focus:outline-none focus:border-blue-700 focus:ring ring-blue-300 disabled:opacity-25 transition ease-in-out duration-150">
+            <a href="{{ route('verification.status') }}" class="mt-4 inline-flex items-center px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition">
               {{ __('Go to Verification') }}
             </a>
           </div>

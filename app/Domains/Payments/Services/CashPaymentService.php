@@ -3,19 +3,27 @@
 namespace App\Domains\Payments\Services;
 
 use App\Domains\Orders\Models\Order;
-use Illuminate\Support\Facades\Log;
+use App\Domains\Orders\Services\OrderCompletionService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class CashPaymentService
 {
     private const CACHE_TTL = 3600; // 1 hour
+
+    protected OrderCompletionService $orderCompletionService;
+
+    public function __construct(OrderCompletionService $orderCompletionService)
+    {
+        $this->orderCompletionService = $orderCompletionService;
+    }
 
     /**
      * Initiate cash payment handshake
      */
     public function initiateHandshake(Order $order): string
     {
-        $handshakeId = 'cash_' . $order->id . '_' . uniqid();
+        $handshakeId = 'cash_'.$order->id.'_'.uniqid();
 
         $handshakeData = [
             'order_id' => $order->id,
@@ -46,11 +54,12 @@ class CashPaymentService
     {
         $data = Cache::get($handshakeId);
 
-        if (!$data || $data['status'] !== 'pending') {
+        if (! $data || $data['status'] !== 'pending') {
             Log::warning('Invalid handshake state for buyer claim', [
                 'handshake_id' => $handshakeId,
                 'current_status' => $data['status'] ?? 'not_found',
             ]);
+
             return false;
         }
 
@@ -74,11 +83,12 @@ class CashPaymentService
     {
         $data = Cache::get($handshakeId);
 
-        if (!$data || $data['status'] !== 'buyer_claimed') {
+        if (! $data || $data['status'] !== 'buyer_claimed') {
             Log::warning('Invalid handshake state for seller confirmation', [
                 'handshake_id' => $handshakeId,
                 'current_status' => $data['status'] ?? 'not_found',
             ]);
+
             return false;
         }
 
@@ -100,6 +110,9 @@ class CashPaymentService
             'order_id' => $orderId,
         ]);
 
+        // Check if order can be completed now (if all work is done)
+        $this->orderCompletionService->handlePaymentCompleted($order);
+
         return true;
     }
 
@@ -110,11 +123,12 @@ class CashPaymentService
     {
         $data = Cache::get($handshakeId);
 
-        if (!$data || $data['status'] !== 'buyer_claimed') {
+        if (! $data || $data['status'] !== 'buyer_claimed') {
             Log::warning('Invalid handshake state for seller rejection', [
                 'handshake_id' => $handshakeId,
                 'current_status' => $data['status'] ?? 'not_found',
             ]);
+
             return false;
         }
 
@@ -153,6 +167,7 @@ class CashPaymentService
     public function cancelHandshake(string $handshakeId): bool
     {
         Cache::forget($handshakeId);
+
         return true;
     }
 }

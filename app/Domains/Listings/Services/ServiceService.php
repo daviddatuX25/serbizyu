@@ -4,18 +4,19 @@ namespace App\Domains\Listings\Services;
 
 use App\Domains\Listings\Models\Service;
 use App\Support\MediaConfig;
-use Plank\Mediable\MediaUploader;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Illuminate\Support\Facades\Log;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Plank\Mediable\MediaUploader;
 
 class ServiceService
 {
     protected MediaConfig $mediaConfig;
+
     protected MediaUploader $mediaUploader;
 
     public function __construct()
     {
-        $this->mediaConfig = new MediaConfig();
+        $this->mediaConfig = new MediaConfig;
         $this->mediaUploader = app(MediaUploader::class);
     }
 
@@ -58,11 +59,11 @@ class ServiceService
 
     /**
      * Handle media uploads using MediaConfig
-     * 
-     * @param Service $service The service model
-     * @param array $files Newly uploaded files
-     * @param array $imagesToRemove Media IDs to detach
-     * @param string $tag Media tag (e.g., 'gallery')
+     *
+     * @param  Service  $service  The service model
+     * @param  array  $files  Newly uploaded files
+     * @param  array  $imagesToRemove  Media IDs to detach
+     * @param  string  $tag  Media tag (e.g., 'gallery')
      */
     protected function handleUploadedFiles(
         Service $service,
@@ -71,13 +72,13 @@ class ServiceService
         string $tag = 'gallery'
     ): void {
         // STEP 1: Remove only explicitly requested media
-        if (!empty($imagesToRemove)) {
+        if (! empty($imagesToRemove)) {
             foreach ($imagesToRemove as $mediaId) {
                 try {
                     $service->detachMedia($mediaId);
                     Log::info("Detached media ID: $mediaId from service {$service->id}");
                 } catch (\Exception $e) {
-                    Log::warning('Failed to detach media: ' . $e->getMessage());
+                    Log::warning('Failed to detach media: '.$e->getMessage());
                 }
             }
         }
@@ -88,7 +89,7 @@ class ServiceService
         }
 
         foreach ($files as $file) {
-            if (!$file instanceof TemporaryUploadedFile) {
+            if (! $file instanceof TemporaryUploadedFile) {
                 continue;
             }
 
@@ -102,12 +103,13 @@ class ServiceService
 
                 // Validate against MediaConfig limits
                 if ($fileSizeKb > $maxSizeKb) {
-                    Log::warning("File exceeds MediaConfig limit", [
+                    Log::warning('File exceeds MediaConfig limit', [
                         'filename' => $file->getClientOriginalName(),
                         'size_kb' => $fileSizeKb,
                         'limit_kb' => $maxSizeKb,
                         'type' => $mediaType,
                     ]);
+
                     continue;
                 }
 
@@ -115,7 +117,7 @@ class ServiceService
 
                 // Upload using MediaConfig destination
                 $destination = $this->mediaConfig->getDestination($mediaType);
-                
+
                 $media = $this->mediaUploader->fromSource($sourcePath)
                     ->toDestination('public', $destination)
                     ->upload();
@@ -131,9 +133,9 @@ class ServiceService
                 ]);
 
             } catch (\Exception $e) {
-                Log::error('Media upload failed: ' . $e->getMessage(), [
+                Log::error('Media upload failed: '.$e->getMessage(), [
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
             }
         }
@@ -172,7 +174,7 @@ class ServiceService
     {
         $service = Service::with(['creator', 'category', 'workflowTemplate', 'address', 'media'])->withTrashed()->find($id);
 
-        if (!$service) {
+        if (! $service) {
             throw new \App\Exceptions\ResourceNotFoundException('Service does not exist.');
         }
 
@@ -194,7 +196,6 @@ class ServiceService
             throw new \App\Exceptions\ResourceNotFoundException('No services found.');
         }
 
-
         return $services;
     }
 
@@ -209,15 +210,15 @@ class ServiceService
             $query->withTrashed();
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(fn($q) => $q
+            $query->where(fn ($q) => $q
                 ->where('title', 'like', "%{$search}%")
                 ->orWhere('description', 'like', "%{$search}%")
             );
         }
 
-        if (!empty($filters['category'])) {
+        if (! empty($filters['category'])) {
             $query->where('category_id', $filters['category']);
         }
 
@@ -244,15 +245,15 @@ class ServiceService
             $query->withTrashed();
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(fn($q) => $q
+            $query->where(fn ($q) => $q
                 ->where('title', 'like', "%{$search}%")
                 ->orWhere('description', 'like', "%{$search}%")
             );
         }
 
-        if (!empty($filters['category'])) {
+        if (! empty($filters['category'])) {
             $query->where('category_id', $filters['category']);
         }
 
@@ -274,22 +275,34 @@ class ServiceService
     {
         $query = Service::with(['creator.verification', 'creator.media', 'address', 'media']);
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where(fn($q) => $q
+            $query->where(fn ($q) => $q
                 ->where('title', 'like', "%{$search}%")
                 ->orWhere('description', 'like', "%{$search}%")
             );
         }
 
-        if (!empty($filters['category'])) {
+        if (! empty($filters['category'])) {
             $query->where('category_id', $filters['category']);
         }
-        
-        if (!empty($filters['location_code'])) {
-            $locationCode = $filters['location_code'];
-            $query->whereHas('address', function ($q) use ($locationCode) {
-                $q->where('api_id', 'like', "{$locationCode}%");
+
+        // Filter by region, province, and/or city
+        if (! empty($filters['region']) || ! empty($filters['province']) || ! empty($filters['city'])) {
+            $query->whereHas('address', function ($q) use ($filters) {
+                if (! empty($filters['city'])) {
+                    // Normalize city code from 9 digits to 6 digits for database matching
+                    $cityCode = strlen($filters['city']) === 9 ? substr($filters['city'], 0, 6) : $filters['city'];
+                    $q->where('city', $cityCode);
+                } elseif (! empty($filters['province'])) {
+                    // Normalize province code from 9 digits to 6 digits for database matching
+                    $provinceCode = strlen($filters['province']) === 9 ? substr($filters['province'], 0, 6) : $filters['province'];
+                    $q->where('province', $provinceCode);
+                } elseif (! empty($filters['region'])) {
+                    // Normalize region code from 9 digits to 6 digits for database matching
+                    $regionCode = strlen($filters['region']) === 9 ? substr($filters['region'], 0, 6) : $filters['region'];
+                    $q->where('region', $regionCode);
+                }
             });
         }
 

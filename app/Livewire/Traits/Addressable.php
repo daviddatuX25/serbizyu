@@ -10,35 +10,50 @@ trait Addressable
 {
     // Properties for the new address modal
     public bool $showAddressModal = false;
+
     public string $new_label = '';
+
     public string $new_street_address = '';
+
     public ?string $new_selectedRegion = null;
+
     public ?string $new_selectedProvince = null;
+
     public ?string $new_selectedCity = null;
+
     public ?string $new_selectedBarangay = null;
+
     public ?float $new_lat = null;
+
     public ?float $new_lng = null;
+
     public bool $new_is_primary = false;
-    
+
     // Properties for address data
     public array $regions = [];
+
     public array $provinces = [];
+
     public array $cities = [];
+
     public array $barangays = [];
-    
+
     // Loading states
     public bool $loadingProvinces = false;
+
     public bool $loadingCities = false;
+
     public bool $loadingBarangays = false;
 
     public Collection $addresses; // New property
-    
+
     protected AddressProviderInterface $addressProvider;
 
     public function mountAddressable(Collection $addresses): void // New method
     {
         $this->addresses = $addresses->map(function ($address) {
             $address->is_primary = $address->pivot->is_primary ?? false;
+
             return $address;
         });
     }
@@ -70,6 +85,12 @@ trait Addressable
             'label' => $this->new_label,
             'full_address' => $fullAddress,
             'street_address' => $this->new_street_address,
+            'barangay' => $this->findNameByCode($this->barangays, $this->new_selectedBarangay ?? ''),
+            'city' => $this->new_selectedCity,
+            'province' => $this->new_selectedProvince,
+            'region' => $this->new_selectedRegion,
+            'province_name' => $this->findNameByCode($this->provinces, $this->new_selectedProvince ?? ''),
+            'region_name' => $this->findNameByCode($this->regions, $this->new_selectedRegion ?? ''),
             'api_source' => 'PSGC_API',
             'api_id' => $this->getApiIdFromSelection(),
             'lat' => $this->new_lat,
@@ -84,10 +105,10 @@ trait Addressable
             $this->closeAddressModal();
             session()->flash('success', 'New address added and selected.');
         } catch (\Exception $e) {
-            $this->addError('new_address', 'Failed to save new address: ' . $e->getMessage());
+            $this->addError('new_address', 'Failed to save new address: '.$e->getMessage());
         }
     }
-    
+
     public function loadRegions(): void
     {
         $this->regions = $this->addressProvider->getRegions();
@@ -156,6 +177,7 @@ trait Addressable
         if ($this->new_selectedRegion) {
             $parts[] = $this->findNameByCode($this->regions, $this->new_selectedRegion);
         }
+
         return implode(', ', array_filter($parts));
     }
 
@@ -166,6 +188,7 @@ trait Addressable
                 return $item['name'] ?? $code;
             }
         }
+
         return $code;
     }
 
@@ -177,6 +200,7 @@ trait Addressable
             $this->new_selectedProvince,
             $this->new_selectedRegion,
         ]);
+
         return count($ids) > 0 ? implode('-', $ids) : null;
     }
 

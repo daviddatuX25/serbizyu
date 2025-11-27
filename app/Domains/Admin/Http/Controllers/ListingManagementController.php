@@ -9,45 +9,49 @@ use Illuminate\Http\Request;
 class ListingManagementController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of services
      */
-    public function index()
+    public function index(Request $request)
     {
-        $services = Service::paginate(10);
+        $query = Service::query()->with(['creator', 'category']);
+
+        // Search by title or description
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by category
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+        }
+
+        // Filter by price range
+        if ($request->filled('price_min')) {
+            $query->where('price', '>=', $request->price_min);
+        }
+        if ($request->filled('price_max')) {
+            $query->where('price', '<=', $request->price_max);
+        }
+
+        // Sort by
+        $sort = $request->get('sort', 'created_at');
+        $direction = $request->get('direction', 'desc');
+        $query->orderBy($sort, $direction);
+
+        $services = $query->paginate(15);
+
         return view('admin.listings.index', compact('services'));
     }
 
     /**
-     * Display the specified resource.
+     * Redirect to public-facing show page
      */
     public function show(Service $service)
     {
-        return view('admin.listings.show', compact('service'));
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Service $service)
-    {
-        return view('admin.listings.edit', compact('service'));
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Service $service)
-    {
-        // Add validation and update logic later
-        return redirect()->route('admin.listings.index')->with('success', 'Listing updated successfully.');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Service $service)
-    {
-        $service->delete();
-        return redirect()->route('admin.listings.index')->with('success', 'Listing deleted successfully.');
+        return redirect("/services/{$service->id}");
     }
 }

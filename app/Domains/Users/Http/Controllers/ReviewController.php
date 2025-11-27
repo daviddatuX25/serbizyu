@@ -7,6 +7,7 @@ use App\Domains\Users\Models\User;
 use App\Domains\Users\Models\UserReview;
 use App\Domains\Users\Services\UserReviewService;
 use App\DTO\CreateUserReviewDTO;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 

@@ -1,11 +1,11 @@
 <?php
 
+use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,10 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'admin' => EnsureUserIsAdmin::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-         // Handle all domain exceptions generically
+        // Handle all domain exceptions generically
         $exceptions->render(function (DomainException $e, Request $request) {
             $response = [
                 'error' => class_basename($e),
@@ -36,7 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Custom report hook
         $exceptions->report(function (DomainException $e) {
-            \Log::warning("DomainException: " . $e->getMessage(), [
+            \Log::warning('DomainException: '.$e->getMessage(), [
                 'exception' => $e,
             ]);
         });

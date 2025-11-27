@@ -1,0 +1,283 @@
+Serbizyu FAQGENERAL QUESTIONSWhat is Serbizyu?
+Serbizyu is a local services marketplace connecting customers with service providers in the Philippines. Find services you need or offer your skills to earn.Who can use Serbizyu?
+Anyone can use Serbizyu. You can be a customer looking for services, a provider offering your skills, or both at the same time.Is it free to use?
+Yes, signing up and browsing is completely free. We only charge a small platform fee on completed transactions.What areas do you cover?
+Currently focused on the Philippines, with plans to expand to more locations.ACCOUNT & PROFILEHow do I create an account?
+Click "Join" in the top menu, enter your name, email, and password. Verify your email and you're ready to go.Can I be both a buyer and seller?
+Absolutely! One account lets you book services as a customer and offer services as a provider.How do I reset my password?
+Click "Forgot Password" on the login page. Check your email for a reset link.How do I update my profile?
+Go to Settings → Profile. You can update your name, contact info, addresses, and notification preferences.Can I have multiple addresses?
+Yes. Add addresses in Settings → Addresses. Set one as your primary address for faster bookings.SERVICESWhat is a Service?
+A service is something you offer to customers. Examples: laptop repair, math tutoring, house cleaning, photography, etc.How do I create a Service?
+
+Go to "My Services" → "Create Service"
+Fill in title, description, and price
+Choose a category
+Select a workflow (step-by-step plan for your work)
+Add photos
+Set payment preference (Pay First or Pay After)
+Publish
+Do I need a workflow to create a service?
+Yes. Workflows help customers understand your process and keep work organized. You can use public templates or create your own.What does "Pay First" mean?
+
+Pay First = Yes: Customer pays before you start working. Money is held safely until work is completed.
+Pay First = No: Customer pays after you finish the work.
+Can I edit my service after publishing?
+Yes. Go to "My Services" → Select service → "Edit". Changes take effect immediately.How do customers find my service?
+They can browse by category, search by keywords, filter by location and price, or scan your Quick Deal QR code.OPEN OFFERSWhat is an Open Offer?
+An Open Offer is when a customer posts what they need and service providers bid on it. The customer then chooses the best bid.How do I create an Open Offer?
+
+Click "Post Open Offer"
+Describe what you need
+Set your budget
+Choose category
+Optionally add a workflow
+Wait for service providers to bid
+Is workflow required for Open Offers?
+No, workflows are optional for Open Offers. You can add one if you have specific steps in mind, but it's not required.How do I bid on an Open Offer?
+
+Browse Open Offers
+Click on one that matches your skills
+Click "Place Bid"
+Select which of your services you'll use
+Set your price
+Submit
+How many bids can an Open Offer receive?
+The creator sets a maximum (usually 5-10 bids). Once reached, the offer closes.What happens when my bid is accepted?
+An order is automatically created. You'll be notified and can start working based on the payment terms.ORDERS & WORKFLOWWhat is an Order?
+An order is a confirmed job. It's created when:
+
+Someone books your service directly
+A customer accepts your bid on an Open Offer
+A Quick Deal proposal is accepted (coming soon)
+What are the order statuses?
+
+Pending Payment: Waiting for customer payment
+Confirmed: Paid and ready to start work
+In Progress: Work is happening
+Awaiting Payment: Work done, waiting for payment (if Pay After)
+Completed: Everything finished, payment released
+Cancelled: Order was cancelled
+What is workflow execution?
+Workflow is the step-by-step process of completing the work. Each step might involve:
+
+Posting updates with photos/videos
+Asking questions (prompts)
+Getting customer approval
+Moving to the next phase
+What are Activity Threads?
+Updates you post during work. You can share:
+
+Progress photos
+Video updates
+Written comments
+Evidence of completion
+What are Prompts?
+Questions asked during the work process. Example: "What color would you like?" or "Should I proceed with Option A or B?"What is a Strict Prompt?
+A question that MUST be answered before work can continue. The "Complete & Continue" button stays disabled until answered.Who can move the workflow forward?
+Only the service provider (seller) can click "Complete & Continue" to progress to the next step.Can I skip a workflow step?
+Service providers can skip steps with a valid reason. The skip is logged and visible to the customer.Can I message during an order?
+Yes. Every order has a built-in messaging thread where buyer and seller can communicate.PAYMENTSHow can customers pay?
+Two payment methods:
+
+Online: GCash, Credit Card, Bank Transfer (via Xendit)
+Cash: In-person payment (seller confirms receipt)
+Is online payment safe?
+Yes. Payments are processed by Xendit, a licensed payment gateway. Money is held in escrow until work is completed.What is escrow?
+Money is held securely by the platform. It's only released to the seller after:
+
+Work is completed
+Customer is satisfied
+Waiting period passes (usually 3 days)
+When do sellers receive their money?
+
+Pay First orders: 3 days after work completion
+Pay After orders: 3 days after customer payment
+What is the platform fee?
+A small percentage (3-5%) is deducted from each completed order. This keeps Serbizyu running.Example:
+
+Order total: ₱1,000
+Platform fee (5%): ₱50
+Seller receives: ₱950
+Can I request a refund?
+Yes, within 7 days of payment if:
+
+Service not delivered
+Work quality doesn't match description
+Seller is unresponsive
+Refund requests are reviewed case-by-case.What if there's a payment dispute?
+Contact support with order details. We'll mediate between both parties to find a fair solution.MESSAGINGHow do I message someone?
+Click on their profile → "Send Message". Or message directly from service listings and order pages.What types of messaging exist?
+
+Direct Messages: Private chat between two users
+Order Messages: Built-in chat on every order page
+Listing Messages: Ask questions about a service or offer before booking
+Do I get notifications for new messages?
+Yes. Real-time notifications appear in your browser, plus a notification counter in the top menu.Can I send files in messages?
+Yes, in order messages and activity threads you can attach images, videos, and documents.REVIEWS & RATINGSHow do I leave a review?
+After an order is completed, click "Leave Review" on the order page. Rate with stars (1-5) and write a comment.Can I review both the service and the person?
+Yes. You can leave separate reviews for:
+
+The service/offer itself
+The user you worked with
+Can I edit a review?
+No. Reviews are permanent once submitted. Please be thoughtful before posting.What if I receive an unfair review?
+You can reply to any review on your profile. Stay professional in your response.Do reviews affect my visibility?
+Yes. Higher-rated services appear more prominently in search results.CATEGORIES & SEARCHWhat categories are available?
+Common categories include:
+
+Home Services (cleaning, repair, gardening)
+Technology (computer repair, web design, IT support)
+Education (tutoring, training, workshops)
+Creative (photography, videography, graphic design)
+Personal (fitness, beauty, wellness)
+Transportation (delivery, moving, rides)
+And many more...
+How do I search for services?
+Use the search bar or browse by:
+
+Category
+Location
+Price range
+Rating
+Newest/Popular
+Can I filter search results?
+Yes. Use filters for category, location, price, and more on the browse page.WORKFLOW TEMPLATESWhat is a Workflow Template?
+A pre-made step-by-step plan for how work gets done. Each step can include prompts, required photos, and approval points.Do I have to create my own workflow?
+No. You can use public workflow templates created by Serbizyu or other users.Can I create custom workflows?
+Yes. Go to Settings → Workflows → Create New. Design your own process with custom steps.Can I share my workflow?
+Yes. Mark it as "Public" and other users can use it for their services.What's in a workflow step?
+Each step can have:
+
+Step name and description
+Required actions (upload photo, get approval)
+Questions (prompts) to ask
+Time estimates
+ADDRESSES & LOCATIONSWhy do I need to add an address?
+Addresses help customers find services near them and let sellers know where to provide services.Can I add multiple addresses?
+Yes. Useful if you work from different locations or want services at home/office.How do I set my primary address?
+Settings → Addresses → Click "Set as Primary" on your preferred address.Is my exact address public?
+No. Only the general area (barangay/city) is shown publicly. Exact address is shared only after an order is confirmed.TECHNICAL & MOBILEDo I need to download an app?
+No. Serbizyu works in any web browser (Chrome, Safari, Firefox, Edge).Does it work on mobile phones?
+Yes! Fully optimized for mobile, tablet, and desktop.Do I need constant internet?
+Yes for most features. Some pages may cache temporarily but internet is required for booking, messaging, and payments.What are real-time updates?
+Changes appear instantly without refreshing:
+
+New messages
+Order status changes
+Workflow progress
+Bid notifications
+What browsers are supported?
+
+Chrome (recommended)
+Safari
+Firefox
+Edge
+Any modern browser
+SAFETY & SECURITYIs my personal information safe?
+Yes. We use HTTPS encryption, secure password hashing, and never store credit card details (handled by Xendit).Who can see my information?
+
+Public: Name, profile photo, services, reviews
+Private: Email, phone, exact address (only shared in confirmed orders)
+Never shared: Password, payment details
+How do I report suspicious activity?
+Click the "Report" button on any service, offer, or user profile. Our team reviews reports within 24 hours.What can I report?
+
+Scam/fraud
+Inappropriate content
+Harassment
+Fake profiles
+Service not as described
+How do you handle reported users?
+We investigate all reports. Actions range from warnings to account suspension depending on severity.Can I block a user?
+Yes. Go to their profile → Menu → "Block User". They won't be able to message or interact with you.What if someone asks me to pay outside the platform?
+Never do it! Always use Serbizyu's payment system. External payments have no buyer/seller protection.FUTURE FEATURES (Coming Soon)What's coming next?
+We're working on exciting features:
+Quick Deals ⚡
+
+QR codes for instant service booking
+Scan and propose deals face-to-face
+Perfect for physical stores and events
+
+
+
+Enhanced Flagging System 🚩
+
+Better reporting tools
+Community moderation
+Faster response to issues
+
+
+
+More Payment Options 💳
+
+Additional payment gateways
+Installment plans
+Cryptocurrency support
+
+
+
+Video Features 🎥
+
+Video consultations
+Video evidence in workflows
+Live streaming for services
+
+
+Stay tuned for updates!TROUBLESHOOTINGMy images won't upload
+
+Check file size (max 5MB per image)
+Use JPG or PNG format
+Ensure stable internet connection
+Try a different browser
+I can't see real-time updates
+
+Refresh the page
+Check your internet connection
+Clear browser cache
+Try a different browser
+Payment is stuck on "Processing"
+
+Wait 10 minutes (bank processing time)
+Check your payment confirmation email
+Contact support if still stuck after 30 minutes
+QR code won't scan
+
+Ensure good lighting
+Hold phone steady
+Try manual URL entry
+Use a different QR scanner app
+Service not appearing in search
+
+Check if it's published (not draft)
+Verify category is selected
+Ensure address is added
+Wait a few minutes for indexing
+Can't progress workflow
+
+Check for unanswered Strict Prompts
+Ensure all required photos are uploaded
+Verify you're the service provider (sellers only can progress)
+Refresh the page
+CONTACT & SUPPORTHow do I contact support?
+
+Email: support@serbizyu.com (placeholder)
+Live chat: Click the icon in bottom right corner
+Help Center: Click "Help" in the footer
+What are your support hours?
+Monday to Friday: 8:00 AM - 6:00 PM Philippine Time
+Weekend: Limited support (emergency only)How long until I get a response?
+
+Chat: Usually within 5-10 minutes during business hours
+Email: Within 24 hours
+Reports: Reviewed within 24 hours
+Found a bug?
+Please report it! Email us with:
+
+What you were trying to do
+What happened instead
+Screenshots if possible
+Your browser and device type
+Have a feature suggestion?
+We'd love to hear it! Send suggestions to feedback@serbizyu.comStill have questions?
+Visit our Help Center or contact support. We're here to help!

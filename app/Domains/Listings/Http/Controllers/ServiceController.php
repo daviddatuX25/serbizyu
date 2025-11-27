@@ -2,15 +2,14 @@
 
 namespace App\Domains\Listings\Http\Controllers;
 
+use App\Domains\Common\Services\AddressService;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Services\CategoryService;
-use App\Domains\Common\Services\AddressService;
-use App\Domains\Listings\Services\ServiceService;
 use App\Domains\Listings\Services\ServiceReviewService;
+use App\Domains\Listings\Services\ServiceService;
 use App\Domains\Listings\Services\WorkflowTemplateService;
 use App\Domains\Orders\Services\OrderService;
 use App\Http\Controllers\Controller;
-use App\Domains\Listings\Http\Requests\StoreServiceRequest;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,7 +17,6 @@ use Illuminate\Support\Facades\Auth;
 class ServiceController extends Controller
 {
     use AuthorizesRequests;
-
 
     public function __construct(
         private ServiceService $serviceService,
@@ -36,6 +34,7 @@ class ServiceController extends Controller
     {
         $services = $this->serviceService->getServicesForCreator(Auth::id(), $request->all());
         $categories = $this->categoryService->listAllCategories();
+
         return view('creator.services.index', compact('services', 'categories'));
     }
 
@@ -57,6 +56,7 @@ class ServiceController extends Controller
     public function show(Service $service)
     {
         $this->authorize('view', $service);
+
         return view('listings.services.show', compact('service'));
     }
 
@@ -73,8 +73,8 @@ class ServiceController extends Controller
         return redirect()->route('orders.show', $order)->with('success', 'Order created successfully!');
     }
 
-
-    public function manage(Service $service) {
+    public function manage(Service $service)
+    {
         $this->authorize('update', $service);
 
         // Fetch real data - calculate total revenue from completed orders
@@ -121,9 +121,26 @@ class ServiceController extends Controller
 
         try {
             $this->serviceService->deleteService($service);
+
             return redirect()->route('creator.services.index')->with('success', 'Service deleted successfully.');
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to delete service: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete service: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Publish the specified resource from storage.
+     */
+    public function publish(Service $service)
+    {
+        $this->authorize('update', $service);
+
+        try {
+            $this->serviceService->updateService($service, ['status' => 'active']);
+
+            return redirect()->route('creator.services.index')->with('success', 'Service published successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to publish service: '.$e->getMessage());
         }
     }
 }

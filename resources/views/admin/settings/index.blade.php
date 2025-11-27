@@ -1,7 +1,6 @@
-<x-app-layout>
+<x-admin-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Platform Settings') }}
+        {{ __('Platform Settings') }}
         </h2>
     </x-slot>
 
@@ -28,4 +27,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-admin-layout>

@@ -1,21 +1,17 @@
-@import './app.css';
-@import "swiper/css";
-@import "swiper/css/navigation";
-@import "swiper/css/pagination";
 
 @layer components {
 
     /* Hero search input */
   .hero-search {
-    @apply px-4 py-3 sm:w-[300px] md:w-[450px] w-[200px] text-sm rounded-l-lg text-black 
+    @apply px-4 py-3 sm:w-[300px] md:w-[450px] w-[200px] text-sm rounded-l-lg text-black
            focus:outline-none focus:ring-2 focus:ring-brand
-           placeholder-gray-400 ; 
+           placeholder-gray-400 ;
   }
 
   /* Transparent white outline button */
   .btn-outline-white {
-    @apply px-4 py-2 rounded-lg border border-white text-white 
-           bg-transparent hover:bg-white hover:text-black 
+    @apply px-4 py-2 rounded-lg border border-white text-white
+           bg-transparent hover:bg-white hover:text-black
            transition duration-300;
   }
 
@@ -47,7 +43,7 @@
   }
 
   .category-card {
-    @apply flex-shrink-0 w-48 bg-background-secondary shadow-sm p-6 rounded-lg text-center 
+    @apply flex-shrink-0 w-48 bg-background-secondary shadow-sm p-6 rounded-lg text-center
            hover:shadow-md transition cursor-pointer;
   }
 

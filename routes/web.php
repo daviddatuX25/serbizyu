@@ -1,34 +1,39 @@
 <?php
-use Illuminate\Support\Facades\Route;
-use App\Domains\Listings\Http\Controllers\ServiceController;
-use App\Domains\Users\Http\Controllers\ProfileController;
-use App\Domains\Users\Http\Controllers\CreatorDashboardController;
-use App\Domains\Users\Http\Controllers\UserVerificationController;
-use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
-use App\Domains\Admin\Http\Controllers\DashboardController;
+
 use App\Domains\Admin\Http\Controllers\ActivityLogController;
-use App\Domains\Admin\Http\Controllers\UserManagementController;
+use App\Domains\Admin\Http\Controllers\CategoryManagementController;
+use App\Domains\Admin\Http\Controllers\DashboardController;
+use App\Domains\Admin\Http\Controllers\FlagManagementController;
 use App\Domains\Admin\Http\Controllers\ListingManagementController;
+use App\Domains\Admin\Http\Controllers\OpenOfferManagementController;
+use App\Domains\Admin\Http\Controllers\OrderManagementController;
+use App\Domains\Admin\Http\Controllers\PaymentManagementController;
+use App\Domains\Admin\Http\Controllers\RefundManagementController;
 use App\Domains\Admin\Http\Controllers\SettingsController;
-use App\Domains\Listings\Http\Controllers\CategoryController;
+use App\Domains\Admin\Http\Controllers\UserManagementController;
 use App\Domains\Common\Http\Controllers\MediaServeController;
+use App\Domains\Listings\Http\Controllers\BidMessageController;
+use App\Domains\Listings\Http\Controllers\CategoryController;
 use App\Domains\Listings\Http\Controllers\ListingController;
-use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
-use App\Domains\Listings\Http\Controllers\OpenOfferController;
 use App\Domains\Listings\Http\Controllers\OpenOfferBidController;
+use App\Domains\Listings\Http\Controllers\OpenOfferController;
 use App\Domains\Listings\Http\Controllers\PublicWorkflowController;
+use App\Domains\Listings\Http\Controllers\ServiceController;
+use App\Domains\Listings\Http\Controllers\WorkflowTemplateController;
+use App\Domains\Messaging\Http\Controllers\MessageController;
 use App\Domains\Orders\Http\Controllers\OrderController;
-use App\Domains\Work\Http\Controllers\WorkInstanceController;
-use App\Domains\Work\Http\Controllers\ActivityController;
+use App\Domains\Orders\Http\Controllers\OrderMessageController;
+use App\Domains\Payments\Http\Controllers\DisbursementController;
 use App\Domains\Payments\Http\Controllers\PaymentController;
 use App\Domains\Payments\Http\Controllers\PaymentWebhookController;
-use App\Domains\Payments\Http\Controllers\DisbursementController;
 use App\Domains\Payments\Http\Controllers\RefundController;
-use App\Domains\Messaging\Http\Controllers\MessageController;
-use App\Domains\Orders\Http\Controllers\OrderMessageController;
-use App\Domains\Listings\Http\Controllers\BidMessageController;
-use App\Domains\Payments\Http\Controllers\CashPaymentController;
-
+use App\Domains\Users\Http\Controllers\Admin\UserVerificationController as AdminUserVerificationController;
+use App\Domains\Users\Http\Controllers\CreatorDashboardController;
+use App\Domains\Users\Http\Controllers\ProfileController;
+use App\Domains\Users\Http\Controllers\UserVerificationController;
+use App\Domains\Work\Http\Controllers\ActivityController;
+use App\Domains\Work\Http\Controllers\WorkInstanceController;
+use Illuminate\Support\Facades\Route;
 
 // require or include auth.php
 require __DIR__.'/auth.php';
@@ -67,26 +72,26 @@ Route::middleware('auth')->group(function () {
 });
 
 // Home and static pages
-    Route::get('/', function () {
-        return view('home');
-    })->name('home');
+Route::get('/', function () {
+    return view('home');
+})->name('home');
 
-    Route::get('browse', [ListingController::class, 'index'])->name('browse');
+Route::get('browse', [ListingController::class, 'index'])->name('browse');
 
-    Route::get('create', function () {
-        return view('create');
-    })->name('create');
+Route::get('create', function () {
+    return view('create');
+})->name('create');
 
-    Route::get('about', function () {
-        return view('about');
-    })->name('about');
+Route::get('about', function () {
+    return view('about');
+})->name('about');
 
 Route::get('faq', function () {
-        return view('faq');
-    })->name('faq');
+    return view('faq');
+})->name('faq');
 
 // Public-facing service page
-Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
+Route::get('/services/{service}', [ServiceController::class, 'show'])->where('service', '[0-9]+')->name('services.show');
 
 // Public-facing open offer page
 Route::get('/openoffers/{openoffer}', [OpenOfferController::class, 'show'])->name('openoffers.show');
@@ -101,6 +106,7 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     // Service Management
     Route::resource('services', ServiceController::class);
     Route::get('services/{service}/manage', [ServiceController::class, 'manage'])->name('services.manage');
+    Route::post('services/{service}/publish', [ServiceController::class, 'publish'])->name('services.publish');
 
     // Category Management
     Route::resource('categories', CategoryController::class);
@@ -113,7 +119,7 @@ Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function
     // Bidding Management for Open Offer Owners
     Route::prefix('openoffers/{openoffer}')->name('openoffers.')->group(function () {
         Route::resource('bids', OpenOfferBidController::class)->only([
-            'index', 'store', 'edit', 'update', 'destroy'
+            'index', 'store', 'edit', 'update', 'destroy',
         ]);
         Route::post('bids/{bid}/accept', [OpenOfferBidController::class, 'accept'])->name('bids.accept');
         Route::post('bids/{bid}/reject', [OpenOfferBidController::class, 'reject'])->name('bids.reject');
@@ -181,21 +187,57 @@ Route::middleware(['auth'])->prefix('profile')->group(function () {
 // Admin Routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // User Verifications Management
     Route::get('/verifications', [AdminUserVerificationController::class, 'index'])->name('verifications.index');
     Route::get('/verifications/{verification}', [AdminUserVerificationController::class, 'show'])->name('verifications.show');
     Route::post('/verifications/{verification}/approve', [AdminUserVerificationController::class, 'approve'])->name('verifications.approve');
     Route::post('/verifications/{verification}/reject', [AdminUserVerificationController::class, 'reject'])->name('verifications.reject');
+
+    // User Management CRUD
     Route::resource('users', UserManagementController::class)->except(['create', 'store']);
-    Route::resource('listings', ListingManagementController::class)->except(['create', 'store']);
+
+    // Listing (Service) Management CRUD
+    Route::resource('listings', ListingManagementController::class)->only(['index', 'show']);
+
+    // Open Offer Management - View only (admin can flag but not edit directly)
+    Route::resource('openoffers', OpenOfferManagementController::class)->only(['index', 'show']);
+
+    // Order Management
+    Route::resource('orders', OrderManagementController::class)->only(['index', 'show', 'edit', 'update']);
+    Route::post('/orders/{order}/cancel', [OrderManagementController::class, 'cancel'])->name('orders.cancel');
+
+    // Payment Management
+    Route::resource('payments', PaymentManagementController::class)->only(['index', 'show', 'edit', 'update']);
+    Route::post('/payments/{payment}/mark-paid', [PaymentManagementController::class, 'markAsPaid'])->name('payments.mark-paid');
+    Route::post('/payments/{payment}/mark-failed', [PaymentManagementController::class, 'markAsFailed'])->name('payments.mark-failed');
+
+    // Refund Management
+    Route::resource('refunds', RefundManagementController::class)->only(['index', 'show', 'edit']);
+    Route::post('/refunds/{refund}/approve', [RefundManagementController::class, 'approve'])->name('refunds.approve');
+    Route::post('/refunds/{refund}/reject', [RefundManagementController::class, 'reject'])->name('refunds.reject');
+    Route::post('/refunds/{refund}/complete', [RefundManagementController::class, 'complete'])->name('refunds.complete');
+
+    // Category Management CRUD
+    Route::resource('categories', CategoryManagementController::class);
+
+    // Flag Management (Flagged Content)
+    Route::resource('flags', FlagManagementController::class)->only(['index', 'show', 'edit', 'store']);
+    Route::post('/flags/{flag}/approve', [FlagManagementController::class, 'approve'])->name('flags.approve');
+    Route::post('/flags/{flag}/reject', [FlagManagementController::class, 'reject'])->name('flags.reject');
+    Route::post('/flags/{flag}/resolve', [FlagManagementController::class, 'resolve'])->name('flags.resolve');
+
+    // Settings
     Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+
+    // Activity Logs
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 });
 
 Route::get('/media/serve/{payload}', [MediaServeController::class, '__invoke'])
     ->middleware('auth')
     ->name('media.serve');
-
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/messages/threads/{thread}', [App\Domains\Messaging\Http\Controllers\MessageController::class, 'show'])->name('messages.show');
@@ -206,7 +248,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth'])->prefix('orders')->name('orders.')->group(function () {
-    Route::get('/', [OrderController::class, 'index'])->name('index');//
+    Route::get('/', [OrderController::class, 'index'])->name('index'); //
     Route::get('/create', [OrderController::class, 'create'])->name('create');
     Route::post('/', [OrderController::class, 'store'])->name('store');
     Route::get('/{order}', [OrderController::class, 'show'])->name('show');

@@ -21,13 +21,34 @@ class AddressFactory extends Factory
      */
     public function definition()
     {
+        $streetAddress = $this->faker->streetAddress();
+        $barangay = $this->faker->city();
+        $city = '042108'; // Sample city code
+        $province = '042100'; // Sample province code
+        $region = '040000'; // Sample region code
+        $provinceName = 'Cavite';
+        $regionName = 'CALABARZON';
+
+        // Compose full address
+        $fullAddress = implode(', ', array_filter([
+            $streetAddress,
+            $barangay,
+            $provinceName,
+            $regionName,
+        ]));
+
         return [
-            'house_no' => $this->faker->buildingNumber,
-            'street' => $this->faker->streetName,
-            'barangay' => $this->faker->citySuffix, // Using citySuffix as a proxy for barangay
-            'town' => $this->faker->city,
-            'province' => $this->faker->state,
-            'country' => $this->faker->country,
+            'label' => $this->faker->word().' Address',
+            'street_address' => $streetAddress,
+            'barangay' => $barangay,
+            'city' => $city,
+            'province' => $province,
+            'region' => $region,
+            'province_name' => $provinceName,
+            'region_name' => $regionName,
+            'full_address' => $fullAddress,
+            'api_source' => 'PSGC_API',
+            'api_id' => "{$region}-{$province}-{$city}",
             'lat' => $this->faker->latitude,
             'lng' => $this->faker->longitude,
         ];
