@@ -1,6 +1,4 @@
-@extends('layouts.app')
-
-@section('content')
+<x-app-layout>
     <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <!-- Header Section -->
         <div class="relative py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-700/50">
@@ -195,4 +193,4 @@
             searchInput.value = '';
         }
     </script>
-@endsection
+</x-app-layout>

@@ -33,6 +33,7 @@ use App\Domains\Users\Http\Controllers\ProfileController;
 use App\Domains\Users\Http\Controllers\UserVerificationController;
 use App\Domains\Work\Http\Controllers\ActivityController;
 use App\Domains\Work\Http\Controllers\WorkInstanceController;
+use App\Http\Controllers\AboutController;
 use App\Http\Controllers\FaqController;
 use Illuminate\Support\Facades\Route;
 
@@ -83,9 +84,7 @@ Route::get('create', function () {
     return view('create');
 })->name('create');
 
-Route::get('about', function () {
-    return view('about');
-})->name('about');
+Route::get('about', [AboutController::class, 'index'])->name('about');
 
 Route::get('faq', [FaqController::class, 'index'])->name('faq');
 
