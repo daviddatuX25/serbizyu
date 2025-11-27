@@ -14,7 +14,7 @@
                                 <div class="swiper-wrapper">
                                     @foreach($offer->media as $media)
                                         <div class="swiper-slide bg-gray-100 flex items-center justify-center">
-                                            <img src="{{ $media->getUrl() }}" alt="{{ $offer->title }}" 
+                                            <img src="/images/{{ $media->filename }}.{{ $media->extension }}" alt="{{ $offer->title }}" 
                                                 class="w-full h-full object-contain">
                                         </div>
                                     @endforeach

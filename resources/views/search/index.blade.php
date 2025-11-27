@@ -62,7 +62,7 @@
                                     <!-- Service Image -->
                                     <div class="relative h-48 bg-gray-200">
                                         @if($service->media->isNotEmpty())
-                                            <img src="{{ $service->media->first()->getUrl() }}" 
+                                            <img src="/images/{{ $service->media->first()->filename }}.{{ $service->media->first()->extension }}" 
                                                 alt="{{ $service->title }}" 
                                                 class="w-full h-full object-cover">
                                         @else

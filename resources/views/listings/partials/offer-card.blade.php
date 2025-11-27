@@ -7,7 +7,7 @@
         <div class="relative h-48">
             {{-- Image --}}
             @if($offer->media->isNotEmpty())
-                <img src="{{ $offer->media->first()->getUrl() }}" 
+                <img src="/images/{{ $offer->media->first()->filename }}.{{ $offer->media->first()->extension }}" 
                      alt="{{ $offer->title }}" 
                      class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
             @else
