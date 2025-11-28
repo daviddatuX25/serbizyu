@@ -22,3 +22,12 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Listing seeder - large data files and images
+/listing_seeder/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.svg
