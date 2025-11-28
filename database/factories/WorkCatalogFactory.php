@@ -14,8 +14,7 @@ class WorkCatalogFactory extends Factory
         return [
             'name' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
-            'price' => $this->faker->randomFloat(2, 10, 1000),
-            'duration_minutes' => $this->faker->numberBetween(15, 240),
+            'category_id' => null,
         ];
     }
 }

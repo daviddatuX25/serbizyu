@@ -3,10 +3,8 @@
 namespace App\Domains\Listings\Models;
 
 use Database\Factories\WorkCatalogFactory; // Import the factory
-use App\Domains\Listings\Models\WorkTemplate;
-
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class WorkCatalog extends Model
 {
@@ -21,15 +19,18 @@ class WorkCatalog extends Model
     }
 
     protected $fillable = [
-        'name', 'description', 'default_config', 'price', 'duration_minutes'
+        'name', 'description', 'category_id',
     ];
 
-    protected $casts = [
-        'default_config' => 'array',
-    ];
+    protected $casts = [];
 
     public function workTemplates()
     {
         return $this->hasMany(WorkTemplate::class);
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'category_id');
     }
 }

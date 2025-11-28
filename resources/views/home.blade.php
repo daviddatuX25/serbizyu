@@ -16,13 +16,13 @@
                 </h1>
 
                 <!-- Search Bar -->
-                <div class="flex justify-center mb-6">
-                <input type="text" placeholder="Search for any service..."
-                    class="hero-search">
-                <x-primary-button class="rounded-l-none rounded-r-lg">
+                <form method="GET" action="{{ route('browse') }}" class="flex justify-center mb-6">
+                <input type="text" name="search" placeholder="Search for any service..."
+                    class="hero-search" value="{{ request('search', '') }}">
+                <button type="submit" class="rounded-l-none rounded-r-lg">
                     <x-icons.search />
-                </x-primary-button>
-                </div>
+                </button>
+                </form>
 
                 <!-- Categories -->
                 <div class="flex flex-wrap justify-center gap-3  text-sm ">
@@ -46,13 +46,13 @@
                 </h1>
 
                 <!-- Search Bar -->
-                <div class="flex justify-center mb-6">
-                <input type="text" placeholder="Search open offers..."
-                    class="hero-search">
-                <x-primary-button class="rounded-l-none rounded-r-lg">
+                <form method="GET" action="{{ route('browse') }}" class="flex justify-center mb-6">
+                <input type="text" name="search" placeholder="Search open offers..."
+                    class="hero-search" value="{{ request('search', '') }}">
+                <button type="submit" class="rounded-l-none rounded-r-lg">
                     <x-icons.search />
-                </x-primary-button>
-                </div>
+                </button>
+                </form>
 
                 <!-- Categories -->
                 <div class="flex flex-wrap justify-center gap-3">
@@ -136,99 +136,63 @@
     <div class="browse-inner">
         <div class="browse-header">
         <h2 class="text-3xl font-bold">Browse Offers & Services</h2>
-
-        <!-- Filters -->
-        <div class="browse-filters">
-            <button class="filter-btn filter-btn-primary">All</button>
-            <button class="filter-btn filter-btn-outline">Services</button>
-            <button class="filter-btn filter-btn-outline">Open Offers</button>
-
-            <select class="filter-select">
-            <option>All Categories</option>
-            <option>Catering</option>
-            <option>Construction</option>
-            <option>Repair</option>
-            </select>
-
-            <select class="filter-select">
-            <option>All Locations</option>
-            <option>Tagudin</option>
-            <option>Sta. Cruz</option>
-            <option>Candon</option>
-            </select>
-        </div>
         </div>
 
         <!-- Card Grid -->
         <div class="browse-grid">
-
-        <!-- Service Card -->
-        <article class="listing-card">
-            <div class="card-top">
-            <span class="badge-service">Service</span>
-            <span class="rating">★★★★★</span>
+        @forelse($browseItems as $item)
+            @if($item instanceof App\Domains\Listings\Models\Service)
+                <!-- Service Card -->
+                <article class="listing-card">
+                    <div class="card-top">
+                    <span class="badge-service">Service</span>
+                    <span class="rating">★★★★★</span>
+                    </div>
+                    <h3 class="card-title">{{ $item->title }}</h3>
+                    <p class="card-desc">{{ Str::limit($item->description, 60) }}</p>
+                    <p class="card-meta">Rate: ₱{{ $item->price }}/hr</p>
+                    @if($item->address)
+                        <p class="card-meta">Location: {{ $item->address->city ?? 'N/A' }}</p>
+                    @endif
+                    <div class="card-footer">
+                    <span class="text-xs text-text-secondary">{{ $item->creator->name ?? 'Servicer' }}</span>
+                    <div class="card-avatar">
+                        @if($item->creator->media->first())
+                            <img src="{{ asset('storage/' . $item->creator->media->first()->disk_path) }}" alt="Avatar" class="w-8 h-8 rounded-full" />
+                        @else
+                            👤
+                        @endif
+                    </div>
+                    </div>
+                </article>
+            @else
+                <!-- Open Offer Card -->
+                <article class="listing-card">
+                    <div class="card-top">
+                    <span class="badge-offer">Open Offer</span>
+                    <span class="text-sm text-text-secondary">Budget: ₱{{ $item->budget ?? 'TBD' }}</span>
+                    </div>
+                    <h3 class="card-title">{{ $item->title }}</h3>
+                    <p class="card-desc">{{ Str::limit($item->description, 60) }}</p>
+                    @if($item->address)
+                        <p class="card-meta">{{ $item->address->city ?? 'N/A' }}</p>
+                    @endif
+                    <div class="card-footer">
+                    <span class="text-xs text-text-secondary">{{ $item->created_at->diffForHumans() }}</span>
+                    <div class="card-avatar">📝</div>
+                    </div>
+                </article>
+            @endif
+        @empty
+            <div class="col-span-full text-center py-12">
+                <p class="text-gray-500 text-lg">No services or offers available yet. Check back soon!</p>
             </div>
-            <h3 class="card-title">Arnel’s Plumbing</h3>
-            <p class="card-desc">Diagnose &gt; Buy materials &gt; On field &gt; Finish</p>
-            <p class="card-meta">Rate: ₱200/hr</p>
-            <p class="card-meta">Location: Tagudin, Ilocos Sur</p>
-            <div class="card-footer">
-            <span class="text-xs text-text-secondary">Verified Servicer</span>
-            <div class="card-avatar">👤</div>
-            </div>
-        </article>
-
-        <!-- Open Offer Card -->
-        <article class="listing-card">
-            <div class="card-top">
-            <span class="badge-offer">Open Offer</span>
-            <span class="text-sm text-text-secondary">Budget: ₱5,000</span>
-            </div>
-            <h3 class="card-title">Looking for Catering Service</h3>
-            <p class="card-desc">Event for 50 guests</p>
-            <p class="card-meta">Sta. Cruz, Ilocos Sur</p>
-            <div class="card-footer">
-            <span class="text-xs text-text-secondary">Posted 2h ago</span>
-            <div class="card-avatar">📝</div>
-            </div>
-        </article>
-
-        <!-- Service Card -->
-        <article class="listing-card">
-            <div class="card-top">
-            <span class="badge-service">Service</span>
-            <span class="rating">★★★★☆</span>
-            </div>
-            <h3 class="card-title">General Home Repairs</h3>
-            <p class="card-desc">Diagnose &gt; Buy materials &gt; On field &gt; Finish</p>
-            <p class="card-meta">Rate: ₱150/hr</p>
-            <p class="card-meta">Candon, Ilocos Sur</p>
-            <div class="card-footer">
-            <span class="text-xs text-text-secondary">Trusted Local</span>
-            <div class="card-avatar">👤</div>
-            </div>
-        </article>
-
-        <!-- Open Offer Card -->
-        <article class="listing-card">
-            <div class="card-top">
-            <span class="badge-offer">Open Offer</span>
-            <span class="text-sm text-text-secondary">Budget: ₱12,000</span>
-            </div>
-            <h3 class="card-title">Need House Painting</h3>
-            <p class="card-desc">2-story house, labor only</p>
-            <p class="card-meta">Luna, La Union</p>
-            <div class="card-footer">
-            <span class="text-xs text-text-secondary">Posted 1d ago</span>
-            <div class="card-avatar">📝</div>
-            </div>
-        </article>
-
+        @endforelse
         </div>
     </div>
 
     <div class="w-full text-center mt-6">
-        <a href="/browse" class="browse-viewmore">View More</a>
+        <a href="{{ route('browse') }}" class="browse-viewmore">View More</a>
     </div>
     </section>
 
@@ -244,15 +208,15 @@
         <!-- Create Service -->
         <div class="create-card">
             <h3>Create a Service</h3>
-            <textarea placeholder="Describe the service you want to offer..." rows="4"></textarea>
-            <button>Continue</button>
+            <textarea id="serviceDesc" placeholder="Describe the service you want to offer..." rows="4"></textarea>
+            <button onclick="handleCreateService()">Continue</button>
         </div>
 
         <!-- Create Open Offer -->
         <div class="create-card">
             <h3>Create an Open Offer</h3>
-            <textarea placeholder="Describe what you are looking for..." rows="4"></textarea>
-            <button>Continue</button>
+            <textarea id="offerDesc" placeholder="Describe what you are looking for..." rows="4"></textarea>
+            <button onclick="handleCreateOffer()">Continue</button>
         </div>
 
         </div>
@@ -267,39 +231,54 @@
 
         <!-- Workflow Grid -->
         <div class="workflows-grid">
-
-        <!-- Workflow Card -->
-        <div class="workflow-card">
-            <h3>Wedding Video Production</h3>
-            <p><strong>Steps:</strong> Import Footage → Edit Clips → Color Grade → Export</p>
-            <div class="workflow-actions">
-            <button class="btn-service">Create Service</button>
-            <button class="btn-offer">Create Offer</button>
+        @forelse($workflows as $workflow)
+            <!-- Workflow Card -->
+            <div class="workflow-card">
+                <h3>{{ $workflow->name }}</h3>
+                <p>
+                    <strong>Steps:</strong> 
+                    @if($workflow->workTemplates->count() > 0)
+                        {{ $workflow->workTemplates->pluck('name')->join(' → ') }}
+                    @else
+                        No steps defined
+                    @endif
+                </p>
+                <div class="workflow-actions">
+                <a href="{{ route('workflows.create-service', $workflow->id) }}" class="btn-service">Create Service</a>
+                <a href="{{ route('workflows.create-offer', $workflow->id) }}" class="btn-offer">Create Offer</a>
+                </div>
             </div>
-        </div>
-
-        <!-- Workflow Card -->
-        <div class="workflow-card">
-            <h3>House Painting</h3>
-            <p><strong>Steps:</strong> Inspect → Prepare Surface → Apply Paint → Finish</p>
-            <div class="workflow-actions">
-            <button class="btn-service">Create Service</button>
-            <button class="btn-offer">Create Offer</button>
+        @empty
+            <div class="col-span-full text-center py-8">
+                <p class="text-gray-500">No workflow templates available.</p>
             </div>
-        </div>
-
-        <!-- Workflow Card -->
-        <div class="workflow-card">
-            <h3>Birthday Catering</h3>
-            <p><strong>Steps:</strong> Menu Planning → Cook → Serve → Clean Up</p>
-            <div class="workflow-actions">
-            <button class="btn-service">Create Service</button>
-            <button class="btn-offer">Create Offer</button>
-            </div>
-        </div>
-
+        @endforelse
         </div>
     </div>
     </section>
+
+    <script>
+        function handleCreateService() {
+            const description = document.getElementById('serviceDesc').value;
+            if (description.trim()) {
+                const url = new URL('{{ route("creator.services.create") }}', window.location.origin);
+                url.searchParams.append('description', description);
+                window.location.href = url.toString();
+            } else {
+                alert('Please enter a service description');
+            }
+        }
+
+        function handleCreateOffer() {
+            const description = document.getElementById('offerDesc').value;
+            if (description.trim()) {
+                const url = new URL('{{ route("creator.openoffers.create") }}', window.location.origin);
+                url.searchParams.append('description', description);
+                window.location.href = url.toString();
+            } else {
+                alert('Please enter an offer description');
+            }
+        }
+    </script>
 
 </x-app-layout>

@@ -1,112 +1,291 @@
 <x-app-layout>
-    <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <!-- Header Section -->
-        <div class="relative py-16 px-4 sm:px-6 lg:px-8 border-b border-slate-700/50">
-            <div class="max-w-4xl mx-auto text-center">
-                <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">
-                    Frequently Asked Questions
-                </h1>
-                <p class="text-xl text-slate-400 mb-8">
-                    Find answers to common questions about Serbizyu
-                </p>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Frequently Asked Questions') }}
+        </h2>
+    </x-slot>
 
-                <!-- Search Bar -->
-                <div class="relative max-w-2xl mx-auto">
+    <div class="py-12">
+        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+            <!-- Search Bar -->
+            <div class="mb-8">
+                <div class="relative">
                     <input type="text" id="searchInput" placeholder="Search FAQs..."
-                        class="w-full px-6 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
-                    <svg class="absolute right-4 top-3.5 w-5 h-5 text-slate-400" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
+                        class="w-full px-4 py-3 rounded-md border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" />
+                    <svg class="absolute right-4 top-3.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
             </div>
-        </div>
 
-        <!-- Categories Navigation -->
-        <div class="sticky top-0 z-40 bg-slate-800/80 backdrop-blur-md border-b border-slate-700/50 px-4 sm:px-6 lg:px-8">
-            <div class="max-w-4xl mx-auto">
-                <div class="flex overflow-x-auto gap-3 py-4 no-scrollbar">
-                    <button onclick="filterCategory('all')"
-                        class="category-btn active px-6 py-2 rounded-full font-semibold whitespace-nowrap transition-all duration-300 bg-blue-600 text-white">
-                        All
-                    </button>
-                    @foreach ($categories as $category)
-                        <button onclick="filterCategory('{{ $loop->index }}')"
-                            class="category-btn px-6 py-2 rounded-full font-semibold whitespace-nowrap transition-all duration-300 bg-slate-700/50 text-slate-300 hover:bg-slate-600">
-                            {{ $category['icon'] }} {{ $category['category'] }}
-                        </button>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-
-        <!-- FAQ Content -->
-        <div class="py-12 px-4 sm:px-6 lg:px-8">
-            <div class="max-w-4xl mx-auto">
-                @forelse ($categories as $categoryIndex => $category)
-                    <div class="category-section mb-12" data-category="{{ $loop->index }}">
-                        <!-- Category Header -->
-                        <div class="mb-6 flex items-center gap-3">
-                            <span class="text-3xl">{{ $category['icon'] }}</span>
-                            <h2 class="text-3xl font-bold text-white">{{ $category['category'] }}</h2>
-                        </div>
-
-                        <!-- Questions Accordion -->
-                        <div class="space-y-3">
-                            @forelse ($category['questions'] as $qIndex => $item)
-                                <div class="faq-item bg-slate-700/30 border border-slate-600/50 rounded-lg overflow-hidden hover:border-slate-500 transition-all duration-300"
-                                    data-question="{{ strtolower($item['question']) }}{{ strtolower($item['answer']) }}">
-                                    <button onclick="toggleAccordion(this)"
-                                        class="w-full px-6 py-4 flex items-start justify-between hover:bg-slate-700/50 transition-colors duration-200">
-                                        <span class="text-lg font-semibold text-white text-left">{{ $item['question'] }}</span>
-                                        <svg class="accordion-icon w-5 h-5 text-slate-400 flex-shrink-0 ml-4 transition-transform duration-300"
-                                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                                        </svg>
-                                    </button>
-
-                                    <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
-                                        <div class="px-6 py-4 border-t border-slate-600/50 bg-slate-800/50 text-slate-300 leading-relaxed whitespace-pre-wrap">
-                                            {{ nl2br($item['answer']) }}
-                                        </div>
-                                    </div>
+            <div class="space-y-8">
+                
+                <!-- GENERAL QUESTIONS -->
+                <section class="faq-category">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">General Questions</h2>
+                    <div class="space-y-3">
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="what is serbizyu">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">What is Serbizyu?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Serbizyu is a local services marketplace connecting customers with service providers in the Philippines. Find services you need or offer your skills to earn.
                                 </div>
-                            @empty
-                                <p class="text-slate-400">No questions in this category.</p>
-                            @endforelse
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="who can use">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">Who can use Serbizyu?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Anyone can use Serbizyu. You can be a customer looking for services, a provider offering your skills, or both at the same time.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="free cost">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">Is it free to use?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Yes, signing up and browsing is completely free. We only charge a small platform fee on completed transactions.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="areas locations coverage">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">What areas do you cover?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Currently focused on the Philippines, with plans to expand to more locations.
+                                </div>
+                            </div>
                         </div>
                     </div>
-                @empty
-                    <div class="text-center py-12">
-                        <p class="text-xl text-slate-400">No FAQs available.</p>
-                    </div>
-                @endforelse
-            </div>
-        </div>
+                </section>
 
-        <!-- Support CTA -->
-        <div class="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border-t border-slate-700/50 py-12 px-4 sm:px-6 lg:px-8">
-            <div class="max-w-4xl mx-auto text-center">
-                <h3 class="text-2xl font-bold text-white mb-4">Didn't find your answer?</h3>
-                <p class="text-slate-400 mb-6">Contact our support team for immediate assistance</p>
-                <a href="#"
-                    class="inline-block px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-blue-600/30">
-                    Contact Support
-                </a>
+                <!-- ACCOUNT & PROFILE -->
+                <section class="faq-category">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">Account & Profile</h2>
+                    <div class="space-y-3">
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="create account">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">How do I create an account?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Click "Join" in the top menu, enter your name, email, and password. Verify your email and you're ready to go.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="buyer seller both">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">Can I be both a buyer and seller?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Absolutely! One account lets you book services as a customer and offer services as a provider.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="reset password">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">How do I reset my password?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Click "Forgot Password" on the login page. Check your email for a reset link.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="update profile">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">How do I update my profile?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Go to Settings → Profile. You can update your name, contact info, addresses, and notification preferences.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="multiple addresses">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">Can I have multiple addresses?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Yes. Add addresses in Settings → Addresses. Set one as your primary address for faster bookings.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PAYMENTS -->
+                <section class="faq-category">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">Payments</h2>
+                    <div class="space-y-3">
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="payment methods gcash">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">How can customers pay?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Two payment methods: Online (GCash, Credit Card, Bank Transfer via Xendit) and Cash (in-person payment with seller confirmation).
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="online payment safe secure">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">Is online payment safe?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Yes. Payments are processed by Xendit, a licensed payment gateway. Money is held in escrow until work is completed.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="escrow protection">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">What is escrow?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Money is held securely by the platform. It's only released to the seller after work is completed and the customer is satisfied (usually 3 days).
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="platform fee">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">What is the platform fee?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    A small percentage (3-5%) is deducted from each completed order. Example: ₱1,000 order - ₱50 fee (5%) = ₱950 to seller.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="refund request">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">Can I request a refund?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Yes, within 7 days of payment if service isn't delivered, work quality doesn't match, or seller is unresponsive. Requests are reviewed case-by-case.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SUPPORT -->
+                <section class="faq-category">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">Support & Contact</h2>
+                    <div class="space-y-3">
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="contact support">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">How do I contact support?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Email: support@serbizyu.com | Live chat: Click the icon in bottom right corner | Help Center: Click "Help" in the footer
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="support hours">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">What are your support hours?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Monday to Friday: 8:00 AM - 6:00 PM Philippine Time. Weekend: Limited support (emergency only)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300" data-search="report bug">
+                            <button onclick="toggleAccordion(this)" class="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition-colors duration-200">
+                                <span class="text-lg font-semibold text-gray-900 text-left">Found a bug?</span>
+                                <svg class="accordion-icon w-5 h-5 text-gray-400 flex-shrink-0 ml-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300">
+                                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 text-gray-700 leading-relaxed">
+                                    Please report it! Email us with: what you were trying to do, what happened instead, screenshots if possible, and your browser/device type.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
 
     <style>
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
         .accordion-content {
             max-height: 0;
         }
@@ -123,8 +302,7 @@
     <script>
         const searchInput = document.getElementById('searchInput');
         const faqItems = document.querySelectorAll('.faq-item');
-        const categoryButtons = document.querySelectorAll('.category-btn');
-        const categorySections = document.querySelectorAll('.category-section');
+        const categorySections = document.querySelectorAll('.faq-category');
 
         // Accordion Toggle
         function toggleAccordion(button) {
@@ -150,7 +328,7 @@
             let hasVisibleItems = false;
 
             faqItems.forEach(item => {
-                const searchData = item.getAttribute('data-question');
+                const searchData = item.getAttribute('data-search');
                 const isVisible = searchData.includes(searchTerm);
 
                 item.style.display = isVisible ? 'block' : 'none';
@@ -165,31 +343,5 @@
                 section.style.display = visibleItems.length > 0 ? 'block' : 'none';
             });
         });
-
-        // Category Filter
-        function filterCategory(categoryIndex) {
-            categoryButtons.forEach(btn => {
-                btn.classList.remove('active', 'bg-blue-600', 'text-white');
-                btn.classList.add('bg-slate-700/50', 'text-slate-300');
-            });
-            event.target.classList.add('active', 'bg-blue-600', 'text-white');
-            event.target.classList.remove('bg-slate-700/50', 'text-slate-300');
-
-            if (categoryIndex === 'all') {
-                categorySections.forEach(section => section.style.display = 'block');
-            } else {
-                categorySections.forEach((section, index) => {
-                    section.style.display = index == categoryIndex ? 'block' : 'none';
-                });
-            }
-
-            // Reset accordion states
-            document.querySelectorAll('.accordion-content.open').forEach(item => {
-                item.classList.remove('open');
-                item.previousElementSibling.querySelector('.accordion-icon').classList.remove('open');
-            });
-
-            searchInput.value = '';
-        }
     </script>
 </x-app-layout>

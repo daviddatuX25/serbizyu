@@ -150,4 +150,15 @@ class OpenOfferService
 
         return $query->get();
     }
+
+    /**
+     * Get latest open offers (collection) with limit
+     */
+    public function getLatestOffers(int $limit = 10)
+    {
+        return OpenOffer::whereHas('creator')->with(['creator.verification', 'creator.media', 'address', 'media', 'bids'])
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
 }

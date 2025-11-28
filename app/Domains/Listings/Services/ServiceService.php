@@ -316,4 +316,15 @@ class ServiceService
 
         return $query->get();
     }
+
+    /**
+     * Get latest services (collection) with limit
+     */
+    public function getLatestServices(int $limit = 10)
+    {
+        return Service::with(['creator.verification', 'creator.media', 'address', 'media'])
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
 }

@@ -1,0 +1,218 @@
+{
+    "Agriculture_and_Landscaping": {
+        "image_count": 2,
+        "images": [
+            "Agriculture_Crop_Planting_Team.jpeg",
+            "Landscaping_Arborist_TreeRemoval_02.jpeg"
+        ]
+    },
+    "Care_and_Cleaning_Services": {
+        "image_count": 2,
+        "images": [
+            "Care_Childcare_Nanny.jpeg",
+            "Cleaning_Janitorial_Staircase.jpg"
+        ]
+    },
+    "Community_and_Social_Services": {
+        "image_count": 2,
+        "images": [
+            "51a85c527d2e72448b8892c6f3392f0a.jpg",
+            "Community_Environmental_Cleanup.jpg"
+        ]
+    },
+    "Construction & Engineering": {
+        "image_count": 2,
+        "images": [
+            "Construction_Plumbing_Consultation.jpg",
+            "Construction_Structural_Steelwork.jpeg"
+        ]
+    },
+    "Construction_and_Property_Maintenance": {
+        "image_count": 4,
+        "images": [
+            "Painting_Service.jpg",
+            "Trade_Masonry_CementWork.jpg",
+            "d16e228b22c03fd5dad63c86e4531326.jpg",
+            "e8863d729163800fb2b46d4c61c27541.jpg"
+        ]
+    },
+    "Construction_and_Skilled_Trades": {
+        "image_count": 15,
+        "images": [
+            "1c52bb738447fe1f3b8f8e001976c713.jpg",
+            "257579cd91eb4c7b3d48193da76ae1d8.jpg",
+            "28b8d3773218cd5f76ec12b010e0b034.jpg",
+            "4608b4a6e08519d3c6010954f7a020fc.jpg",
+            "5b4b42f1b3c014eed195f91a6d3f721b.jpg",
+            "640_transfer_2025-11-26_183546.jpeg",
+            "7b19e6c0b293a5e99d7d4f7bf7516250.jpg",
+            "7f884992ed45bf97645b133a2fa288ca.jpg",
+            "Plumbing_Service2.jpg",
+            "Trade_Carpentry_OnSite.jpg",
+            "Trade_Carpentry_Workshop.jpg",
+            "Trade_Construction_Planning.jpg",
+            "Trade_Electrical_Maintenance.jpg",
+            "Trade_Plumbing_Repair.jpg",
+            "Welding_Service.jpeg"
+        ]
+    },
+    "Education_and_Training": {
+        "image_count": 2,
+        "images": [
+            "34b5ffa6e982b4d196ac21caa2d11b3d.jpg",
+            "Educating_Service.jpg"
+        ]
+    },
+    "Facility_and_Grounds_Maintenance": {
+        "image_count": 6,
+        "images": [
+            "Maintenance_Janitorial_FloorCare.jpeg",
+            "Maintenance_Landscaping_TreeService.png",
+            "Maintenance_Window_Cleaning.jpg",
+            "how-to-hire-a-tree-removal-service-1024x576_transfer_2025-11-26_183546.png",
+            "iStock-162353030-1_transfer_2025-11-26_183546.jpg",
+            "images (2)_transfer_2025-11-26_183546.jpeg"
+        ]
+    },
+    "Food & Agriculture": {
+        "image_count": 2,
+        "images": [
+            "Agriculture_Aquaculture_Harvest.jpeg",
+            "Culinary_Student_Group_Photo.jpeg"
+        ]
+    },
+    "Graphic_Design": {
+        "image_count": 2,
+        "images": [
+            "Digital_Media_Illustration_Workspace.jpg",
+            "arts_service.jpg"
+        ]
+    },
+    "Health_and_Wellness": {
+        "image_count": 6,
+        "images": [
+            "682a4cab5b1a9b3e665541b8b6b7b285.jpg",
+            "Fitness_Coach_Service.jpg",
+            "Wellness_Personal_Training.jpg",
+            "Wellness_Spa_MassageTherapy.jpg",
+            "a2a039f797b10488f23fb9c0055d6355.jpg",
+            "everything+you+need+to+know+about+balinese+massage_transfer_2025-11-26_183546.jpg"
+        ]
+    },
+    "Hospitality_and_Culinary_Arts": {
+        "image_count": 6,
+        "images": [
+            "17518c7f67881065f250e6d379bd69f6.jpg",
+            "681d6cf257560d18ba1109b3db2eaacc.jpg",
+            "Culinary_Chef_Plating_01.jpg",
+            "Culinary_Kitchen_Team_02.jpg",
+            "Hospitality_Service.jpg",
+            "c2e0a0038c541165e3dc2ca2b15c5db9.jpg"
+        ]
+    },
+    "Hospitality_and_Food_Services": {
+        "image_count": 6,
+        "images": [
+            "29eaeccf0ff8df28c5504b690e5e1821.jpg",
+            "5b535ca9bbda096944d2dc0169d3bd94.jpg",
+            "9dcd0059b70be5ae74c6577fbc11c5fd.jpg",
+            "Hospitality_Catering_Staff_01.jpg",
+            "Hospitality_Catering_Staff_02.jpg",
+            "Hospitality_Concierge_Desk.jpg"
+        ]
+    },
+    "Laundry_and_Cleaning_Services": {
+        "image_count": 4,
+        "images": [
+            "Clothe_Folding.jpg",
+            "Laundry_Cleaning_Service.jpg",
+            "d906ca84594d40f548c0baf699141a0d.jpg",
+            "e3c8b99afec551da02fc126845eaf1fe.jpg"
+        ]
+    },
+    "Manufacturing & Technology": {
+        "image_count": 1,
+        "images": [
+            "Industrial_Electronics_Assembly.jpeg"
+        ]
+    },
+    "Mechanical_and_Repair_Services": {
+        "image_count": 6,
+        "images": [
+            "Mechanical_Auto_EngineRepair.jpg",
+            "Mechanical_Bicycle_Maintenance.jpg",
+            "Repair_Auto_Undercarriage.jpg",
+            "Repair_Bicycle_Mechanic_BW.jpg",
+            "ed757f7b67b716facd211f1733965417.jpg",
+            "eff7a0f681ff0adbe2a3f259b3461b3b.jpg"
+        ]
+    },
+    "Printiing_Service": {
+        "image_count": 2,
+        "images": [
+            "printing_service1.webp",
+            "printing_service2.jpg"
+        ]
+    },
+    "Repair_and_Technical_Services": {
+        "image_count": 5,
+        "images": [
+            "Computer_Maintenance.jpg",
+            "Garage_Maintenance_Service.jpg",
+            "cc894f277d2554c9e7e011bbf999a552.jpg",
+            "computer-repair-services_transfer_2025-11-26_183546 (1).jpg",
+            "computer-repair-services_transfer_2025-11-26_183546.jpg"
+        ]
+    },
+    "Skilled_Trades_and_Plumbing": {
+        "image_count": 4,
+        "images": [
+            "Trade_Carpentry_Woodworking_Detail.jpg",
+            "Trade_Masonry_Waterproofing_02.jpeg",
+            "Trade_Plumbing_Industrial_System.jpeg",
+            "Trade_Plumbing_Residential_Repair.jpeg"
+        ]
+    },
+    "Skilled_Trades_and_Systems": {
+        "image_count": 6,
+        "images": [
+            "Trade_HVAC_Installation_01.jpeg",
+            "Trade_Masonry_Waterproofing.jpg",
+            "Trade_Plumbing_PipeFitting.jpg",
+            "f6761db73758139be3247097595433b5.jpg",
+            "images (1)_transfer_2025-11-26_183546 (1).jpeg",
+            "istockphoto-857627420-612x612_transfer_2025-11-26_183546.jpg"
+        ]
+    },
+    "Specialized_Personal_Services": {
+        "image_count": 6,
+        "images": [
+            "Personal_Trainer_Service.jpg",
+            "Pet_Maintenance.jpg",
+            "Team_Collab_Discussion.jpg",
+            "caadc603fa2a42e6a455deb87abaee82.jpg",
+            "d07e11aa3172712816dce7008d7af024.jpg",
+            "dc01472be93f83f32addf476e2afba32.jpg"
+        ]
+    },
+    "Technical_Maintenance_and_IT": {
+        "image_count": 2,
+        "images": [
+            "Maintenance_Industrial_Robotics.jpeg",
+            "Repair_IT_Hardware_03.jpeg"
+        ]
+    },
+    "Video_Editing": {
+        "image_count": 2,
+        "images": [
+            "Digital_Media_Video_Editor.jpg",
+            "video_editing.jpg"
+        ]
+    },
+    "Web_Designing": {
+        "image_count": 1,
+        "images": [
+            "Design_Graphic_Workspace_Flatlay.jpg"
+        ]
+    }
+}

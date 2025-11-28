@@ -122,34 +122,60 @@
     <!-- Work Catalog Modal -->
     @if($showCatalogModal)
         <div class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
-                <div class="p-6 border-b">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+                <div class="p-6 border-b sticky top-0 bg-white">
                     <h3 class="text-lg font-semibold">Add Step From Catalog</h3>
+                    @if($workflowTemplate->category_id)
+                        <p class="text-sm text-gray-500 mt-1">Showing catalog items for this category + generic items</p>
+                    @else
+                        <p class="text-sm text-gray-500 mt-1">Showing generic catalog items</p>
+                    @endif
                 </div>
-                <div class="p-6 max-h-96 overflow-y-auto">
+                <div class="p-6 overflow-y-auto flex-1">
                     <ul class="space-y-4">
                         @forelse ($workCatalogs as $catalog)
-                            <li class="p-4 bg-gray-50 rounded-lg shadow-sm flex justify-between items-center">
+                            <li class="p-4 bg-gray-50 rounded-lg shadow-sm flex justify-between items-center hover:bg-gray-100 transition">
                                 <div>
                                     <p class="font-semibold">{{ $catalog->name }}</p>
                                     <p class="text-sm text-gray-600">{{ $catalog->description }}</p>
+                                    @if($catalog->category_id)
+                                        <p class="text-xs text-gray-500 mt-1">📂 {{ $catalog->category->name ?? 'Unknown' }}</p>
+                                    @else
+                                        <p class="text-xs text-gray-500 mt-1">🔓 Generic (any category)</p>
+                                    @endif
                                 </div>
                                 <div>
                                     <button
                                         wire:click="addStepFromCatalog({{ $catalog->id }})"
-                                        class="px-3 py-1 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
+                                        class="px-3 py-1 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 whitespace-nowrap">
                                         Add
                                     </button>
                                 </div>
                             </li>
                         @empty
-                            <li class="text-center text-gray-500 py-4">
-                                No items in catalog.
+                            <li class="text-center text-gray-500 py-8">
+                                <p class="text-lg">No items in catalog</p>
+                                <p class="text-sm mt-1">Add work catalog items from admin panel</p>
                             </li>
                         @endforelse
                     </ul>
+
+                    <!-- Load More Button -->
+                    @if($hasMoreCatalogs)
+                        <div class="flex justify-center mt-6 pt-4 border-t">
+                            <button
+                                wire:click="loadMoreCatalogs"
+                                class="px-4 py-2 bg-gray-300 text-gray-800 text-sm rounded-md hover:bg-gray-400 transition">
+                                Load More ({{ count($workCatalogs) }} of {{ $totalCatalogItems }})
+                            </button>
+                        </div>
+                    @elseif($totalCatalogItems > 0)
+                        <div class="text-center mt-6 pt-4 border-t text-gray-500 text-sm">
+                            All {{ $totalCatalogItems }} items loaded
+                        </div>
+                    @endif
                 </div>
-                <div class="p-4 bg-gray-50 border-t flex justify-end">
+                <div class="p-4 bg-gray-50 border-t flex justify-end sticky bottom-0">
                     <button
                         wire:click="closeCatalog"
                         class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">

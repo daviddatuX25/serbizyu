@@ -2,54 +2,68 @@
 
 namespace App\Livewire;
 
+use App\Domains\Listings\Models\WorkCatalog;
 use App\Domains\Listings\Models\WorkflowTemplate;
 use App\Domains\Listings\Models\WorkTemplate;
-use App\Domains\Listings\Models\WorkCatalog;
 use App\Domains\Listings\Services\WorkCatalogService;
-use App\Domains\Listings\Services\WorkTemplateService;
 use App\Domains\Listings\Services\WorkflowTemplateService;
-use DebugBar\DebugBar;
-use Livewire\Component;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
+use App\Domains\Listings\Services\WorkTemplateService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Collection;
+use Livewire\Component;
 
-class WorkflowBuilder extends Component 
+class WorkflowBuilder extends Component
 {
     use AuthorizesRequests;
 
     public WorkflowTemplate $workflowTemplate;
+
     public Collection $categories;
-    
+
     /**
      * Define the context: 'page' (default) or 'modal'.
      * This will determine the save behavior.
      */
     public $context = 'page';
     // Use public property without type hint for Livewire compatibility
-    
+
     // Memory-based collections (not saved to DB yet)
     public $workTemplates = [];
+
     public $pendingDeletes = []; // Track steps to delete on save
-    
-    public $showCatalogModal = false;
-    public $workCatalogs = [];
-    public $showEditStepModal = false;
+
+    public $catalogPage = 1;
+
+    public $catalogPerPage = 15;
+
+    public $totalCatalogItems = 0;
+
+    public $hasMoreCatalogs = false;
+
     public $editingStep = null;
 
+    public $showCatalogModal = false;
+
+    public $showEditStepModal = false;
+
+    public $workCatalogs = [];
+
     public $name = '';
+
     public $description = '';
+
     public $is_public = false;
 
     // Track if changes have been saved
     public $hasSavedChanges = false;
+
     private $tempIdCounter = -1; // Negative IDs for new items
 
     public function mount(WorkflowTemplate $workflowTemplate, Collection $categories)
     {
         $this->workflowTemplate = $workflowTemplate;
         $this->categories = $categories;
-        
+
         // Load existing steps into memory
         $this->workTemplates = $workflowTemplate->workTemplates()
             ->orderBy('order')
@@ -93,8 +107,8 @@ class WorkflowBuilder extends Component
                           $this->is_public !== $original->is_public;
 
         // Check if there are pending changes to steps
-        $stepsChanged = collect($this->workTemplates)->contains('is_persisted', false) || 
-                       !empty($this->pendingDeletes) ||
+        $stepsChanged = collect($this->workTemplates)->contains('is_persisted', false) ||
+                       ! empty($this->pendingDeletes) ||
                        $this->stepsOrderChanged($original);
 
         return $workflowChanged || $stepsChanged;
@@ -123,8 +137,46 @@ class WorkflowBuilder extends Component
 
     public function openCatalog(WorkCatalogService $workCatalogService)
     {
-        $this->workCatalogs = $workCatalogService->getAllWorkCatalogs();
+        $this->catalogPage = 1; // Reset pagination
+        $this->loadCatalogItems($workCatalogService);
         $this->showCatalogModal = true;
+    }
+
+    private function loadCatalogItems(WorkCatalogService $workCatalogService)
+    {
+        // Build query: filter by category_id if workflow has one, or show null category items
+        $query = WorkCatalog::query();
+
+        if ($this->workflowTemplate->category_id) {
+            // Filter to catalogs for this category OR generic (category_id = null)
+            $query->where(function ($q) {
+                $q->where('category_id', $this->workflowTemplate->category_id)
+                    ->orWhereNull('category_id');
+            });
+        } else {
+            // If workflow has no category, show only generic catalog items
+            $query->whereNull('category_id');
+        }
+
+        // Get total count
+        $this->totalCatalogItems = $query->count();
+
+        // Get paginated results
+        $skip = ($this->catalogPage - 1) * $this->catalogPerPage;
+        $this->workCatalogs = $query
+            ->orderBy('name')
+            ->skip($skip)
+            ->take($this->catalogPerPage)
+            ->get();
+
+        // Check if there are more items
+        $this->hasMoreCatalogs = ($skip + $this->catalogPerPage) < $this->totalCatalogItems;
+    }
+
+    public function loadMoreCatalogs(WorkCatalogService $workCatalogService)
+    {
+        $this->catalogPage++;
+        $this->loadCatalogItems($workCatalogService);
     }
 
     public function closeCatalog()
@@ -135,10 +187,10 @@ class WorkflowBuilder extends Component
     public function addStepFromCatalog($catalogId, WorkCatalogService $workCatalogService)
     {
         $catalogItem = $workCatalogService->getWorkCatalog($catalogId);
-        
+
         // Add to memory, not DB
         $lastOrder = collect($this->workTemplates)->max('order') ?? -1;
-        
+
         $this->workTemplates[] = [
             'id' => $this->tempIdCounter--,
             'workflow_template_id' => $this->workflowTemplate->id,
@@ -148,26 +200,26 @@ class WorkflowBuilder extends Component
             'work_catalog_id' => $catalogItem->id,
             'is_persisted' => false,
         ];
-        
+
         $this->hasSavedChanges = false;
         $this->closeCatalog();
     }
 
     public function save(WorkflowTemplateService $workflowTemplateService, WorkTemplateService $workTemplateService)
     {
-        if (!$this->workflowTemplate->exists) {
+        if (! $this->workflowTemplate->exists) {
             // This is a new template, check 'create' permission
             $this->authorize('create', WorkflowTemplate::class);
         } else {
             // This is an existing template, check 'update'
             $this->authorize('update', $this->workflowTemplate);
         }
-        
+
         // Check if the model is NEW before saving
-        $isNew = !$this->workflowTemplate->exists;
-        
+        $isNew = ! $this->workflowTemplate->exists;
+
         // Check if the model is new (doesn't exist in the DB yet)
-        $isCreating = !$this->workflowTemplate->exists;
+        $isCreating = ! $this->workflowTemplate->exists;
 
         $data = [
             'name' => $this->name,
@@ -179,13 +231,13 @@ class WorkflowBuilder extends Component
 
         if ($isCreating) {
             \Barryvdh\Debugbar\Facades\Debugbar::info('Creating new workflow template', $data);
-            
+
             // --- THIS IS THE NEW LOGIC YOU'RE MISSING ---
             // We are CREATING. Call the create method on your service.
             // (Assuming you have a createWorkflowTemplate method in your service)
             $this->workflowTemplate = $workflowTemplateService->createWorkflowTemplate($data);
             \Barryvdh\Debugbar\Facades\Debugbar::info('Created workflow template', $this->workflowTemplate);
-            
+
         } else {
             // We are UPDATING. Your old logic was fine for this.
             // (I'll add the findOrFail fix we discussed)
@@ -204,7 +256,7 @@ class WorkflowBuilder extends Component
 
         // Save or update steps
         foreach ($this->workTemplates as $index => $stepData) {
-            if (!$stepData['is_persisted']) {
+            if (! $stepData['is_persisted']) {
                 // Create new step
                 $step = $workTemplateService->createWorkTemplate([
                     'workflow_template_id' => $this->workflowTemplate->id,
@@ -213,7 +265,7 @@ class WorkflowBuilder extends Component
                     'order' => $stepData['order'],
                     'work_catalog_id' => $stepData['work_catalog_id'] ?? null,
                 ]);
-                
+
                 // Update collection with real ID
                 $this->workTemplates[$index]['id'] = $step->id;
                 $this->workTemplates[$index]['is_persisted'] = true;
@@ -227,7 +279,7 @@ class WorkflowBuilder extends Component
         }
 
         $this->workflowTemplate->refresh();
-        
+
         // Mark as saved
         $this->hasSavedChanges = true;
 
@@ -236,7 +288,7 @@ class WorkflowBuilder extends Component
             // We are in the ServiceForm modal.
             // Dispatch the event with the new ID for the parent to catch.
             $this->dispatch('workflowCreated', workflowId: $this->workflowTemplate->id);
-            
+
             // No redirect. The parent component will close the modal.
 
         } else {
@@ -245,6 +297,7 @@ class WorkflowBuilder extends Component
             // Redirect to the index page with a success message.
             // This mimics the behavior of the controller[cite: 30].
             session()->flash('success', 'Workflow saved successfully.');
+
             return $this->redirect(route('creator.workflows.index'), navigate: true);
         }
     }
@@ -252,7 +305,7 @@ class WorkflowBuilder extends Component
     public function addStep()
     {
         $lastOrder = collect($this->workTemplates)->max('order') ?? -1;
-        
+
         // Add to memory only
         $this->workTemplates[] = [
             'id' => $this->tempIdCounter--,
@@ -263,14 +316,14 @@ class WorkflowBuilder extends Component
             'work_catalog_id' => null,
             'is_persisted' => false,
         ];
-        
+
         $this->hasSavedChanges = false;
     }
 
     public function deleteStep($stepId)
     {
         $steps = collect($this->workTemplates);
-        
+
         // Find step in memory
         $step = $steps->firstWhere('id', $stepId);
 
@@ -279,12 +332,12 @@ class WorkflowBuilder extends Component
             if ($step['is_persisted']) {
                 $this->pendingDeletes[] = $stepId;
             }
-            
+
             // Remove from memory
             $this->workTemplates = $steps->filter(function ($s) use ($stepId) {
                 return $s['id'] !== $stepId;
             })->values()->toArray();
-            
+
             $this->hasSavedChanges = false;
         }
     }
@@ -313,7 +366,7 @@ class WorkflowBuilder extends Component
             $this->workTemplates[$stepIndex] = $this->editingStep;
             $this->hasSavedChanges = false;
         }
-        
+
         $this->closeEditStepModal();
     }
 
@@ -321,26 +374,26 @@ class WorkflowBuilder extends Component
     {
         // Update order in memory
         $steps = collect($this->workTemplates);
-        
+
         foreach ($orderedIds as $item) {
             $stepId = $item['value'];
             $newOrder = $item['order'];
-            
+
             $stepIndex = $steps->search(function ($step) use ($stepId) {
                 return $step['id'] == $stepId;
             });
-            
+
             if ($stepIndex !== false) {
                 $this->workTemplates[$stepIndex]['order'] = $newOrder;
             }
         }
-        
+
         // Re-sort by order
         $this->workTemplates = collect($this->workTemplates)
             ->sortBy('order')
             ->values()
             ->toArray();
-            
+
         $this->hasSavedChanges = false;
     }
 

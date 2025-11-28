@@ -1,0 +1,1559 @@
+{
+  "_instructions": {
+    "version": "2.0",
+    "created_at": "2025-11-28T10:30:38.459737",
+    "description": "Auto-generated seeder configuration for listings with multiple images",
+    "note": "All listings have 2-3 images each. 70/30 service-to-offer ratio maintained."
+  },
+  "dir_path": "C:\\Users\\sarmi\\Documents\\School Files\\serbizyu\\listing_seeder",
+  "settings": {
+    "auto_create_categories": true,
+    "skip_duplicates": true
+  },
+  "images_and_categories": {
+    "Agriculture and Landscaping": [
+      {
+        "listing_name": "Professional Crop Planting",
+        "listing_description": "Expert crop planting with soil prep and seed selection",
+        "listing_price_or_budget": 450,
+        "workflow_name": "Small Construction Project",
+        "workflow_steps": [
+          {
+            "name": "Project Consultation",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 60
+          },
+          {
+            "name": "Site Inspection",
+            "work_catalog_ref": "Site Inspection",
+            "duration_minutes": 90
+          },
+          {
+            "name": "Material Preparation",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 180
+          },
+          {
+            "name": "Construction Work",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 480
+          },
+          {
+            "name": "Quality Inspection",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 120
+          },
+          {
+            "name": "Client Walkthrough",
+            "work_catalog_ref": "Client Approval",
+            "duration_minutes": 60
+          }
+        ],
+        "images": [
+          {
+            "filename": "Agriculture_Crop_Planting_Team.jpeg",
+            "relative_path": "Agriculture_and_Landscaping/Agriculture_Crop_Planting_Team.jpeg"
+          },
+          {
+            "filename": "Landscaping_Arborist_TreeRemoval_02.jpeg",
+            "relative_path": "Agriculture_and_Landscaping/Landscaping_Arborist_TreeRemoval_02.jpeg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Perfect!",
+            "comment": "Exceeded my expectations. Outstanding service!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Good quality",
+            "comment": "Good work, minor issues but overall satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Reliable and professional",
+            "comment": "Good communication and reliable service.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Reliable and professional",
+            "comment": "Good communication and reliable service.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Good quality",
+            "comment": "Good work, minor issues but overall satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Care and Cleaning Services": [
+      {
+        "listing_name": "Childcare Services",
+        "listing_description": "Professional nanny with childcare expertise",
+        "listing_price_or_budget": 350,
+        "workflow_name": "Cleaning Service",
+        "workflow_steps": [
+          {
+            "name": "Initial Assessment",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 20
+          },
+          {
+            "name": "Cleaning Execution",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 180
+          },
+          {
+            "name": "Quality Verification",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 20
+          }
+        ],
+        "images": [
+          {
+            "filename": "Cleaning_Janitorial_Staircase.jpg",
+            "relative_path": "Care_and_Cleaning_Services/Cleaning_Janitorial_Staircase.jpg"
+          },
+          {
+            "filename": "Care_Childcare_Nanny.jpeg",
+            "relative_path": "Care_and_Cleaning_Services/Care_Childcare_Nanny.jpeg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Excellent work!",
+            "comment": "Highly professional and punctual. Will hire again!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Good quality",
+            "comment": "Good work, minor issues but overall satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Excellent work!",
+            "comment": "Highly professional and punctual. Will hire again!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Community and Social Services": [
+      {
+        "listing_name": "Environmental Cleanup",
+        "listing_description": "Community cleanup and waste removal",
+        "listing_price_or_budget": 320,
+        "workflow_name": "Cleaning Service",
+        "workflow_steps": [
+          {
+            "name": "Initial Assessment",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 20
+          },
+          {
+            "name": "Cleaning Execution",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 180
+          },
+          {
+            "name": "Quality Verification",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 20
+          }
+        ],
+        "images": [
+          {
+            "filename": "Community_Environmental_Cleanup.jpg",
+            "relative_path": "Community_and_Social_Services/Community_Environmental_Cleanup.jpg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect!",
+            "comment": "Exceeded my expectations. Outstanding service!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect!",
+            "comment": "Exceeded my expectations. Outstanding service!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Excellent work!",
+            "comment": "Highly professional and punctual. Will hire again!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Good quality",
+            "comment": "Good work, minor issues but overall satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Construction & Engineering": [
+      {
+        "listing_name": "Plumbing Consultation",
+        "listing_description": "Expert plumbing design and planning",
+        "listing_price_or_budget": 400,
+        "workflow_name": "Basic Plumbing Service",
+        "workflow_steps": [
+          {
+            "name": "Initial Consultation",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 30
+          },
+          {
+            "name": "Diagnostic Assessment",
+            "work_catalog_ref": "Site Inspection",
+            "duration_minutes": 45
+          },
+          {
+            "name": "Repair Execution",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 120
+          },
+          {
+            "name": "Final Inspection",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 30
+          }
+        ],
+        "images": [
+          {
+            "filename": "Construction_Structural_Steelwork.jpeg",
+            "relative_path": "Construction & Engineering/Construction_Structural_Steelwork.jpeg"
+          },
+          {
+            "filename": "Construction_Plumbing_Consultation.jpg",
+            "relative_path": "Construction & Engineering/Construction_Plumbing_Consultation.jpg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Excellent work!",
+            "comment": "Highly professional and punctual. Will hire again!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Excellent work!",
+            "comment": "Highly professional and punctual. Will hire again!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect!",
+            "comment": "Exceeded my expectations. Outstanding service!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Construction and Property Maintenance": [
+      {
+        "listing_name": "House Painting",
+        "listing_description": "Interior and exterior painting service",
+        "listing_price_or_budget": 550,
+        "workflow_name": "House Painting Service",
+        "workflow_steps": [
+          {
+            "name": "Design Consultation",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 30
+          },
+          {
+            "name": "Surface Preparation",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 240
+          },
+          {
+            "name": "Painting Execution",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 480
+          },
+          {
+            "name": "Quality Inspection",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 45
+          }
+        ],
+        "images": [
+          {
+            "filename": "Painting_Service.jpg",
+            "relative_path": "Construction_and_Property_Maintenance/Painting_Service.jpg"
+          },
+          {
+            "filename": "Trade_Masonry_CementWork.jpg",
+            "relative_path": "Construction_and_Property_Maintenance/Trade_Masonry_CementWork.jpg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 4,
+            "title": "Good quality",
+            "comment": "Good work, minor issues but overall satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Good quality",
+            "comment": "Good work, minor issues but overall satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect!",
+            "comment": "Exceeded my expectations. Outstanding service!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Good quality",
+            "comment": "Good work, minor issues but overall satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Construction and Skilled Trades": [
+      {
+        "listing_name": "Plumbing Repair",
+        "listing_description": "Complete plumbing repair and maintenance",
+        "listing_price_or_budget": 420,
+        "workflow_name": "Basic Plumbing Service",
+        "workflow_steps": [
+          {
+            "name": "Initial Consultation",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 30
+          },
+          {
+            "name": "Diagnostic Assessment",
+            "work_catalog_ref": "Site Inspection",
+            "duration_minutes": 45
+          },
+          {
+            "name": "Repair Execution",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 120
+          },
+          {
+            "name": "Final Inspection",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 30
+          }
+        ],
+        "images": [
+          {
+            "filename": "Trade_Plumbing_Repair.jpg",
+            "relative_path": "Construction_and_Skilled_Trades/Trade_Plumbing_Repair.jpg"
+          },
+          {
+            "filename": "Trade_Carpentry_Workshop.jpg",
+            "relative_path": "Construction_and_Skilled_Trades/Trade_Carpentry_Workshop.jpg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Excellent work!",
+            "comment": "Highly professional and punctual. Will hire again!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Excellent work!",
+            "comment": "Highly professional and punctual. Will hire again!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Food & Agriculture": [
+      {
+        "listing_name": "Aquaculture Services",
+        "listing_description": "Fish farming and harvesting",
+        "listing_price_or_budget": 800,
+        "workflow_name": "Small Construction Project",
+        "workflow_steps": [
+          {
+            "name": "Project Consultation",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 60
+          },
+          {
+            "name": "Site Inspection",
+            "work_catalog_ref": "Site Inspection",
+            "duration_minutes": 90
+          },
+          {
+            "name": "Material Preparation",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 180
+          },
+          {
+            "name": "Construction Work",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 480
+          },
+          {
+            "name": "Quality Inspection",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 120
+          },
+          {
+            "name": "Client Walkthrough",
+            "work_catalog_ref": "Client Approval",
+            "duration_minutes": 60
+          }
+        ],
+        "images": [
+          {
+            "filename": "Agriculture_Aquaculture_Harvest.jpeg",
+            "relative_path": "Food & Agriculture/Agriculture_Aquaculture_Harvest.jpeg"
+          },
+          {
+            "filename": "Culinary_Student_Group_Photo.jpeg",
+            "relative_path": "Food & Agriculture/Culinary_Student_Group_Photo.jpeg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect!",
+            "comment": "Exceeded my expectations. Outstanding service!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect!",
+            "comment": "Exceeded my expectations. Outstanding service!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Graphic Design": [
+      {
+        "listing_name": "Digital Media Services",
+        "listing_description": "Graphics and illustration design",
+        "listing_price_or_budget": 500,
+        "workflow_name": "Website Design Service",
+        "workflow_steps": [
+          {
+            "name": "Consultation & Planning",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 60
+          },
+          {
+            "name": "Design Preparation",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 300
+          },
+          {
+            "name": "Development Work",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 720
+          },
+          {
+            "name": "Testing & Review",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 120
+          }
+        ],
+        "images": [
+          {
+            "filename": "Digital_Media_Illustration_Workspace.jpg",
+            "relative_path": "Graphic_Design/Digital_Media_Illustration_Workspace.jpg"
+          },
+          {
+            "filename": "arts_service.jpg",
+            "relative_path": "Graphic_Design/arts_service.jpg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Reliable and professional",
+            "comment": "Good communication and reliable service.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Health and Wellness": [
+      {
+        "listing_name": "Fitness Coaching",
+        "listing_description": "Personal fitness training",
+        "listing_price_or_budget": 300,
+        "workflow_name": "AC Repair Service",
+        "workflow_steps": [
+          {
+            "name": "Initial Assessment",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 30
+          },
+          {
+            "name": "System Inspection",
+            "work_catalog_ref": "Site Inspection",
+            "duration_minutes": 45
+          },
+          {
+            "name": "Repair/Installation",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 150
+          },
+          {
+            "name": "System Testing",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 30
+          }
+        ],
+        "images": [
+          {
+            "filename": "Wellness_Personal_Training.jpg",
+            "relative_path": "Health_and_Wellness/Wellness_Personal_Training.jpg"
+          },
+          {
+            "filename": "Wellness_Spa_MassageTherapy.jpg",
+            "relative_path": "Health_and_Wellness/Wellness_Spa_MassageTherapy.jpg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 4,
+            "title": "Reliable and professional",
+            "comment": "Good communication and reliable service.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Reliable and professional",
+            "comment": "Good communication and reliable service.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect!",
+            "comment": "Exceeded my expectations. Outstanding service!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      },
+      {
+        "listing_name": "Personal Training",
+        "listing_description": "Customized fitness programs",
+        "listing_price_or_budget": 320,
+        "workflow_name": "AC Repair Service",
+        "workflow_steps": [
+          {
+            "name": "Initial Assessment",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 30
+          },
+          {
+            "name": "System Inspection",
+            "work_catalog_ref": "Site Inspection",
+            "duration_minutes": 45
+          },
+          {
+            "name": "Repair/Installation",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 150
+          },
+          {
+            "name": "System Testing",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 30
+          }
+        ],
+        "images": [
+          {
+            "filename": "Fitness_Coach_Service.jpg",
+            "relative_path": "Health_and_Wellness/Fitness_Coach_Service.jpg"
+          },
+          {
+            "filename": "everything+you+need+to+know+about+balinese+massage_transfer_2025-11-26_183546.jpg",
+            "relative_path": "Health_and_Wellness/everything+you+need+to+know+about+balinese+massage_transfer_2025-11-26_183546.jpg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 4,
+            "title": "Good quality",
+            "comment": "Good work, minor issues but overall satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Good quality",
+            "comment": "Good work, minor issues but overall satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Hospitality and Culinary Arts": [
+      {
+        "listing_name": "Chef Services",
+        "listing_description": "Professional culinary services",
+        "listing_price_or_budget": 650,
+        "workflow_name": "Event Catering Service",
+        "workflow_steps": [
+          {
+            "name": "Menu Planning",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 60
+          },
+          {
+            "name": "Ingredient Sourcing",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 120
+          },
+          {
+            "name": "Food Preparation",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 360
+          },
+          {
+            "name": "Service & Setup",
+            "work_catalog_ref": "Client Approval",
+            "duration_minutes": 120
+          }
+        ],
+        "images": [
+          {
+            "filename": "Hospitality_Service.jpg",
+            "relative_path": "Hospitality_and_Culinary_Arts/Hospitality_Service.jpg"
+          },
+          {
+            "filename": "Culinary_Kitchen_Team_02.jpg",
+            "relative_path": "Hospitality_and_Culinary_Arts/Culinary_Kitchen_Team_02.jpg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Excellent work!",
+            "comment": "Highly professional and punctual. Will hire again!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Reliable and professional",
+            "comment": "Good communication and reliable service.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect!",
+            "comment": "Exceeded my expectations. Outstanding service!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Excellent work!",
+            "comment": "Highly professional and punctual. Will hire again!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      },
+      {
+        "listing_name": "Kitchen Team",
+        "listing_description": "Catering team and support",
+        "listing_price_or_budget": 550,
+        "workflow_name": "Event Catering Service",
+        "workflow_steps": [
+          {
+            "name": "Menu Planning",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 60
+          },
+          {
+            "name": "Ingredient Sourcing",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 120
+          },
+          {
+            "name": "Food Preparation",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 360
+          },
+          {
+            "name": "Service & Setup",
+            "work_catalog_ref": "Client Approval",
+            "duration_minutes": 120
+          }
+        ],
+        "images": [
+          {
+            "filename": "Culinary_Chef_Plating_01.jpg",
+            "relative_path": "Hospitality_and_Culinary_Arts/Culinary_Chef_Plating_01.jpg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Excellent work!",
+            "comment": "Highly professional and punctual. Will hire again!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Good quality",
+            "comment": "Good work, minor issues but overall satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Hospitality and Food Services": [
+      {
+        "listing_name": "Event Catering",
+        "listing_description": "Full catering with staff",
+        "listing_price_or_budget": 750,
+        "workflow_name": "Event Catering Service",
+        "workflow_steps": [
+          {
+            "name": "Menu Planning",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 60
+          },
+          {
+            "name": "Ingredient Sourcing",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 120
+          },
+          {
+            "name": "Food Preparation",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 360
+          },
+          {
+            "name": "Service & Setup",
+            "work_catalog_ref": "Client Approval",
+            "duration_minutes": 120
+          }
+        ],
+        "images": [
+          {
+            "filename": "Hospitality_Catering_Staff_01.jpg",
+            "relative_path": "Hospitality_and_Food_Services/Hospitality_Catering_Staff_01.jpg"
+          },
+          {
+            "filename": "Hospitality_Concierge_Desk.jpg",
+            "relative_path": "Hospitality_and_Food_Services/Hospitality_Concierge_Desk.jpg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Excellent work!",
+            "comment": "Highly professional and punctual. Will hire again!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect!",
+            "comment": "Exceeded my expectations. Outstanding service!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Reliable and professional",
+            "comment": "Good communication and reliable service.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      },
+      {
+        "listing_name": "Catering Support",
+        "listing_description": "Dedicated catering team",
+        "listing_price_or_budget": 680,
+        "workflow_name": "Event Catering Service",
+        "workflow_steps": [
+          {
+            "name": "Menu Planning",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 60
+          },
+          {
+            "name": "Ingredient Sourcing",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 120
+          },
+          {
+            "name": "Food Preparation",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 360
+          },
+          {
+            "name": "Service & Setup",
+            "work_catalog_ref": "Client Approval",
+            "duration_minutes": 120
+          }
+        ],
+        "images": [
+          {
+            "filename": "Hospitality_Catering_Staff_02.jpg",
+            "relative_path": "Hospitality_and_Food_Services/Hospitality_Catering_Staff_02.jpg"
+          }
+        ],
+        "listing_type": "service",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Highly recommended",
+            "comment": "Great service, exactly as described. Very satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Good quality",
+            "comment": "Good work, minor issues but overall satisfied.",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect!",
+            "comment": "Exceeded my expectations. Outstanding service!",
+            "tags": [
+              "professional",
+              "reliable"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Manufacturing & Technology": [
+      {
+        "listing_name": "Electronics Assembly",
+        "listing_description": "Industrial electronics manufacturing",
+        "listing_price_or_budget": 900,
+        "workflow_name": "Small Construction Project",
+        "workflow_steps": [
+          {
+            "name": "Project Consultation",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 60
+          },
+          {
+            "name": "Site Inspection",
+            "work_catalog_ref": "Site Inspection",
+            "duration_minutes": 90
+          },
+          {
+            "name": "Material Preparation",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 180
+          },
+          {
+            "name": "Construction Work",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 480
+          },
+          {
+            "name": "Quality Inspection",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 120
+          },
+          {
+            "name": "Client Walkthrough",
+            "work_catalog_ref": "Client Approval",
+            "duration_minutes": 60
+          }
+        ],
+        "images": [
+          {
+            "filename": "Industrial_Electronics_Assembly.jpeg",
+            "relative_path": "Manufacturing & Technology/Industrial_Electronics_Assembly.jpeg"
+          }
+        ],
+        "listing_type": "offer",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Interested",
+            "comment": "This is what I need. Great opportunity!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Interested",
+            "comment": "This is what I need. Great opportunity!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Printiing Service": [
+      {
+        "listing_name": "Printing Services",
+        "listing_description": "Digital and offset printing",
+        "listing_price_or_budget": 300,
+        "workflow_name": "Website Design Service",
+        "workflow_steps": [
+          {
+            "name": "Consultation & Planning",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 60
+          },
+          {
+            "name": "Design Preparation",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 300
+          },
+          {
+            "name": "Development Work",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 720
+          },
+          {
+            "name": "Testing & Review",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 120
+          }
+        ],
+        "images": [
+          {
+            "filename": "printing_service2.jpg",
+            "relative_path": "Printiing_Service/printing_service2.jpg"
+          }
+        ],
+        "listing_type": "offer",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Great offer!",
+            "comment": "Very interested in this service. Excellent pricing!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect match",
+            "comment": "Exactly what I was looking for. Highly interested!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Great offer!",
+            "comment": "Very interested in this service. Excellent pricing!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Specialized Personal Services": [
+      {
+        "listing_name": "Personal Fitness",
+        "listing_description": "Certified fitness training",
+        "listing_price_or_budget": 280,
+        "workflow_name": "AC Repair Service",
+        "workflow_steps": [
+          {
+            "name": "Initial Assessment",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 30
+          },
+          {
+            "name": "System Inspection",
+            "work_catalog_ref": "Site Inspection",
+            "duration_minutes": 45
+          },
+          {
+            "name": "Repair/Installation",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 150
+          },
+          {
+            "name": "System Testing",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 30
+          }
+        ],
+        "images": [
+          {
+            "filename": "Personal_Trainer_Service.jpg",
+            "relative_path": "Specialized_Personal_Services/Personal_Trainer_Service.jpg"
+          },
+          {
+            "filename": "Pet_Maintenance.jpg",
+            "relative_path": "Specialized_Personal_Services/Pet_Maintenance.jpg"
+          }
+        ],
+        "listing_type": "offer",
+        "reviews": [
+          {
+            "rating": 4,
+            "title": "Good opportunity",
+            "comment": "Looks promising. Interested in learning more.",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 4,
+            "title": "Good opportunity",
+            "comment": "Looks promising. Interested in learning more.",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Interested",
+            "comment": "This is what I need. Great opportunity!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      },
+      {
+        "listing_name": "Pet Care",
+        "listing_description": "Grooming and pet services",
+        "listing_price_or_budget": 200,
+        "workflow_name": "AC Repair Service",
+        "workflow_steps": [
+          {
+            "name": "Initial Assessment",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 30
+          },
+          {
+            "name": "System Inspection",
+            "work_catalog_ref": "Site Inspection",
+            "duration_minutes": 45
+          },
+          {
+            "name": "Repair/Installation",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 150
+          },
+          {
+            "name": "System Testing",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 30
+          }
+        ],
+        "images": [
+          {
+            "filename": "Team_Collab_Discussion.jpg",
+            "relative_path": "Specialized_Personal_Services/Team_Collab_Discussion.jpg"
+          }
+        ],
+        "listing_type": "offer",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Great offer!",
+            "comment": "Very interested in this service. Excellent pricing!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect match",
+            "comment": "Exactly what I was looking for. Highly interested!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Interested",
+            "comment": "This is what I need. Great opportunity!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Great offer!",
+            "comment": "Very interested in this service. Excellent pricing!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Video Editing": [
+      {
+        "listing_name": "Video Editing",
+        "listing_description": "Professional video post-production",
+        "listing_price_or_budget": 450,
+        "workflow_name": "Website Design Service",
+        "workflow_steps": [
+          {
+            "name": "Consultation & Planning",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 60
+          },
+          {
+            "name": "Design Preparation",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 300
+          },
+          {
+            "name": "Development Work",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 720
+          },
+          {
+            "name": "Testing & Review",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 120
+          }
+        ],
+        "images": [
+          {
+            "filename": "Digital_Media_Video_Editor.jpg",
+            "relative_path": "Video_Editing/Digital_Media_Video_Editor.jpg"
+          },
+          {
+            "filename": "video_editing.jpg",
+            "relative_path": "Video_Editing/video_editing.jpg"
+          }
+        ],
+        "listing_type": "offer",
+        "reviews": [
+          {
+            "rating": 4,
+            "title": "Good opportunity",
+            "comment": "Looks promising. Interested in learning more.",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect match",
+            "comment": "Exactly what I was looking for. Highly interested!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ],
+    "Web Designing": [
+      {
+        "listing_name": "Web Design",
+        "listing_description": "Professional web development",
+        "listing_price_or_budget": 1200,
+        "workflow_name": "Website Design Service",
+        "workflow_steps": [
+          {
+            "name": "Consultation & Planning",
+            "work_catalog_ref": "Initial Consultation",
+            "duration_minutes": 60
+          },
+          {
+            "name": "Design Preparation",
+            "work_catalog_ref": "Material/Resource Preparation",
+            "duration_minutes": 300
+          },
+          {
+            "name": "Development Work",
+            "work_catalog_ref": "Work Execution",
+            "duration_minutes": 720
+          },
+          {
+            "name": "Testing & Review",
+            "work_catalog_ref": "Quality Check",
+            "duration_minutes": 120
+          }
+        ],
+        "images": [
+          {
+            "filename": "Design_Graphic_Workspace_Flatlay.jpg",
+            "relative_path": "Web_Designing/Design_Graphic_Workspace_Flatlay.jpg"
+          }
+        ],
+        "listing_type": "offer",
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Great offer!",
+            "comment": "Very interested in this service. Excellent pricing!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Interested",
+            "comment": "This is what I need. Great opportunity!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          },
+          {
+            "rating": 5,
+            "title": "Perfect match",
+            "comment": "Exactly what I was looking for. Highly interested!",
+            "tags": [
+              "interested",
+              "relevant"
+            ],
+            "is_verified_purchase": true
+          }
+        ]
+      }
+    ]
+  }
+}

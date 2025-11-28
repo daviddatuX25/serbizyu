@@ -8,6 +8,7 @@
     
     <a href="{{ route('home') }}" class="navbar-brand">
         <img src="{{ asset('img/logo.png') }}" alt="Serbizyu" class="h-8 w-auto">
+        <span class="navbar-brand-text ml-2">Serbizyu</span>
     </a>
 
     <nav class="navbar-nav">

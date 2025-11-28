@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Domains\Users\Models\User;
-
+use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
 {
@@ -13,22 +12,7 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // collection acnt be assigned role so have each function
-        
-        User::create([
-            'firstname' => 'First',
-            'lastname' => 'User',
-            'password' => bcrypt('password123'),
-            'email' => 'user@localhost',
-        ])->assignRole('user');
-
-        User::create([
-            'firstname' => 'Moderator',
-            'lastname' => 'User',
-            'password' => bcrypt('password123'),
-            'email' => 'moderator@localhost',
-        ])->assignRole('moderator');
-
+        // Create 1 admin user
         User::create([
             'firstname' => 'Admin',
             'lastname' => 'User',
@@ -36,11 +20,19 @@ class UserSeeder extends Seeder
             'email' => 'admin@localhost',
         ])->assignRole('admin');
 
-        User::create([
-            'firstname' => 'Second',
-            'lastname' => 'User',
-            'password' => bcrypt('password123'),
-            'email' => 'user2@localhost',
-        ])->assignRole('user');
+        // Create 9 regular users (for a total of 10 users)
+        $firstNames = ['John', 'Maria', 'Carlos', 'Ana', 'Pedro', 'Rosa', 'Juan', 'Sofia', 'Miguel'];
+        $lastNames = ['Santos', 'Garcia', 'Lopez', 'Rodriguez', 'Martinez', 'Hernandez', 'Flores', 'Morales', 'Reyes'];
+
+        for ($i = 0; $i < 9; $i++) {
+            User::create([
+                'firstname' => $firstNames[$i],
+                'lastname' => $lastNames[$i],
+                'password' => bcrypt('password123'),
+                'email' => 'user'.($i + 1).'@localhost',
+            ])->assignRole('user');
+        }
+
+        $this->command->info('Created 1 admin + 9 users (10 total)');
     }
 }

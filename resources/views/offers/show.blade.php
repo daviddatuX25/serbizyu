@@ -148,7 +148,7 @@
                                     @guest
                                         <div class="bg-gray-100 border-l-4 border-gray-400 p-4">
                                             <p class="font-bold">Want to place a bid?</p>
-                                            <p>Please <a href="{{ route('auth.signin') }}" class="text-blue-600 hover:underline">log in</a> or <a href="{{ route('register') }}" class="text-blue-600 hover:underline">create an account</a> to get started.</p>
+                                            <p>Please <a href="{{ route('auth.signin') }}" class="text-blue-600 hover:underline">log in</a> or <a href="{{ route('auth.join') }}" class="text-blue-600 hover:underline">create an account</a> to get started.</p>
                                         </div>
                                     @endguest
                                 @endcan

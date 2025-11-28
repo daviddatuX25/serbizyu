@@ -2,98 +2,62 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Domains\Listings\Models\WorkCatalog;
+use Illuminate\Database\Seeder;
 
 class WorkCatalogSeeder extends Seeder
 {
     public function run(): void
     {
+        // Generic, reusable work catalog items (category_id is nullable - can be used across categories)
         $workCatalogs = [
             [
                 'name' => 'Initial Consultation',
                 'description' => 'Meet with client to discuss requirements and expectations',
-                'config' => [
-                    'estimated_duration' => '1-2 hours',
-                    'location' => 'client_location',
-                    'requirements' => ['notepad', 'measuring_tools']
-                ]
+                'category_id' => null,
             ],
             [
                 'name' => 'Site Inspection',
                 'description' => 'Visit and assess the work location',
-                'config' => [
-                    'estimated_duration' => '30 minutes - 1 hour',
-                    'requirements' => ['camera', 'measuring_tape']
-                ]
+                'category_id' => null,
             ],
             [
-                'name' => 'Material Purchase',
-                'description' => 'Acquire necessary materials and supplies',
-                'config' => [
-                    'estimated_duration' => '2-4 hours',
-                    'payment_type' => 'client_advance'
-                ]
+                'name' => 'Material/Resource Preparation',
+                'description' => 'Acquire and prepare necessary materials and supplies',
+                'category_id' => null,
             ],
             [
-                'name' => 'On-site Work',
+                'name' => 'Work Execution',
                 'description' => 'Perform the actual service work',
-                'config' => [
-                    'estimated_duration' => 'varies',
-                    'location' => 'client_location'
-                ]
+                'category_id' => null,
             ],
             [
                 'name' => 'Quality Check',
                 'description' => 'Review completed work for quality assurance',
-                'config' => [
-                    'estimated_duration' => '30 minutes',
-                    'requires_client' => true
-                ]
+                'category_id' => null,
             ],
             [
-                'name' => 'Final Cleanup',
-                'description' => 'Clean up work area and remove debris',
-                'config' => [
-                    'estimated_duration' => '30 minutes - 1 hour',
-                ]
-            ],
-            [
-                'name' => 'Client Walkthrough',
+                'name' => 'Client Approval',
                 'description' => 'Present finished work to client for approval',
-                'config' => [
-                    'estimated_duration' => '15-30 minutes',
-                    'requires_client' => true
-                ]
-            ],
-            [
-                'name' => 'Payment Collection',
-                'description' => 'Collect payment from client',
-                'config' => [
-                    'payment_methods' => ['cash', 'gcash', 'bank_transfer']
-                ]
+                'category_id' => null,
             ],
             [
                 'name' => 'Documentation',
                 'description' => 'Take photos and document completed work',
-                'config' => [
-                    'estimated_duration' => '15 minutes',
-                    'requirements' => ['camera', 'smartphone']
-                ]
+                'category_id' => null,
             ],
             [
-                'name' => 'Follow-up Visit',
-                'description' => 'Return to check on completed work',
-                'config' => [
-                    'estimated_duration' => '30 minutes',
-                    'typical_timeframe' => '1-2 weeks after completion'
-                ]
+                'name' => 'Payment Processing',
+                'description' => 'Collect payment from client',
+                'category_id' => null,
             ],
         ];
 
         foreach ($workCatalogs as $catalog) {
-            $catalog['config'] = json_encode($catalog['config']);
-            WorkCatalog::create($catalog);
+            WorkCatalog::firstOrCreate(
+                ['name' => $catalog['name']],
+                $catalog
+            );
         }
     }
 }

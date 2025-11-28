@@ -2,35 +2,40 @@
 
 namespace App\Livewire;
 
+use App\Domains\Common\Interfaces\AddressProviderInterface;
 use App\Domains\Listings\Models\Service;
 use App\Domains\Listings\Services\ServiceService;
-use App\Domains\Common\Services\AddressService;
 use App\Enums\PaymentMethod;
-use Livewire\Component;
-use Livewire\Attributes\On;
 use App\Livewire\Traits\Addressable;
-use App\Livewire\Traits\Workflowable;
 use App\Livewire\Traits\WithMedia;
-use App\Domains\Common\Interfaces\AddressProviderInterface;
+use App\Livewire\Traits\Workflowable;
+use Livewire\Component;
 
 class ServiceForm extends Component
 {
     use Addressable;
-    use Workflowable;
     use WithMedia;
+    use Workflowable;
 
     public ?Service $service = null;
 
     // Livewire properties for Service
     public ?string $title = '';
+
     public ?string $description = '';
+
     public float|string|null $price = null;
+
     public int|string|null $category_id = null;
+
     public ?bool $pay_first = false;
+
     public ?string $payment_method = 'any';
+
     public ?int $address_id = null;
 
     public $categories = [];
+
     public $paymentMethods = [];
 
     public function boot(AddressProviderInterface $addressProvider)
@@ -81,13 +86,19 @@ class ServiceForm extends Component
             $primary = $this->addresses->firstWhere('pivot.is_primary', true);
             $this->address_id = $primary?->id ?? null;
             $this->payment_method = 'any';
+
+            // Check if workflow_id is passed in request
+            if (request()->has('workflow_id')) {
+                $this->workflow_template_id = request('workflow_id');
+            }
         }
     }
 
     public function save(ServiceService $serviceService)
     {
-        if (empty($this->address_id) && !$this->showAddressModal) {
+        if (empty($this->address_id) && ! $this->showAddressModal) {
             $this->addError('address_id', 'Please select an address or add a new one.');
+
             return;
         }
 
@@ -127,10 +138,11 @@ class ServiceForm extends Component
 
             $this->resetMediaForm();
             session()->flash('success', 'Service saved successfully!');
+
             return redirect()->route('creator.services.index');
 
         } catch (\Throwable $e) {
-            $this->addError('save', 'Failed to save service: ' . $e->getMessage());
+            $this->addError('save', 'Failed to save service: '.$e->getMessage());
         }
     }
 

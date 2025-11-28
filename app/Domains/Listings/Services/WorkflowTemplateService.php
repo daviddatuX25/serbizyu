@@ -17,6 +17,7 @@ class WorkflowTemplateService
         if ($workflowTemplate == null) {
             throw new ResourceNotFoundException('Workflow template does not exist.');
         }
+
         return $workflowTemplate;
     }
 
@@ -26,7 +27,7 @@ class WorkflowTemplateService
             ->orderBy('name');
 
         if (isset($filters['search'])) {
-            $query->where('name', 'like', '%' . $filters['search'] . '%');
+            $query->where('name', 'like', '%'.$filters['search'].'%');
         }
 
         return $query->get();
@@ -35,7 +36,6 @@ class WorkflowTemplateService
     /**
      * Get all workflow templates available to a user, including their own and bookmarked ones.
      *
-     * @param User $user
      * @return Collection<int, WorkflowTemplate>
      */
     public function getAvailableWorkflowTemplatesForUser(User $user): Collection
@@ -63,6 +63,7 @@ class WorkflowTemplateService
     public function updateWorkflowTemplate(WorkflowTemplate $workflowTemplate, array $data): WorkflowTemplate
     {
         $workflowTemplate->update($data);
+
         return $workflowTemplate;
     }
 
@@ -78,9 +79,9 @@ class WorkflowTemplateService
     {
         return DB::transaction(function () use ($workflowTemplate) {
             $newWorkflowTemplate = $workflowTemplate->replicate([
-                'name' // You might want to adjust the name of the duplicate
+                'name', // You might want to adjust the name of the duplicate
             ]);
-            $newWorkflowTemplate->name = $workflowTemplate->name . ' (Copy)';
+            $newWorkflowTemplate->name = $workflowTemplate->name.' (Copy)';
             $newWorkflowTemplate->creator_id = Auth::user()->id;
             $newWorkflowTemplate->save();
 
@@ -91,5 +92,16 @@ class WorkflowTemplateService
 
             return $newWorkflowTemplate;
         });
+    }
+
+    /**
+     * Get featured workflow templates with limit
+     */
+    public function getFeaturedWorkflows(int $limit = 3): Collection
+    {
+        return WorkflowTemplate::with('workTemplates')
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
     }
 }

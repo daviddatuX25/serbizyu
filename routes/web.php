@@ -35,6 +35,7 @@ use App\Domains\Work\Http\Controllers\ActivityController;
 use App\Domains\Work\Http\Controllers\WorkInstanceController;
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\FaqController;
+use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 
 // require or include auth.php
@@ -74,9 +75,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // Home and static pages
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('browse', [ListingController::class, 'index'])->name('browse');
 
@@ -96,6 +95,12 @@ Route::get('/openoffers/{openoffer}', [OpenOfferController::class, 'show'])->nam
 
 // Public Workflow Browsing
 Route::get('/workflows', [PublicWorkflowController::class, 'index'])->name('workflows');
+
+// Workflow creation routes - these bookmark the workflow and redirect
+Route::middleware(['auth'])->group(function () {
+    Route::get('/workflows/{workflow}/create-service', [HomeController::class, 'createServiceFromWorkflow'])->name('workflows.create-service');
+    Route::get('/workflows/{workflow}/create-offer', [HomeController::class, 'createOfferFromWorkflow'])->name('workflows.create-offer');
+});
 
 // Creator space
 Route::middleware(['auth'])->prefix('creator')->name('creator.')->group(function () {
